@@ -1,6 +1,6 @@
 import pymysql
 from contextlib import contextmanager
-from db_config import DB_CONFIG
+from .db_config import DB_CONFIG
 
 
 @contextmanager
