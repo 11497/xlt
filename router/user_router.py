@@ -8,6 +8,14 @@ router = APIRouter(prefix="/api/user", tags=["user"])
 
 @router.post("/regisster")
 async def register(user: User):
+    """用户注册"""
+    if len(user.password) < 6:
+        return {"code": 1, "msg": "密码长度不能小于6位", "data": None}
+    if len(user.username) < 4 or len(user.username) > 15:
+        return {"code": 1, "msg": "用户名长度必须在4到15位之间", "data": None}
+    user_exist = UserCRUD.get_by_username(user.username)
+    if user_exist:
+        return {"code": 1, "msg": "用户名已存在", "data": None}
     UserCRUD.create(user)
     return {"code": 0, "msg": "注册成功", "data": None}
 
