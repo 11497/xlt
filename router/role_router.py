@@ -55,14 +55,28 @@ async def get_by_name(role_name: str, token: str = Depends(oauth2_scheme)):
 
 @router.put("")
 async def update(role: Role, token: str = Depends(oauth2_scheme)):
-    """更新角色"""
+    """更新角色名"""
     result = Result()
     current_user = get_current_user(token)
     user = UserCRUD.get_by_id(current_user["user_id"])
     if user.is_admin == 0 or user is None:
-        return result.error(msg="您没有权限更新角色")
+        return result.error(msg="您没有权限更新角色名")
 
-    update_result = RoleCRUD.update(role)
+    update_result = RoleCRUD.update_name(role.id, role.name)
     if not update_result:
-        return result.error(msg="更新角色失败")
-    return result.success(msg="更新角色成功")
+        return result.error(msg="更新角色名失败")
+    return result.success(msg="更新角色名成功")
+
+@router.delete("")
+async def delete(id: int, token: str = Depends(oauth2_scheme)):
+    """删除角色"""
+    result = Result()
+    current_user = get_current_user(token)
+    user = UserCRUD.get_by_id(current_user["user_id"])
+    if user.is_admin == 0 or user is None:
+        return result.error(msg="您没有权限删除角色")
+
+    delete_result = RoleCRUD.delete(id)
+    if not delete_result:
+        return result.error(msg="删除角色失败")
+    return result.success(msg="删除角色成功")
