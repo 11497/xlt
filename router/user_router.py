@@ -29,3 +29,12 @@ async def login(username: str, password: str):
     # 返回去掉 password 字段的用户信息
     login_user.password = ""
     return {"code": 0, "msg": "登录成功", "data": login_user.to_dict()}
+
+@router.get("/{id}")
+async def get_user(id: int):
+    user = UserCRUD.get_by_id(id)
+    if not user:
+        return {"code": 1, "msg": "用户不存在", "data": None}
+    # 返回去掉 password 字段的用户信息
+    user.password = ""
+    return {"code": 0, "msg": "查询成功", "data": user.to_dict()}
