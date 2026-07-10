@@ -28,13 +28,13 @@ create table message (
 drop table if exists knowledge_base;
 create table knowledge_base (
     id int auto_increment primary key comment '知识库id',
-    name varchar(255) not null comment '知识库名称'
+    name varchar(255) not null unique comment '知识库名称'
 ) comment '知识库';
 
 drop table if exists role;
 create table role (
     id int auto_increment primary key comment '角色id',
-    name varchar(255) not null comment '角色名称'
+    name varchar(255) not null unique comment '角色名称'
 ) comment '角色';
 
 drop table if exists role_user;
@@ -59,7 +59,7 @@ drop table if exists document;
 create table document (
     id int auto_increment primary key comment '文档id',
     knowledge_base_id int not null comment '知识库id',
-    name varchar(255) not null comment '文档名称',
+    name varchar(255) not null unique comment '文档名称',
     content longtext not null comment '文档内容',
     create_time datetime default current_timestamp comment '创建时间',
     update_time datetime default current_timestamp comment '更新时间',
