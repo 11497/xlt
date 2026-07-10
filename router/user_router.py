@@ -16,6 +16,7 @@ async def register(user: User):
     user_exist = UserCRUD.get_by_username(user.username)
     if user_exist:
         return {"code": 1, "msg": "用户名已存在", "data": None}
+
     UserCRUD.create(user)
     return {"code": 0, "msg": "注册成功", "data": None}
 
@@ -39,7 +40,7 @@ async def get_user(id: int):
     user.password = ""
     return {"code": 0, "msg": "查询成功", "data": user.to_dict()}
 
-@router.put("")
+@router.put("/")
 async def update_user(user: User):
     if len(user.password) < 6:
         return {"code": 1, "msg": "密码长度不能小于6位", "data": None}
@@ -49,7 +50,7 @@ async def update_user(user: User):
     if user_exist:
         return {"code": 1, "msg": "用户名已存在", "data": None}
 
-    UserCRUD.update(user)
+    count = UserCRUD.update(user)
     updated_user = UserCRUD.get_by_username(user.username)
     # 返回去掉 password 字段的用户信息
     updated_user.password = ""
@@ -60,3 +61,11 @@ async def get_all_user():
     # TODO 校验权限
     users = UserCRUD.get_all()
     return {"code": 0, "msg": "查询成功", "data": users}
+
+@router.delete("/")
+async def delete_user(id: int):
+    # TODO 校验权限
+    count = UserCRUD.delete(id)
+    if count == 0:
+        return {"code": 1, "msg": "用户不存在", "data": None}
+    return {"code": 0, "msg": "删除成功", "data": None}
