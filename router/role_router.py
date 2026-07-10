@@ -27,3 +27,16 @@ async def create_role(role: Role, token: str = Depends(oauth2_scheme)):
         return result.error(msg="创建角色失败")
     return result.success(msg="创建角色成功")
 
+@router.get("/{role_name}")
+async def get_by_name(role_name: str, token: str = Depends(oauth2_scheme)):
+    """根据角色名查询角色"""
+    result = Result()
+    current_user = get_current_user(token)
+    user = UserCRUD.get_by_id(current_user["user_id"])
+    if user.is_admin == 0 or user is None:
+        return result.error(msg="您没有权限查询角色")
+    role = RoleCRUD.get_by_name(role_name)
+    if role is None:
+        return result.error(msg="角色不存在")
+    return result.success(msg="查询角色成功", data=role)
+
