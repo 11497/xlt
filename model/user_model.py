@@ -7,6 +7,7 @@ class User:
     """User 数据模型，对应 xlt.user 表"""
     username: str
     password: str
+    is_admin: int
     id: Optional[int] = field(default=None)  # 新建时 id 为 None，查询时自动填充
 
     def to_dict(self) -> dict:
@@ -19,4 +20,5 @@ class User:
             id=row["id"],
             username=row["username"],
             password=row["password"],
+            is_admin=row["is_admin"],
         )

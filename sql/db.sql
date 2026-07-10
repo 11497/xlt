@@ -7,7 +7,8 @@ drop table if exists user;
 create table user (
     id int auto_increment primary key comment '用户id',
     username varchar(255) not null unique comment '用户名',
-    password varchar(255) not null comment '密码'
+    password varchar(255) not null comment '密码',
+    is_admin boolean default 0 comment '是否管理员，0为普通用户，1为管理员'
 ) comment '用户';
 
 drop table if exists session;
