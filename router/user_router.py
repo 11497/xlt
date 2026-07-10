@@ -54,3 +54,9 @@ async def update_user(user: User):
     # 返回去掉 password 字段的用户信息
     updated_user.password = ""
     return {"code": 0, "msg": "更新成功", "data": updated_user.to_dict()}
+
+@router.get("/all")
+async def get_all_user():
+    # TODO 校验权限
+    users = UserCRUD.get_all()
+    return {"code": 0, "msg": "查询成功", "data": users}
