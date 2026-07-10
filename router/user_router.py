@@ -38,3 +38,19 @@ async def get_user(id: int):
     # 返回去掉 password 字段的用户信息
     user.password = ""
     return {"code": 0, "msg": "查询成功", "data": user.to_dict()}
+
+@router.put("")
+async def update_user(user: User):
+    if len(user.password) < 6:
+        return {"code": 1, "msg": "密码长度不能小于6位", "data": None}
+    if len(user.username) < 4 or len(user.username) > 15:
+        return {"code": 1, "msg": "用户名长度必须在4到15位之间", "data": None}
+    user_exist = UserCRUD.get_by_username(user.username)
+    if user_exist:
+        return {"code": 1, "msg": "用户名已存在", "data": None}
+
+    UserCRUD.update(user)
+    updated_user = UserCRUD.get_by_username(user.username)
+    # 返回去掉 password 字段的用户信息
+    updated_user.password = ""
+    return {"code": 0, "msg": "更新成功", "data": updated_user.to_dict()}
