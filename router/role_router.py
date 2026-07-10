@@ -27,6 +27,18 @@ async def create_role(role: Role, token: str = Depends(oauth2_scheme)):
         return result.error(msg="创建角色失败")
     return result.success(msg="创建角色成功")
 
+@router.get("/all")
+async def get_all_role(token: str = Depends(oauth2_scheme)):
+    """查询所有角色"""
+    result = Result()
+    current_user = get_current_user(token)
+    user = UserCRUD.get_by_id(current_user["user_id"])
+    if user.is_admin == 0 or user is None:
+        return result.error(msg="您没有权限查询所有角色")
+
+    roles = RoleCRUD.get_all()
+    return result.success(msg="查询所有角色成功", data=roles)
+
 @router.get("/{role_name}")
 async def get_by_name(role_name: str, token: str = Depends(oauth2_scheme)):
     """根据角色名查询角色"""
@@ -39,4 +51,3 @@ async def get_by_name(role_name: str, token: str = Depends(oauth2_scheme)):
     if role is None:
         return result.error(msg="角色不存在")
     return result.success(msg="查询角色成功", data=role)
-
