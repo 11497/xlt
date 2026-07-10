@@ -6,7 +6,7 @@ use xlt;
 drop table if exists user;
 create table user (
     id int auto_increment primary key comment '用户id',
-    name varchar(255) not null comment '用户名',
+    username varchar(255) not null unique comment '用户名',
     password varchar(255) not null comment '密码'
 ) comment '用户';
 
