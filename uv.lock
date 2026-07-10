@@ -275,5 +275,5 @@ dependencies = [
 requires-dist = [
     { name = "fastapi", specifier = ">=0.139.0" },
     { name = "pymysql", specifier = ">=1.2.0" },
-    { name = "uvicorn", specifier = ">=0.51.0" },
+    { name = "uvicorn", specifier = "==0.51.0" },
 ]

@@ -44,16 +44,16 @@ class UserCRUD:
             return [User.from_row(r) for r in rows]
 
     @staticmethod
-    def update(user: User) -> bool:
+    def update_username(user_id: int, username: str) -> bool:
         """
-        根据 ID 更新用户信息（全量更新）
+        根据 ID 更新用户名
         :return: 是否成功更新了记录
         """
-        if user.id is None:
-            raise ValueError("更新操作需要提供 user.id")
-        sql = "UPDATE user SET username = %s, password = %s WHERE id = %s"
+        if user_id is None:
+            raise ValueError("更新操作需要提供 user_id")
+        sql = "UPDATE user SET username = %s WHERE id = %s"
         with get_cursor() as cursor:
-            affected = cursor.execute(sql, (user.username, user.password, user.id))
+            affected = cursor.execute(sql, (username, user_id))
             return affected > 0
 
     @staticmethod
@@ -65,4 +65,15 @@ class UserCRUD:
         sql = "DELETE FROM user WHERE id = %s"
         with get_cursor() as cursor:
             affected = cursor.execute(sql, (user_id,))
+            return affected > 0
+
+    @staticmethod
+    def update_password(user_id: int, new_password: str) -> bool:
+        """
+        根据 ID 更新用户密码
+        :return: 是否成功更新了记录
+        """
+        sql = "UPDATE user SET password = %s WHERE id = %s"
+        with get_cursor() as cursor:
+            affected = cursor.execute(sql, (new_password, user_id))
             return affected > 0

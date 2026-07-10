@@ -46,32 +46,44 @@ async def get_user(id: int):
     user.password = ""
     return {"code": 0, "msg": "查询成功", "data": user.to_dict()}
 
-@router.put("/")
-async def update_user(user: User):
-    if len(user.password) < 6:
-        return {"code": 1, "msg": "密码长度不能小于6位", "data": None}
-    if len(user.username) < 4 or len(user.username) > 15:
-        return {"code": 1, "msg": "用户名长度必须在4到15位之间", "data": None}
-    user_exist = UserCRUD.get_by_username(user.username)
+@router.put("/username")
+async def update_username(id: int, username: str):
+    # TODO 校验权限
+    user_exist = UserCRUD.get_by_username(username)
     if user_exist:
         return {"code": 1, "msg": "用户名已存在", "data": None}
 
-    count = UserCRUD.update(user)
-    updated_user = UserCRUD.get_by_username(user.username)
+    res = UserCRUD.update_username(id, username)
+    if not res:
+        return {"code": 1, "msg": "用户不存在", "data": None}
+    updated_user = UserCRUD.get_by_username(username)
     # 返回去掉 password 字段的用户信息
     updated_user.password = ""
     return {"code": 0, "msg": "更新成功", "data": updated_user.to_dict()}
 
-@router.get("/all")
-async def get_all_user():
-    # TODO 校验权限
-    users = UserCRUD.get_all()
-    return {"code": 0, "msg": "查询成功", "data": users}
-
-@router.delete("/")
+@router.delete("/{id}")
 async def delete_user(id: int):
     # TODO 校验权限
-    count = UserCRUD.delete(id)
-    if count == 0:
+    res = UserCRUD.delete(id)
+    if not res:
         return {"code": 1, "msg": "用户不存在", "data": None}
     return {"code": 0, "msg": "删除成功", "data": None}
+
+@router.post("/password")
+async def update_password(id: int, old_password: str, new_password: str):
+    if len(new_password) < 6:
+        return {"code": 1, "msg": "密码长度不能小于6位", "data": None}
+    if old_password == new_password:
+        return {"code": 1, "msg": "新密码不能与旧密码相同", "data": None}
+
+    user_exist = UserCRUD.get_by_id(id)
+    if not user_exist:
+        return {"code": 1, "msg": "用户不存在", "data": None}
+
+    # 密码校验
+    if user_exist.password != old_password:
+        return {"code": 1, "msg": "旧密码错误", "data": None}
+    res = UserCRUD.update_password(id, new_password)
+    if not res:
+        return {"code": 1, "msg": "更新密码失败", "data": None}
+    return {"code": 0, "msg": "更新成功", "data": None}
