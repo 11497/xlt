@@ -3,25 +3,20 @@ from typing import List
 from fastapi import APIRouter, Depends
 
 from authentication.authentication import get_current_user, oauth2_scheme
+from authentication.user_auth import require_admin
 from config.jwt_config import JWT_CONFIG
 from crud.role_user_crud import RoleUserCRUD
 from crud.user_crud import UserCRUD
 from model.result import Result
+from model.user_model import User
 from util.jwt_util import JwtUtil
 
 router = APIRouter(prefix="/api/role_user", tags=["role_user"])
 
-jwt_util = JwtUtil(secret_key=JWT_CONFIG["secret_key"], algorithm=JWT_CONFIG["algorithm"],
-                   access_token_expire_minutes=JWT_CONFIG["access_token_expire_minutes"])
-
 @router.post("/assign")
-async def batch_assign_users_to_role(role_id: int, user_ids: List[int], token: str = Depends(oauth2_scheme)):
+async def batch_assign_users_to_role(role_id: int, user_ids: List[int], admin: User = Depends(require_admin())):
     """批量为角色分配用户"""
     result = Result()
-    current_user = get_current_user(token)
-    user = UserCRUD.get_by_id(current_user["user_id"])
-    if user.is_admin == 0 or user is None:
-        result.set_error("您没有权限为角色分配用户")
 
     # 删除user_ids中已经分配给角色的用户
     new_user_ids = []
@@ -34,3 +29,4 @@ async def batch_assign_users_to_role(role_id: int, user_ids: List[int], token: s
     if not res:
         result.error("分配用户失败")
     return result.success("分配用户成功")
+
