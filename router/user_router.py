@@ -122,3 +122,33 @@ async def update_password(old_password: str, new_password: str, token: str = Dep
     if not res:
         return result.error(msg="更新密码失败")
     return result.success(msg="更新成功")
+
+
+@router.put("/admin-status")
+async def set_user_admin_status(id: int, is_admin: int, token: str = Depends(oauth2_scheme)):
+    """管理员设置用户权限"""
+    result = Result()
+    current_user = get_current_user(token)
+    admin_user = UserCRUD.get_by_id(current_user["user_id"])
+    if admin_user.is_admin == 0 or admin_user is None:
+        return result.error(msg="您没有权限设置用户权限")
+
+    # 验证目标用户是否存在
+    target_user = UserCRUD.get_by_id(id)
+    if not target_user:
+        return result.error(msg="目标用户不存在")
+
+    # 确保 is_admin 值有效（0 或 1）
+    if is_admin not in [0, 1]:
+        return result.error(msg="管理员状态值无效，应为 0（普通用户）或 1（管理员）")
+
+    # 防止管理员取消自己的管理员权限
+    if admin_user.id == id and is_admin == 0:
+        return result.error(msg="不能取消自己的管理员权限")
+    update_result = UserCRUD.set_user_admin_status(id, is_admin)
+    if not update_result:
+        return result.error(msg="更新用户权限失败")
+
+    updated_user = UserCRUD.get_by_id(id)
+    return result.success(msg="用户权限更新成功", data=updated_user)
+

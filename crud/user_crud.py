@@ -77,3 +77,16 @@ class UserCRUD:
         with get_cursor() as cursor:
             affected = cursor.execute(sql, (new_password, user_id))
             return affected > 0
+
+    @staticmethod
+    def set_user_admin_status(user_id: int, is_admin: int) -> bool:
+        """
+        设置用户的管理员状态
+        :param user_id: 用户ID
+        :param is_admin: 管理员状态 (1=管理员, 0=普通用户)
+        :return: 是否成功更新了记录
+        """
+        sql = "UPDATE user SET is_admin = %s WHERE id = %s"
+        with get_cursor() as cursor:
+            affected = cursor.execute(sql, (is_admin, user_id))
+            return affected > 0
