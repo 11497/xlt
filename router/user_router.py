@@ -98,7 +98,7 @@ async def update_username(id: int, username: str, admin: User = Depends(require_
     return result.success(msg="更新成功", data=updated_user)
 
 @router.delete("/{id}")
-async def delete_user(id: int, admin: str = Depends(require_admin())):
+async def delete_user(id: int, admin: str = Depends(require_admin)):
     """管理员删除用户"""
     result = Result()
 
