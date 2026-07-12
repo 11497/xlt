@@ -15,7 +15,7 @@ drop table if exists session;
 create table session (
     id int auto_increment primary key comment '会话id',
     user_id int not null comment '用户id',
-    name varchar(255) not null comment '会话名称',
+    name varchar(255) not null default '新建会话' comment '会话名称',
     create_time datetime default current_timestamp comment '创建时间',
     update_time datetime not null default current_timestamp comment '更新时间'
 ) comment '会话';
