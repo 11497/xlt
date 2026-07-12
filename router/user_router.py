@@ -37,16 +37,18 @@ def valid_password(new_password: str, old_password: str = "", user: User = None)
     return None
 
 @router.post("/register")
-async def register(user: User):
+async def register(username: str, password: str):
     """用户注册"""
     result = Result()
-    password_result = valid_password(user.password)
+    password_result = valid_password(password)
     if password_result is not None:
         return result.error(msg=password_result)
 
-    username_result = valid_username(user.username)
+    username_result = valid_username(username)
     if username_result is not None:
         return result.error(msg=username_result)
+
+    user = User(username=username, password=password)
 
     UserCRUD.create(user)
     return result.success(msg="注册成功")
@@ -72,7 +74,7 @@ async def get_all_user(admin: User = Depends(require_admin)):
     return result.success(msg="查询成功", data=[user for user in users])
 
 @router.get("")
-async def get_user(user: User = Depends(require_current_user())):
+async def get_user(user: User = Depends(require_current_user)):
     """查询当前用户信息"""
     result = Result()
 
@@ -109,7 +111,7 @@ async def delete_user(id: int, admin: str = Depends(require_admin)):
 
 @router.post("/password")
 async def update_password(old_password: str, new_password: str,
-                          user: User = Depends(require_current_user())):
+                          user: User = Depends(require_current_user)):
     """用户更新密码"""
     result = Result()
 
