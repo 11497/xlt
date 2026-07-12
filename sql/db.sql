@@ -74,3 +74,9 @@ create table announcement (
     create_time datetime default current_timestamp comment '创建时间',
     update_time datetime default current_timestamp comment '更新时间'
 ) comment '公告';
+
+insert into user (username, password, is_admin) values ('admin', '123456', 1);
+insert into role (name) values ('新芒');
+insert into role_user (role_id, user_id) values (1, 1);
+insert into knowledge_base (name) values ('图书馆');
+insert into role_knowledge_base (role_id, knowledge_base_id) values (1, 1);
