@@ -9,7 +9,7 @@ from model.user_model import User
 router = APIRouter(prefix="/api/role", tags=["role"])
 
 @router.post("")
-async def create_role(role: Role, admin: User = Depends(require_admin)):
+async def create_role(role: Role, _admin: User = Depends(require_admin)):
     """创建角色"""
     result = Result()
 
@@ -19,7 +19,7 @@ async def create_role(role: Role, admin: User = Depends(require_admin)):
     return result.success(msg="创建角色成功")
 
 @router.get("/all")
-async def get_all_role(admin: User = Depends(require_admin)):
+async def get_all_role(_admin: User = Depends(require_admin)):
     """查询所有角色"""
     result = Result()
 
@@ -27,7 +27,7 @@ async def get_all_role(admin: User = Depends(require_admin)):
     return result.success(msg="查询所有角色成功", data=roles)
 
 @router.get("/{role_name}")
-async def get_by_name(role_name: str, admin: User = Depends(require_admin)):
+async def get_by_name(role_name: str, _admin: User = Depends(require_admin)):
     """根据角色名查询角色"""
     result = Result()
 
@@ -37,7 +37,7 @@ async def get_by_name(role_name: str, admin: User = Depends(require_admin)):
     return result.success(msg="查询角色成功", data=role)
 
 @router.put("")
-async def update(role: Role, admin: User = Depends(require_admin)):
+async def update(role: Role, _admin: User = Depends(require_admin)):
     """更新角色名"""
     result = Result()
 
@@ -47,7 +47,7 @@ async def update(role: Role, admin: User = Depends(require_admin)):
     return result.success(msg="更新角色名成功")
 
 @router.delete("")
-async def delete(id: int, admin: User = Depends(require_admin)):
+async def delete(id: int, _admin: User = Depends(require_admin)):
     """删除角色"""
     result = Result()
 

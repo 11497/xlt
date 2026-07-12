@@ -1,6 +1,5 @@
 from fastapi import APIRouter, Depends
 
-from authentication.authentication import get_current_user, oauth2_scheme
 from authentication.user_auth import require_admin, require_current_user
 from config.jwt_config import JWT_CONFIG
 from crud.user_crud import UserCRUD
@@ -67,7 +66,7 @@ async def login(username: str, password: str):
     return result.success(msg="登录成功", data=access_token)
 
 @router.get("/all")
-async def get_all_user(admin: User = Depends(require_admin)):
+async def get_all_user(_admin: User = Depends(require_admin)):
     result = Result()
 
     users = UserCRUD.get_all()
@@ -83,7 +82,7 @@ async def get_user(user: User = Depends(require_current_user)):
     return result.success(msg="查询成功", data=user)
 
 @router.put("/username")
-async def update_username(id: int, username: str, admin: User = Depends(require_admin)):
+async def update_username(id: int, username: str, _admin: User = Depends(require_admin)):
     """管理员更新用户名"""
     result = Result()
 
@@ -100,7 +99,7 @@ async def update_username(id: int, username: str, admin: User = Depends(require_
     return result.success(msg="更新成功", data=updated_user)
 
 @router.delete("/{id}")
-async def delete_user(id: int, admin: str = Depends(require_admin)):
+async def delete_user(id: int, _admin: User = Depends(require_admin)):
     """管理员删除用户"""
     result = Result()
 

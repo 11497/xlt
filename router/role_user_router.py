@@ -11,7 +11,7 @@ router = APIRouter(prefix="/api/role_user", tags=["role_user"])
 
 @router.post("/assign")
 async def batch_assign_users_to_role(role_id: int, user_ids: List[int],
-                                     admin: User = Depends(require_admin)):
+                                     _admin: User = Depends(require_admin)):
     """批量为角色分配用户"""
     result = Result()
 
@@ -30,7 +30,7 @@ async def batch_assign_users_to_role(role_id: int, user_ids: List[int],
 
 @router.post("/remove")
 async def batch_remove_users_from_role(role_id: int, user_ids: List[int],
-                                       admin: User = Depends(require_admin)):
+                                       _admin: User = Depends(require_admin)):
     """批量从指定角色中移除用户"""
     result = Result()
     res = RoleUserCRUD.batch_remove_users_from_role(role_id, user_ids)
@@ -40,7 +40,7 @@ async def batch_remove_users_from_role(role_id: int, user_ids: List[int],
 
 
 @router.get("/users_by_role/{role_id}")
-async def get_users_by_role(role_id: int, user: User = Depends(require_current_user)):
+async def get_users_by_role(role_id: int, _user: User = Depends(require_current_user)):
     """获取指定角色下的所有用户ID"""
     result = Result()
     user_ids = RoleUserCRUD.get_users_by_role(role_id)
@@ -48,7 +48,7 @@ async def get_users_by_role(role_id: int, user: User = Depends(require_current_u
 
 
 @router.get("/roles_by_user/{user_id}")
-async def get_roles_by_user(user_id: int, admin: User = Depends(require_admin)):
+async def get_roles_by_user(user_id: int, _admin: User = Depends(require_admin)):
     """获取指定用户的所有角色ID（管理员）"""
     result = Result()
     role_ids = RoleUserCRUD.get_roles_by_user(user_id)
@@ -64,7 +64,7 @@ async def get_my_roles(current_user: User = Depends(require_current_user)):
 
 
 @router.post("/assign_single")
-async def assign_user_to_role(role_id: int, user_id: int, admin: User = Depends(require_admin)):
+async def assign_user_to_role(role_id: int, user_id: int, _admin: User = Depends(require_admin)):
     """分配单个用户到指定角色"""
     result = Result()
     res = RoleUserCRUD.assign_user_to_role(role_id, user_id)
@@ -74,7 +74,7 @@ async def assign_user_to_role(role_id: int, user_id: int, admin: User = Depends(
 
 
 @router.post("/remove_single")
-async def remove_user_from_role(role_id: int, user_id: int, admin: User = Depends(require_admin)):
+async def remove_user_from_role(role_id: int, user_id: int, _admin: User = Depends(require_admin)):
     """从指定角色中移除单个用户"""
     result = Result()
     res = RoleUserCRUD.remove_user_from_role(role_id, user_id)
@@ -84,7 +84,7 @@ async def remove_user_from_role(role_id: int, user_id: int, admin: User = Depend
 
 
 @router.delete("/by_role/{role_id}")
-async def delete_by_role(role_id: int, admin: User = Depends(require_admin)):
+async def delete_by_role(role_id: int, _admin: User = Depends(require_admin)):
     """删除指定角色的所有用户关联关系"""
     result = Result()
     res = RoleUserCRUD.delete_by_role(role_id)
@@ -94,7 +94,7 @@ async def delete_by_role(role_id: int, admin: User = Depends(require_admin)):
 
 
 @router.delete("/by_user/{user_id}")
-async def delete_by_user(user_id: int, admin: User = Depends(require_admin)):
+async def delete_by_user(user_id: int, _admin: User = Depends(require_admin)):
     """删除指定用户的所有角色关联关系"""
     result = Result()
     res = RoleUserCRUD.delete_by_user(user_id)
