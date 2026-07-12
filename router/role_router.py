@@ -13,6 +13,11 @@ async def create_role(role: Role, _admin: User = Depends(require_admin)):
     """创建角色"""
     result = Result()
 
+    # 检查是否已存在同名角色
+    role_exists = RoleCRUD.get_by_name(role.name)
+    if role_exists is not None:
+        return result.error(msg="已存在同名角色")
+
     role_id = RoleCRUD.create(role)
     if role_id is None:
         return result.error(msg="创建角色失败")
