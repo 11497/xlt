@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field, asdict
-from typing import Optional
+from typing import Optional, Any
+import json
 
 from datetime import datetime
 
@@ -8,7 +9,7 @@ from datetime import datetime
 class Message:
     """Message 数据模型，对应 xlt.message 表"""
     session_id: int
-    content: str
+    content: dict[str, Any]
     created_time: datetime
     id: Optional[int] = field(default=None)  # 新建时 id 为 None，查询时自动填充
 
@@ -18,9 +19,14 @@ class Message:
     @classmethod
     def from_row(cls, row: dict) -> "Message":
         """从数据库查询结果构建 Message 对象"""
+        # 如果数据库驱动未自动解析JSON，需手动loads；若已自动解析则直接使用 row["content"]
+        content_data = row["content"]
+        if isinstance(content_data, str):
+            content_data = json.loads(content_data)
+
         return cls(
             id=row["id"],
             session_id=row["session_id"],
-            content=row["content"],
+            content=content_data,
             created_time=row["created_time"],
         )
