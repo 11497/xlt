@@ -36,18 +36,16 @@ def valid_password(new_password: str, old_password: str = "", user: User = None)
     return None
 
 @router.post("/register")
-async def register(username: str, password: str):
+async def register(user: User):
     """用户注册"""
     result = Result()
-    password_result = valid_password(password)
+    password_result = valid_password(user.password)
     if password_result is not None:
         return result.error(msg=password_result)
 
-    username_result = valid_username(username)
+    username_result = valid_username(user.username)
     if username_result is not None:
         return result.error(msg=username_result)
-
-    user = User(username=username, password=password)
 
     UserCRUD.create(user)
     return result.success(msg="注册成功")

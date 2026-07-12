@@ -10,12 +10,6 @@ class User:
     is_admin: int
     id: Optional[int] = field(default=None)  # 新建时 id 为 None，查询时自动填充
 
-    def __init__(self, username: str, password: str = "123456", is_admin: int = 0, id: Optional[int] = None):
-        self.username = username
-        self.password = password
-        self.is_admin = is_admin
-        self.id = id
-
     def to_dict(self) -> dict:
         return asdict(self)
 
