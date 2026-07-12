@@ -28,7 +28,7 @@ async def batch_assign_users_to_role(role_id: int, user_ids: List[int],
     return result.success(msg="分配用户成功")
 
 
-@router.post("/remove")
+@router.delete("/remove")
 async def batch_remove_users_from_role(role_id: int, user_ids: List[int],
                                        _admin: User = Depends(require_admin)):
     """批量从指定角色中移除用户"""
@@ -73,7 +73,7 @@ async def assign_user_to_role(role_id: int, user_id: int, _admin: User = Depends
     return result.success(msg="分配用户成功")
 
 
-@router.post("/remove_single")
+@router.delete("/remove_single")
 async def remove_user_from_role(role_id: int, user_id: int, _admin: User = Depends(require_admin)):
     """从指定角色中移除单个用户"""
     result = Result()

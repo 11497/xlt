@@ -24,7 +24,7 @@ create table message (
     content text not null comment '消息内容',
     create_time datetime default current_timestamp comment '创建时间',
     foreign key (session_id) references session(id)
-);
+) comment '消息';
 
 drop table if exists knowledge_base;
 create table knowledge_base (
