@@ -45,6 +45,7 @@ async def update_knowledge_base(knowledge_base: KnowledgeBase, _admin: User = De
 @router.delete("")
 async def delete_knowledge_base(id: int, _admin: User = Depends(require_admin)):
     """删除知识库"""
+    # TODO 删除前验证kb对应的role_kb是否存在
     result = Result()
 
     delete_result = KnowledgeBaseCRUD.delete(id)

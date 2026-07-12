@@ -54,6 +54,7 @@ async def update(role: Role, _admin: User = Depends(require_admin)):
 @router.delete("")
 async def delete(id: int, _admin: User = Depends(require_admin)):
     """删除角色"""
+    # TODO 删除前验证role下是否有绑定的关系
     result = Result()
 
     delete_result = RoleCRUD.delete(id)

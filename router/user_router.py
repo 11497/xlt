@@ -99,6 +99,7 @@ async def update_username(id: int, username: str, _admin: User = Depends(require
 @router.delete("/{id}")
 async def delete_user(id: int, _admin: User = Depends(require_admin)):
     """管理员删除用户"""
+    # TODO 删除前验证user下是否有绑定的关系
     result = Result()
 
     delete_result = UserCRUD.delete(id)
