@@ -68,7 +68,7 @@ async def get_all_user(_admin: User = Depends(require_admin)):
     result = Result()
 
     users = UserCRUD.get_all()
-    return result.success(msg="查询成功", data=[user for user in users])
+    return result.success(msg="查询成功", data=users)
 
 @router.get("")
 async def get_user(user: User = Depends(require_current_user)):

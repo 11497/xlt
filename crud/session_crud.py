@@ -67,3 +67,15 @@ class SessionCRUD:
         with get_cursor() as cursor:
             affected = cursor.execute(sql, (datetime.now(), session_id))
             return affected > 0
+
+    @staticmethod
+    def get_all() -> List[Session]:
+        """
+        获取所有会话
+        :return: 所有会话列表
+        """
+        sql = "SELECT * FROM session"
+        with get_cursor() as cursor:
+            cursor.execute(sql)
+            rows = cursor.fetchall()
+            return [Session.from_row(row) for row in rows]
