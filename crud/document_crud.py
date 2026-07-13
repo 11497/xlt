@@ -44,29 +44,16 @@ class DocumentCRUD:
             return [Document.from_row(r) for r in rows]
 
     @staticmethod
-    def update_filename(document_id: int, filename: str) -> bool:
+    def update(document_id: int, filename: str, storage_path: str) -> bool:
         """
-        根据 ID 更新文档文件名
+        根据 ID 更新文档文件名和存储路径
         :return: 是否成功更新了记录
         """
         if document_id is None:
             raise ValueError("更新操作需要提供 document_id")
-        sql = "UPDATE document SET filename = %s, update_time = NOW() WHERE id = %s"
+        sql = "UPDATE document SET filename = %s, storage_path = %s, update_time = NOW() WHERE id = %s"
         with get_cursor() as cursor:
-            affected = cursor.execute(sql, (filename, document_id))
-            return affected > 0
-
-    @staticmethod
-    def update_storage_path(document_id: int, storage_path: str) -> bool:
-        """
-        根据 ID 更新文档存储路径
-        :return: 是否成功更新了记录
-        """
-        if document_id is None:
-            raise ValueError("更新操作需要提供 document_id")
-        sql = "UPDATE document SET storage_path = %s, update_time = NOW() WHERE id = %s"
-        with get_cursor() as cursor:
-            affected = cursor.execute(sql, (storage_path, document_id))
+            affected = cursor.execute(sql, (filename, storage_path, document_id))
             return affected > 0
 
     @staticmethod

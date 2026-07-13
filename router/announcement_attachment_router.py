@@ -117,16 +117,8 @@ async def update_attachment(
     except Exception as e:
         return result.error(msg=f"文件修改失败：{str(e)}")
     
-    # 更新数据库记录
-    AnnouncementAttachmentCRUD.update_filename(attachment_id, file.filename)
-    
-    # 更新存储路径
-    from db.db_connection import get_cursor
-    with get_cursor() as cursor:
-        cursor.execute(
-            "UPDATE announcement_attachment SET storage_path = %s WHERE id = %s",
-            (storage_path, attachment_id)
-        )
+    # 更新数据库记录（同时更新文件名和存储路径）
+    AnnouncementAttachmentCRUD.update(attachment_id, file.filename, storage_path)
     
     return result.success(msg="修改成功", data={"id": attachment_id, "filename": file.filename})
 

@@ -44,16 +44,16 @@ class AnnouncementAttachmentCRUD:
             return [AnnouncementAttachment.from_row(r) for r in rows]
 
     @staticmethod
-    def update_filename(attachment_id: int, filename: str) -> bool:
+    def update(attachment_id: int, filename: str, storage_path: str) -> bool:
         """
-        根据 ID 更新附件文件名
+        根据 ID 更新附件文件名和存储路径
         :return: 是否成功更新了记录
         """
         if attachment_id is None:
             raise ValueError("更新操作需要提供 attachment_id")
-        sql = "UPDATE announcement_attachment SET filename = %s, upload_time = NOW() WHERE id = %s"
+        sql = "UPDATE announcement_attachment SET filename = %s, storage_path = %s, upload_time = NOW() WHERE id = %s"
         with get_cursor() as cursor:
-            affected = cursor.execute(sql, (filename, attachment_id))
+            affected = cursor.execute(sql, (filename, storage_path, attachment_id))
             return affected > 0
 
     @staticmethod

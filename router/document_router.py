@@ -123,9 +123,8 @@ async def update_document(
     except Exception as e:
         return result.error(msg=f"文件修改失败：{str(e)}")
 
-    # 更新数据库记录
-    DocumentCRUD.update_filename(document_id, file.filename)
-    DocumentCRUD.update_storage_path(document_id, storage_path)
+    # 更新数据库记录（同时更新文件名和存储路径）
+    DocumentCRUD.update(document_id, file.filename, storage_path)
 
     return result.success(msg="修改成功", data={"id": document_id, "filename": file.filename})
 
