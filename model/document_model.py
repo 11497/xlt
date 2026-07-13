@@ -7,10 +7,10 @@ from typing import Optional
 class Document:
     """Document 数据模型，对应 xlt.document 表"""
     knowledge_base_id: int
-    name: str
-    content: str
-    created_time: datetime
-    updated_time: datetime
+    filename: str
+    storage_path: str
+    create_time: datetime
+    update_time: datetime
     id: Optional[int] = field(default=None)  # 新建时 id 为 None，查询时自动填充
 
     def to_dict(self) -> dict:
@@ -22,8 +22,8 @@ class Document:
         return cls(
             id=row["id"],
             knowledge_base_id=row["knowledge_base_id"],
-            name=row["name"],
-            content=row["content"],
-            created_time=row["created_time"],
-            updated_time=row["updated_time"],
+            filename=row["filename"],
+            storage_path=row["storage_path"],
+            create_time=row["create_time"],
+            update_time=row["update_time"],
         )
