@@ -59,6 +59,7 @@ def update_announcement(announcement: Announcement, _admin: User = Depends(requi
 @router.delete("")
 def delete_announcements(ids: list[int], _admin: User = Depends(require_admin)):
     """批量删除公告"""
+    # TODO 删除公告附件
     result = Result()
 
     delete_result = AnnouncementCRUD.batch_delete(ids)
