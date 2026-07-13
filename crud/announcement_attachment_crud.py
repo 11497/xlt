@@ -17,6 +17,20 @@ class AnnouncementAttachmentCRUD:
             return cursor.lastrowid
 
     @staticmethod
+    def batch_create(attachments: list) -> int:
+        """
+        批量新增公告附件
+        :param attachments: 附件列表，每个元素为 (announcement_id, filename, storage_path) 元组
+        :return: 成功插入的记录数
+        """
+        if not attachments:
+            return 0
+        sql = "INSERT INTO announcement_attachment (announcement_id, filename, storage_path) VALUES (%s, %s, %s)"
+        with get_cursor() as cursor:
+            affected = cursor.executemany(sql, attachments)
+            return affected
+
+    @staticmethod
     def get_by_id(attachment_id: int) -> Optional[AnnouncementAttachment]:
         """根据 ID 查询单个公告附件"""
         sql = "SELECT * FROM announcement_attachment WHERE id = %s"
