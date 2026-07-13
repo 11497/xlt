@@ -1,7 +1,6 @@
-from fastapi import APIRouter, Depends, UploadFile, File, Form
-from fastapi.responses import Response
 from typing import Optional
-import urllib.parse
+
+from fastapi import APIRouter, Depends, UploadFile, File, Form
 
 from authentication.user_auth import require_admin, require_current_user
 from crud.announcement_attachment_crud import AnnouncementAttachmentCRUD
