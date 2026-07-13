@@ -1,4 +1,5 @@
 import mimetypes
+from datetime import timedelta
 from typing import Optional, Union
 
 import alibabacloud_oss_v2 as oss
@@ -162,7 +163,7 @@ class OSSUtil:
         return result
 
     async def generate_presigned_url(
-        self, object_key: str, expires: int = 3600
+            self, object_key: str, expires: int = 3600
     ) -> dict:
         """
         生成预签名URL，用于在阻止公共访问的Bucket中实现临时预览/下载
@@ -170,12 +171,15 @@ class OSSUtil:
         :param expires: URL有效期（秒），默认1小时
         :return: 包含url和expires的字典
         """
+        # 将整数秒数转换为 timedelta 对象
+        expires_delta = timedelta(seconds=expires)
+
         result = await self._client.presign(
             oss.GetObjectRequest(
                 bucket=self._bucket,
                 key=object_key,
             ),
-            expires=expires,
+            expires=expires_delta,  # 使用 timedelta 类型
         )
         return {
             "url": result.url,
