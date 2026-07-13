@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List
 
 from fastapi import APIRouter, Depends, UploadFile, File, Form
 
@@ -45,6 +45,65 @@ async def validate_file(file: UploadFile) -> Optional[str]:
         return "文件内容不能为空"
 
     return None
+
+
+@router.post("/upload/batch")
+async def upload_documents_batch(
+        knowledge_base_id: int = Form(...),
+        files: List[UploadFile] = File(...),
+        _admin: User = Depends(require_admin)
+):
+    """批量上传文档到知识库"""
+    result = Result()
+
+    # 验证知识库是否存在
+    knowledge_base = KnowledgeBaseCRUD.get_by_id(knowledge_base_id)
+    if not knowledge_base:
+        return result.error(msg="知识库不存在")
+
+    # 验证文件列表
+    if not files:
+        return result.error(msg="请选择要上传的文件")
+
+    # 存储成功和失败的文件信息
+    success_count = 0
+    failed_files = []
+    documents_to_create = []
+
+    # 先验证所有文件
+    for file in files:
+        error_msg = await validate_file(file)
+        if error_msg:
+            failed_files.append({"filename": file.filename, "reason": error_msg})
+            continue
+        documents_to_create.append((knowledge_base_id, file.filename, f"knowledge_base/{knowledge_base_id}/{file.filename}"))
+
+    # 上传文件到OSS
+    async with OSSUtil() as oss_client:
+        for i, file in enumerate(files):
+            # 跳过已标记为失败的文件
+            if any(f["filename"] == file.filename for f in failed_files):
+                continue
+            try:
+                content = await file.read()
+                storage_path = f"knowledge_base/{knowledge_base_id}/{file.filename}"
+                await oss_client.upload_file(storage_path, content)
+                success_count += 1
+            except Exception as e:
+                failed_files.append({"filename": file.filename, "reason": f"上传失败：{str(e)}"})
+
+    # 批量插入数据库
+    if documents_to_create:
+        DocumentCRUD.batch_create(documents_to_create)
+    return result.success(
+        msg=f"批量上传完成",
+        data={
+            "total_count": len(files),
+            "success_count": success_count,
+            "failed_count": len(failed_files),
+            "failed_files": failed_files
+        }
+    )
 
 
 @router.post("/upload")

@@ -17,6 +17,20 @@ class DocumentCRUD:
             return cursor.lastrowid
 
     @staticmethod
+    def batch_create(documents: list) -> int:
+        """
+        批量新增文档
+        :param documents: 文档列表，每个元素为 (knowledge_base_id, filename, storage_path) 元组
+        :return: 成功插入的记录数
+        """
+        if not documents:
+            return 0
+        sql = "INSERT INTO document (knowledge_base_id, filename, storage_path) VALUES (%s, %s, %s)"
+        with get_cursor() as cursor:
+            affected = cursor.executemany(sql, documents)
+            return affected
+
+    @staticmethod
     def get_by_id(document_id: int) -> Optional[Document]:
         """根据 ID 查询单个文档"""
         sql = "SELECT * FROM document WHERE id = %s"
