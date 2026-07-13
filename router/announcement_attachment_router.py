@@ -23,6 +23,8 @@ ALLOWED_FILE_TYPES = {
 
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
 
+EXPIRES = 300  # 5分钟
+
 
 async def validate_file(file: UploadFile) -> Optional[str]:
     """
@@ -157,7 +159,7 @@ async def download_attachment(
     # 生成预签名URL用于下载
     try:
         async with OSSUtil() as oss_client:
-            url_result = await oss_client.generate_presigned_url(attachment.storage_path, expires=300)
+            url_result = await oss_client.generate_presigned_url(attachment.storage_path, expires=EXPIRES)
 
             return result.success(
                 msg="下载链接生成成功",
@@ -169,36 +171,6 @@ async def download_attachment(
             )
     except Exception as e:
         return result.error(msg=f"下载链接生成失败：{str(e)}")
-
-
-@router.get("/preview/{attachment_id}")
-async def preview_attachment(
-    attachment_id: int,
-    _user: User = Depends(require_current_user)
-):
-    """预览公告附件（生成预签名URL）"""
-    result = Result()
-    
-    # 查询附件是否存在
-    attachment = AnnouncementAttachmentCRUD.get_by_id(attachment_id)
-    if not attachment:
-        return result.error(msg="附件不存在")
-    
-    # 生成预签名URL
-    try:
-        async with OSSUtil() as oss_client:
-            url_result = await oss_client.generate_presigned_url(attachment.storage_path, expires=3600)
-            
-            return result.success(
-                msg="预览链接生成成功",
-                data={
-                    "filename": attachment.filename,
-                    "preview_url": url_result["url"],
-                    "expires_in": url_result["expires"]
-                }
-            )
-    except Exception as e:
-        return result.error(msg=f"预览链接生成失败：{str(e)}")
 
 
 @router.delete("/{attachment_id}")

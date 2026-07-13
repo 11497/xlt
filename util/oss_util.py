@@ -163,7 +163,7 @@ class OSSUtil:
         return result
 
     async def generate_presigned_url(
-            self, object_key: str, expires: int = 3600
+            self, object_key: str, expires: int = 300
     ) -> dict:
         """
         生成预签名URL，用于在阻止公共访问的Bucket中实现临时预览/下载
