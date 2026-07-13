@@ -51,7 +51,7 @@ class AnnouncementAttachmentCRUD:
         """
         if attachment_id is None:
             raise ValueError("更新操作需要提供 attachment_id")
-        sql = "UPDATE announcement_attachment SET filename = %s WHERE id = %s"
+        sql = "UPDATE announcement_attachment SET filename = %s, upload_time = NOW() WHERE id = %s"
         with get_cursor() as cursor:
             affected = cursor.execute(sql, (filename, attachment_id))
             return affected > 0
