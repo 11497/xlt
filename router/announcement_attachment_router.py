@@ -9,21 +9,9 @@ from model.announcement_attachment_model import AnnouncementAttachment
 from model.result import Result
 from model.user_model import User
 from util.oss_util import OSSUtil
+from config.file_config import ALLOWED_FILE_TYPES, MAX_FILE_SIZE, EXPIRES
 
 router = APIRouter(prefix="/api/announcement_attachment", tags=["announcement_attachment"])
-
-# 支持的文件类型和最大文件大小（10MB）
-ALLOWED_FILE_TYPES = {
-    ".md": "text/markdown",
-    ".txt": "text/plain",
-    ".pdf": "application/pdf",
-    ".doc": "application/msword",
-    ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-}
-
-MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
-
-EXPIRES = 300  # 5分钟
 
 
 async def validate_file(file: UploadFile) -> Optional[str]:
