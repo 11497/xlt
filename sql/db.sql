@@ -8,7 +8,7 @@ create table user (
     id int auto_increment primary key comment '用户id',
     username varchar(255) not null unique comment '用户名',
     password varchar(255) not null default '123456' comment '密码',
-    is_admin boolean default 0 comment '是否管理员，0为普通用户，1为管理员'
+    is_admin tinyint default 0 comment '是否管理员，0为普通用户，1为管理员'
 ) comment '用户';
 
 drop table if exists session;
@@ -73,10 +73,22 @@ create table document (
 drop table if exists announcement;
 create table announcement (
     id int auto_increment primary key comment '公告id',
+    title varchar(255) not null comment '公告标题',
     content longtext not null comment '公告内容',
-    create_time datetime default current_timestamp comment '创建时间',
-    update_time datetime default current_timestamp comment '更新时间'
+    is_top tinyint not null default 0 comment '是否置顶，0=否，1=是',
+    create_time datetime not null default current_timestamp comment '创建时间',
+    update_time datetime not null default current_timestamp comment '更新时间'
 ) comment '公告';
+
+drop table if exists announcement_attachment;
+create table announcement_attachment (
+    id int auto_increment primary key comment '公告附件id',
+    announcement_id int not null comment '公告id',
+    filename varchar(255) not null comment '附件文件名',
+    storage_path varchar(500) not null comment '附件存储路径',
+    upload_time datetime not null default current_timestamp comment '上传时间',
+    foreign key (announcement_id) references announcement(id)
+) comment '公告附件';
 
 insert into user (username, password, is_admin) values ('admin', '123456', 1);
 insert into role (name) values ('新芒');
