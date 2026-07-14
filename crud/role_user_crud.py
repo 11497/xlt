@@ -1,6 +1,6 @@
 from typing import List
 
-from db.db_connection import get_cursor
+from util.db_util import get_cursor
 
 
 class RoleUserCRUD:

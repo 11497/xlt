@@ -1,6 +1,6 @@
 from typing import List, Optional
 
-from db.db_connection import get_cursor
+from util.db_util import get_cursor
 from model.knowledge_base_model import KnowledgeBase
 
 
