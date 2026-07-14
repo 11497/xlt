@@ -50,19 +50,6 @@ class RoleKnowledgeBaseCRUD:
             return affected > 0  # 删除操作返回行数大于0，表示成功删除
 
     @staticmethod
-    def get_knowledge_bases_by_role(role_id: int) -> List[int]:
-        """
-        获取指定角色下的所有知识库ID
-        :param role_id: 角色ID
-        :return: 知识库ID列表
-        """
-        sql = "SELECT knowledge_base_id FROM role_knowledge_base WHERE role_id = %s"
-        with get_cursor() as cursor:
-            cursor.execute(sql, (role_id,))
-            rows = cursor.fetchall()
-            return [row['knowledge_base_id'] for row in rows]
-
-    @staticmethod
     def get_roles_by_knowledge_base(knowledge_base_id: int) -> List[int]:
         """
         获取指定知识库的所有角色ID
