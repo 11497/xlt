@@ -1,13 +1,17 @@
+from datetime import datetime
 from typing import Optional, List
 
 from fastapi import APIRouter, Depends, UploadFile, File, Form
 
+from ai.chroma_service import ChromaService
+from ai.embedding import EmbeddingService
 from authentication.user_auth import require_admin, require_current_user
 from crud.document_crud import DocumentCRUD
 from crud.knowledge_base_crud import KnowledgeBaseCRUD
 from model.document_model import Document
 from model.result import Result
 from model.user_model import User
+from util.file_util import read_file_content, chunk_text_by_sentence
 from util.oss_util import OSSUtil
 from config.file_config import ALLOWED_FILE_TYPES, MAX_FILE_SIZE, EXPIRES
 
@@ -149,19 +153,30 @@ async def upload_document(
     except Exception as e:
         return result.error(msg=f"文件上传失败：{str(e)}")
 
-    # 获取当前时间
-    from datetime import datetime
-    now = datetime.now()
-
     # 保存到数据库
     document = Document(
         knowledge_base_id=knowledge_base_id,
         filename=file.filename,
         storage_path=storage_path,
-        create_time=now,
-        update_time=now
+        create_time=datetime.now(),
+        update_time=datetime.now()
     )
     document_id = DocumentCRUD.create(document)
+
+    # 文档向量化
+    await file.seek(0)  # 重置文件指针
+    content = await read_file_content(file)
+    chunks = chunk_text_by_sentence(content)
+    embeddings = EmbeddingService().embed_texts(chunks)
+
+    # 将向量存储到chroma
+    chroma_service = ChromaService()
+    chroma_service.add_document_embeddings(
+        knowledge_base_id=knowledge_base_id,
+        document_id=document_id,
+        chunks=chunks,
+        embeddings = embeddings
+    )
 
     return result.success(msg="上传成功", data={"id": document_id, "filename": file.filename})
 
@@ -203,6 +218,25 @@ async def update_document(
             await oss_client.update_file(storage_path, content)
     except Exception as e:
         return result.error(msg=f"文件修改失败：{str(e)}")
+
+    # 文档向量化更新
+    await file.seek(0)  # 重置文件指针
+    content = await read_file_content(file)
+    chunks = chunk_text_by_sentence(content)
+    embeddings = EmbeddingService().embed_texts(chunks)
+
+    # 将向量存储到chroma
+    chroma_service = ChromaService()
+    chroma_service.delete_document_embeddings(
+        knowledge_base_id=document.knowledge_base_id,
+        document_id=document_id
+    )
+    chroma_service.add_document_embeddings(
+        knowledge_base_id=document.knowledge_base_id,
+        document_id=document_id,
+        chunks=chunks,
+        embeddings = embeddings
+    )
 
     # 更新数据库记录（同时更新文件名和存储路径）
     DocumentCRUD.update(document_id, file.filename, storage_path)
@@ -269,6 +303,13 @@ async def delete_document(
             await oss_client.delete_file(document.storage_path)
     except Exception as e:
         return result.error(msg=f"文件删除失败：{str(e)}")
+
+    # 从chroma删除向量
+    chroma_service = ChromaService()
+    chroma_service.delete_document_embeddings(
+        knowledge_base_id=document.knowledge_base_id,
+
+    )
 
     # 从数据库删除记录
     delete_result = DocumentCRUD.delete(document_id)
