@@ -1,0 +1,4 @@
+BASE_URL = "https://api.siliconflow.cn/v1"
+EMBEDDING_MODEL = "BAAI/bge-m3"
+EMBEDDING_DIM = 1024
+EMBEDDING_BATCH_SIZE = 10
