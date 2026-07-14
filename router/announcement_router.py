@@ -1,10 +1,12 @@
 from fastapi import APIRouter, Depends
 
 from authentication.user_auth import require_admin, require_current_user
+from crud.announcement_attachment_crud import AnnouncementAttachmentCRUD
 from crud.announcement_crud import AnnouncementCRUD
 from model.announcement_model import Announcement
 from model.result import Result
 from model.user_model import User
+from util.oss_util import OSSUtil
 
 router = APIRouter(prefix="/api/announcement", tags=["announcement"])
 
@@ -57,10 +59,25 @@ def update_announcement(announcement: Announcement, _admin: User = Depends(requi
 
 
 @router.delete("")
-def delete_announcements(ids: list[int], _admin: User = Depends(require_admin)):
+async def delete_announcements(ids: list[int], _admin: User = Depends(require_admin)):
     """批量删除公告"""
-    # TODO 删除公告附件
     result = Result()
+
+    # 删除公告附件
+    for id in ids:
+        attachments = AnnouncementAttachmentCRUD.get_by_announcement_id(id)
+        if not attachments:
+            continue
+        for attachment in attachments:
+            if not attachment:
+                continue
+            try:
+                async with OSSUtil() as oss_client:
+                    await oss_client.delete_file(attachment.storage_path)
+            except Exception as e:
+                return result.error(msg=f"文件删除失败：{str(e)}")
+            AnnouncementAttachmentCRUD.delete(attachment.id)
+
 
     delete_result = AnnouncementCRUD.batch_delete(ids)
     if not delete_result:
