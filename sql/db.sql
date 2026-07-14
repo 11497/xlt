@@ -90,8 +90,26 @@ create table announcement_attachment (
     foreign key (announcement_id) references announcement(id)
 ) comment '公告附件';
 
-insert into user (username, password, is_admin) values ('admin', '123456', 1);
-insert into role (name) values ('新芒');
-insert into role_user (role_id, user_id) values (1, 1);
-insert into knowledge_base (name) values ('图书馆');
-insert into role_knowledge_base (role_id, knowledge_base_id) values (1, 1);
+insert into user (username, password, is_admin)
+values ('admin', '123456', 1),
+       ('hajimi', '123456', 0);
+
+insert into role (name)
+values ('新芒'),
+       ('教职工');
+
+insert into role_user (role_id, user_id)
+values (1, 1),
+       (2, 2);
+
+insert into knowledge_base (name)
+values ('图书馆'),
+       ('教职工');
+
+insert into role_knowledge_base (role_id, knowledge_base_id)
+values (1, 1),
+       (2, 2);
+
+insert into announcement (title, content, is_top)
+values ('测试公告', '这是一条测试公告', 0),
+       ('测试公告', '这是一条置顶公告', 1);
