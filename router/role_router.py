@@ -12,7 +12,12 @@ router = APIRouter(prefix="/api/role", tags=["role"])
 
 @router.post("")
 async def create_role(role: Role, _admin: User = Depends(require_admin)):
-    """创建角色"""
+    """
+    创建角色
+    :param role: 角色对象
+    :param _admin: 管理员用户对象
+    :return: 创建结果
+    """
     result = Result()
 
     # 检查是否已存在同名角色
@@ -27,7 +32,11 @@ async def create_role(role: Role, _admin: User = Depends(require_admin)):
 
 @router.get("/all")
 async def get_all_role(_admin: User = Depends(require_admin)):
-    """查询所有角色"""
+    """
+    查询所有角色
+    :param _admin: 管理员用户对象
+    :return: 角色列表
+    """
     result = Result()
 
     roles = RoleCRUD.get_all()
@@ -35,7 +44,12 @@ async def get_all_role(_admin: User = Depends(require_admin)):
 
 @router.get("/{role_name}")
 async def get_by_name(role_name: str, _admin: User = Depends(require_admin)):
-    """根据角色名查询角色"""
+    """
+    根据角色名查询角色
+    :param role_name: 角色名
+    :param _admin: 管理员用户对象
+    :return: 角色对象
+    """
     result = Result()
 
     role = RoleCRUD.get_by_name(role_name)
@@ -45,7 +59,12 @@ async def get_by_name(role_name: str, _admin: User = Depends(require_admin)):
 
 @router.put("")
 async def update(role: Role, _admin: User = Depends(require_admin)):
-    """更新角色名"""
+    """
+    更新角色名
+    :param role: 角色对象
+    :param _admin: 管理员用户对象
+    :return: 更新结果
+    """
     result = Result()
 
     update_result = RoleCRUD.update_name(role.id, role.name)
@@ -55,7 +74,12 @@ async def update(role: Role, _admin: User = Depends(require_admin)):
 
 @router.delete("")
 async def delete(id: int, _admin: User = Depends(require_admin)):
-    """删除角色"""
+    """
+    删除角色
+    :param id: 角色ID
+    :param _admin: 管理员用户对象
+    :return: 删除结果
+    """
     result = Result()
 
     # 验证目标角色是否有绑定的用户和知识库

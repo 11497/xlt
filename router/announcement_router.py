@@ -12,8 +12,14 @@ router = APIRouter(prefix="/api/announcement", tags=["announcement"])
 
 
 @router.post("")
-async def create_announcement(announcement: Announcement, _admin: User = Depends(require_admin)):
-    """新增公告"""
+async def create_announcement(announcement: Announcement,
+                              _admin: User = Depends(require_admin)):
+    """
+    新增公告
+    :param announcement: 新公告对象
+    :param _admin: 管理员用户对象
+    :return: 新增结果
+    """
     result = Result()
 
     announcement_id = AnnouncementCRUD.create(announcement)
@@ -24,7 +30,11 @@ async def create_announcement(announcement: Announcement, _admin: User = Depends
 
 @router.get("/all")
 async def get_all_announcements(_user: User = Depends(require_current_user)):
-    """查看所有公告"""
+    """
+    查看所有公告
+    :param _user: 当前用户对象
+    :return: 所有公告列表
+    """
     result = Result()
 
     announcements = AnnouncementCRUD.get_all()
@@ -33,7 +43,12 @@ async def get_all_announcements(_user: User = Depends(require_current_user)):
 
 @router.get("/{id}")
 async def get_announcement_by_id(id: int, _user: User = Depends(require_current_user)):
-    """根据id查询单个公告"""
+    """
+    根据id查询单个公告
+    :param id: 公告ID
+    :param _user: 当前用户对象
+    :return: 公告对象
+    """
     result = Result()
 
     announcement = AnnouncementCRUD.get_by_id(id)
@@ -43,8 +58,14 @@ async def get_announcement_by_id(id: int, _user: User = Depends(require_current_
 
 
 @router.put("")
-async def update_announcement(announcement: Announcement, _admin: User = Depends(require_admin)):
-    """修改公告"""
+async def update_announcement(announcement: Announcement,
+                              _admin: User = Depends(require_admin)):
+    """
+    修改公告
+    :param announcement: 修改公告对象
+    :param _admin: 管理员用户对象
+    :return: 修改结果
+    """
     result = Result()
 
     update_result = AnnouncementCRUD.update(
@@ -59,8 +80,14 @@ async def update_announcement(announcement: Announcement, _admin: User = Depends
 
 
 @router.delete("")
-async def delete_announcements(ids: list[int], _admin: User = Depends(require_admin)):
-    """批量删除公告"""
+async def delete_announcements(ids: list[int],
+                              _admin: User = Depends(require_admin)):
+    """
+    批量删除公告
+    :param ids: 公告ID列表
+    :param _admin: 管理员用户对象
+    :return: 删除结果
+    """
     result = Result()
 
     # 删除公告附件

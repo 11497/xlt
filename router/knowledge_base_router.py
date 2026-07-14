@@ -10,8 +10,14 @@ from model.user_model import User
 router = APIRouter(prefix="/api/knowledge_base", tags=["knowledge_base"])
 
 @router.post("")
-async def create_knowledge_base(knowledge_base: KnowledgeBase, _admin: User = Depends(require_admin)):
-    """创建知识库"""
+async def create_knowledge_base(knowledge_base: KnowledgeBase,
+                                _admin: User = Depends(require_admin)):
+    """
+    创建知识库
+    :param knowledge_base: 知识库对象
+    :param _admin: 管理员用户对象
+    :return: 创建结果和新知识库对象
+    """
     result = Result()
 
     # 检查是否已存在同名知识库
@@ -27,15 +33,25 @@ async def create_knowledge_base(knowledge_base: KnowledgeBase, _admin: User = De
 
 @router.get("/all")
 async def get_all_knowledge_bases(_user: User = Depends(require_current_user)):
-    """查询所有知识库（开放给所有用户）"""
+    """
+    查询所有知识库（开放给所有用户）
+    :param _user: 当前用户对象
+    :return: 知识库列表
+    """
     result = Result()
 
     knowledge_bases = KnowledgeBaseCRUD.get_all()
     return result.success(msg="查询所有知识库成功", data=knowledge_bases)
 
 @router.put("")
-async def update_knowledge_base(knowledge_base: KnowledgeBase, _admin: User = Depends(require_admin)):
-    """更新知识库"""
+async def update_knowledge_base(knowledge_base: KnowledgeBase,
+                                _admin: User = Depends(require_admin)):
+    """
+    更新知识库
+    :param knowledge_base: 知识库对象
+    :param _admin: 管理员用户对象
+    :return: 更新结果
+    """
     result = Result()
 
     update_result = KnowledgeBaseCRUD.update(knowledge_base)
@@ -45,7 +61,12 @@ async def update_knowledge_base(knowledge_base: KnowledgeBase, _admin: User = De
 
 @router.delete("")
 async def delete_knowledge_base(id: int, _admin: User = Depends(require_admin)):
-    """删除知识库"""
+    """
+    删除知识库
+    :param id: 知识库ID
+    :param _admin: 管理员用户对象
+    :return: 删除结果
+    """
     result = Result()
 
     # 验证目标知识库是否有绑定的角色

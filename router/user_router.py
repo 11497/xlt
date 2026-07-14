@@ -14,7 +14,11 @@ jwt_util = JwtUtil(secret_key=JWT_CONFIG["secret_key"], algorithm=JWT_CONFIG["al
                    access_token_expire_minutes=JWT_CONFIG["access_token_expire_minutes"])
 
 def valid_username(username: str):
-    """验证用户名是否符合要求"""
+    """
+    验证用户名是否符合要求
+    :param username: 用户名
+    :return: 验证结果
+    """
     if len(username) < 4 or len(username) > 15:
         return "用户名长度必须在4到15位之间"
     user = UserCRUD.get_by_username(username)
@@ -22,7 +26,10 @@ def valid_username(username: str):
         return "用户名已存在"
     return None
 
-def valid_password(new_password: str, old_password: str = "", user: User = None):
+def valid_password(
+        new_password: str,
+        old_password: str = "",
+        user: User = None):
     """
     验证密码是否符合要求
     在传入old_password时必须同时传入user
@@ -38,7 +45,11 @@ def valid_password(new_password: str, old_password: str = "", user: User = None)
 
 @router.post("/register")
 async def register(user: User):
-    """用户注册"""
+    """
+    用户注册
+    :param user: 用户对象
+    :return: 注册结果
+    """
     result = Result()
     password_result = valid_password(user.password)
     if password_result is not None:
@@ -53,7 +64,12 @@ async def register(user: User):
 
 @router.post("/login")
 async def login(username: str, password: str):
-    """用户登录"""
+    """
+    用户登录
+    :param username: 用户名
+    :param password: 密码
+    :return: 登录成功后的 JWT 令牌
+    """
     result = Result()
     login_user = UserCRUD.get_by_username(username)
     if not login_user:
@@ -66,6 +82,11 @@ async def login(username: str, password: str):
 
 @router.get("/all")
 async def get_all_user(_admin: User = Depends(require_admin)):
+    """
+    查询所有用户信息（管理员）
+    :param _admin: 管理员用户对象
+    :return: 用户列表
+    """
     result = Result()
 
     users = UserCRUD.get_all()
@@ -73,7 +94,11 @@ async def get_all_user(_admin: User = Depends(require_admin)):
 
 @router.get("")
 async def get_user(user: User = Depends(require_current_user)):
-    """查询当前用户信息"""
+    """
+    查询当前用户信息
+    :param user: 当前用户对象
+    :return: 用户信息
+    """
     result = Result()
 
     # 返回去掉 password 字段的用户信息
@@ -81,8 +106,17 @@ async def get_user(user: User = Depends(require_current_user)):
     return result.success(msg="查询成功", data=user)
 
 @router.put("/username")
-async def update_username(id: int, username: str, _admin: User = Depends(require_admin)):
-    """管理员更新用户名"""
+async def update_username(
+        id: int,
+        username: str,
+        _admin: User = Depends(require_admin)):
+    """
+    管理员更新用户名
+    :param id: 用户ID
+    :param username: 新用户名
+    :param _admin: 管理员用户对象
+    :return: 更新结果
+    """
     result = Result()
 
     user_exist = UserCRUD.get_by_username(username)
@@ -99,7 +133,12 @@ async def update_username(id: int, username: str, _admin: User = Depends(require
 
 @router.delete("/{id}")
 async def delete_user(id: int, _admin: User = Depends(require_admin)):
-    """管理员删除用户"""
+    """
+    管理员删除用户
+    :param id: 用户ID
+    :param _admin: 管理员用户对象
+    :return: 删除结果
+    """
     result = Result()
 
     # 验证目标用户是否有绑定的角色
@@ -113,9 +152,17 @@ async def delete_user(id: int, _admin: User = Depends(require_admin)):
     return result.success(msg="删除成功")
 
 @router.post("/password")
-async def update_password(old_password: str, new_password: str,
-                          user: User = Depends(require_current_user)):
-    """用户更新密码"""
+async def update_password(
+        old_password: str,
+        new_password: str,
+        user: User = Depends(require_current_user)):
+    """
+    用户更新密码
+    :param old_password: 旧密码
+    :param new_password: 新密码
+    :param user: 当前用户对象
+    :return: 更新结果
+    """
     result = Result()
 
     if user is None:
@@ -131,8 +178,17 @@ async def update_password(old_password: str, new_password: str,
 
 
 @router.put("/admin-status")
-async def set_user_admin_status(id: int, is_admin: int, admin: User = Depends(require_admin)):
-    """管理员设置用户权限"""
+async def set_user_admin_status(
+        id: int,
+        is_admin: int,
+        admin: User = Depends(require_admin)):
+    """
+    管理员设置用户权限
+    :param id: 用户ID
+    :param is_admin: 管理员状态值（0：普通用户，1：管理员）
+    :param admin: 管理员用户对象
+    :return: 更新结果
+    """
     result = Result()
 
     # 验证目标用户是否存在

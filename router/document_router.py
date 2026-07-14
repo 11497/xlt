@@ -20,6 +20,7 @@ router = APIRouter(prefix="/api/document", tags=["document"])
 async def validate_file(file: UploadFile) -> Optional[str]:
     """
     验证文件类型和大小
+    :param file: 上传的文件对象
     :return: 验证失败时返回错误信息，成功返回None
     """
     if not file.filename:
@@ -51,7 +52,13 @@ async def upload_documents_batch(
         files: List[UploadFile] = File(...),
         _admin: User = Depends(require_admin)
 ):
-    """批量上传文档到知识库"""
+    """
+    批量上传文档到知识库
+    :param knowledge_base_id: 知识库ID
+    :param files: 上传的文件对象列表
+    :param _admin: 管理员用户对象
+    :return: 上传结果
+    """
     result = Result()
 
     # 验证知识库是否存在
@@ -110,7 +117,13 @@ async def upload_document(
         file: UploadFile = File(...),
         _admin: User = Depends(require_admin)
 ):
-    """上传文档"""
+    """
+    上传文档到知识库
+    :param knowledge_base_id: 知识库ID
+    :param file: 上传的文件对象
+    :param _admin: 管理员用户对象
+    :return: 上传结果
+    """
     result = Result()
 
     # 验证知识库是否存在
@@ -159,7 +172,13 @@ async def update_document(
         file: UploadFile = File(...),
         _admin: User = Depends(require_admin)
 ):
-    """修改文档"""
+    """
+    修改文档
+    :param document_id: 文档ID
+    :param file: 上传的文件对象
+    :param _admin: 管理员用户对象
+    :return: 修改文档对象
+    """
     result = Result()
 
     # 查询文档是否存在
@@ -196,7 +215,12 @@ async def download_document(
         document_id: int,
         _user: User = Depends(require_current_user)
 ):
-    """下载文档（生成预签名URL）"""
+    """
+    下载文档（生成预签名URL）
+    :param document_id: 文档ID
+    :param _user: 当前用户对象
+    :return: 下载链接文档对象
+    """
     result = Result()
 
     # 查询文档是否存在
@@ -226,7 +250,12 @@ async def delete_document(
         document_id: int,
         _admin: User = Depends(require_admin)
 ):
-    """删除文档"""
+    """
+    删除文档
+    :param document_id: 文档ID
+    :param _admin: 管理员用户对象
+    :return: 删除结果
+    """
     result = Result()
 
     # 查询文档是否存在
@@ -254,7 +283,12 @@ async def get_documents_by_knowledge_base(
         knowledge_base_id: int,
         _user: User = Depends(require_current_user)
 ):
-    """根据知识库ID查询所有文档"""
+    """
+    根据知识库ID查询所有文档
+    :param knowledge_base_id: 知识库ID
+    :param _user: 当前用户对象
+    :return: 文档列表
+    """
     result = Result()
 
     # 验证知识库是否存在
@@ -271,7 +305,12 @@ async def get_document_by_id(
         document_id: int,
         _user: User = Depends(require_current_user)
 ):
-    """根据ID查询单个文档"""
+    """
+    根据ID查询单个文档
+    :param document_id: 文档ID
+    :param _user: 当前用户对象
+    :return: 文档对象
+    """
     result = Result()
 
     document = DocumentCRUD.get_by_id(document_id)

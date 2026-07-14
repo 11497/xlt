@@ -10,8 +10,15 @@ router = APIRouter(prefix="/api/session", tags=["session"])
 
 
 @router.post("")
-async def create_session(session: Session, user: User = Depends(require_current_user)):
-    """创建会话，需要获取当前用户id作为session_id"""
+async def create_session(
+        session: Session,
+        user: User = Depends(require_current_user)):
+    """
+    创建会话，需要获取当前用户id作为session_id
+    :param session: 会话对象
+    :param user: 当前用户对象
+    :return: 会话对象
+    """
     result = Result()
     
     # 设置session的用户ID为当前用户ID
@@ -25,7 +32,11 @@ async def create_session(session: Session, user: User = Depends(require_current_
 
 @router.get("/all")
 async def get_all_session(_admin: User = Depends(require_admin)):
-    """获取所有会话"""
+    """
+    获取所有会话
+    :param _admin: 管理员用户对象
+    :return: 会话列表
+    """
     result = Result()
 
     sessions = SessionCRUD.get_all()
@@ -46,8 +57,15 @@ async def get_sessions_by_user_id(user_id: int, current_user: User = Depends(req
 
 
 @router.get("/{session_id}")
-async def get_session(session_id: int, user: User = Depends(require_current_user)):
-    """根据id查询单个会话"""
+async def get_session(
+        session_id: int,
+        user: User = Depends(require_current_user)):
+    """
+    根据id查询单个会话
+    :param session_id: 会话ID
+    :param user: 当前用户对象
+    :return: 会话对象
+    """
     result = Result()
     
     session = SessionCRUD.get_by_id(session_id)
@@ -60,8 +78,15 @@ async def get_session(session_id: int, user: User = Depends(require_current_user
 
 
 @router.delete("/{session_id}")
-async def delete_session(session_id: int, user: User = Depends(require_current_user)):
-    """根据id删除会话"""
+async def delete_session(
+        session_id: int,
+        user: User = Depends(require_current_user)):
+    """
+    根据id删除会话
+    :param session_id: 会话ID
+    :param user: 当前用户对象
+    :return: 删除结果
+    """
     result = Result()
     
     session = SessionCRUD.get_by_id(session_id)
@@ -78,8 +103,17 @@ async def delete_session(session_id: int, user: User = Depends(require_current_u
 
 
 @router.put("/name")
-async def update_session_name(session_id: int, name: str, user: User = Depends(require_current_user)):
-    """更新会话名称"""
+async def update_session_name(
+        session_id: int,
+        name: str,
+        user: User = Depends(require_current_user)):
+    """
+    更新会话名称
+    :param session_id: 会话ID
+    :param name: 会话名称
+    :param user: 当前用户对象
+    :return: 更新结果
+    """
     result = Result()
     
     session = SessionCRUD.get_by_id(session_id)
