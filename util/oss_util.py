@@ -26,6 +26,7 @@ class OSSUtil:
 
         self._client = oss_aio.AsyncClient(cfg)
         self._bucket = OSS_CONFIG["bucket_name"]
+        self.DOC_CONTENT_TYPES = DOC_CONTENT_TYPES
 
     async def close(self):
         """关闭客户端连接，避免资源泄漏"""
