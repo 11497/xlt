@@ -9,6 +9,7 @@ class DocumentCRUD:
     def create(document: Document) -> int:
         """
         新增文档
+        :param document: 文档对象
         :return: 新插入记录的 id
         """
         sql = "INSERT INTO document (knowledge_base_id, filename, storage_path) VALUES (%s, %s, %s)"
@@ -32,7 +33,11 @@ class DocumentCRUD:
 
     @staticmethod
     def get_by_id(document_id: int) -> Optional[Document]:
-        """根据 ID 查询单个文档"""
+        """
+        根据 ID 查询单个文档
+        :param document_id: 文档ID
+        :return: 文档对象（如果存在）
+        """
         sql = "SELECT * FROM document WHERE id = %s"
         with get_cursor() as cursor:
             cursor.execute(sql, (document_id,))
@@ -41,7 +46,11 @@ class DocumentCRUD:
 
     @staticmethod
     def get_by_knowledge_base_id(knowledge_base_id: int) -> List[Document]:
-        """根据知识库 ID 查询所有文档"""
+        """
+        根据知识库 ID 查询所有文档
+        :param knowledge_base_id: 知识库ID
+        :return: 文档对象列表
+        """
         sql = "SELECT * FROM document WHERE knowledge_base_id = %s ORDER BY create_time DESC"
         with get_cursor() as cursor:
             cursor.execute(sql, (knowledge_base_id,))
@@ -50,7 +59,10 @@ class DocumentCRUD:
 
     @staticmethod
     def get_all() -> List[Document]:
-        """查询所有文档"""
+        """
+        查询所有文档
+        :return: 文档对象列表
+        """
         sql = "SELECT * FROM document ORDER BY create_time DESC"
         with get_cursor() as cursor:
             cursor.execute(sql)
@@ -61,6 +73,9 @@ class DocumentCRUD:
     def update(document_id: int, filename: str, storage_path: str) -> bool:
         """
         根据 ID 更新文档文件名和存储路径
+        :param document_id: 文档ID
+        :param filename: 新的文件名
+        :param storage_path: 新的存储路径
         :return: 是否成功更新了记录
         """
         if document_id is None:
@@ -74,6 +89,7 @@ class DocumentCRUD:
     def delete(document_id: int) -> bool:
         """
         根据 ID 删除文档
+        :param document_id: 文档ID
         :return: 是否成功删除了记录
         """
         sql = "DELETE FROM document WHERE id = %s"

@@ -9,6 +9,7 @@ class UserCRUD:
     def create(user: User) -> int:
         """
         新增用户
+        :param user: 用户对象
         :return: 新插入记录的 id
         """
         sql = "INSERT INTO user (username, password) VALUES (%s, %s)"
@@ -18,7 +19,11 @@ class UserCRUD:
 
     @staticmethod
     def get_by_username(username: str) -> Optional[User]:
-        """根据 username 查询单个用户"""
+        """
+        根据用户名查询单个用户
+        :param username: 用户名
+        :return: 用户对象（如果存在）
+        """
         sql = "SELECT * FROM user WHERE username = %s"
         with get_cursor() as cursor:
             cursor.execute(sql, (username,))
@@ -27,7 +32,11 @@ class UserCRUD:
 
     @staticmethod
     def get_by_id(user_id: int) -> Optional[User]:
-        """根据 ID 查询单个用户"""
+        """
+        根据 ID 查询单个用户
+        :param user_id: 用户ID
+        :return: 用户对象（如果存在）
+        """
         sql = "SELECT * FROM user WHERE id = %s"
         with get_cursor() as cursor:
             cursor.execute(sql, (user_id,))
@@ -36,7 +45,10 @@ class UserCRUD:
 
     @staticmethod
     def get_all() -> List[User]:
-        """查询所有用户"""
+        """
+        查询所有用户
+        :return: 用户对象列表
+        """
         sql = "SELECT * FROM user"
         with get_cursor() as cursor:
             cursor.execute(sql)
@@ -47,6 +59,8 @@ class UserCRUD:
     def update_username(user_id: int, username: str) -> bool:
         """
         根据 ID 更新用户名
+        :param user_id: 用户ID
+        :param username: 新的用户名
         :return: 是否成功更新了记录
         """
         if user_id is None:
@@ -60,6 +74,7 @@ class UserCRUD:
     def delete(user_id: int) -> bool:
         """
         根据 ID 删除用户
+        :param user_id: 用户ID
         :return: 是否成功删除了记录
         """
         sql = "DELETE FROM user WHERE id = %s"
@@ -71,6 +86,8 @@ class UserCRUD:
     def update_password(user_id: int, new_password: str) -> bool:
         """
         根据 ID 更新用户密码
+        :param user_id: 用户ID
+        :param new_password: 新的密码
         :return: 是否成功更新了记录
         """
         sql = "UPDATE user SET password = %s WHERE id = %s"

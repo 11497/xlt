@@ -9,6 +9,7 @@ class RoleCRUD:
     def create(role: Role) -> int:
         """
         新增角色
+        :param role: 角色对象
         :return: 新插入记录的 id
         """
         sql = "INSERT INTO role (name) VALUES (%s)"
@@ -18,7 +19,11 @@ class RoleCRUD:
 
     @staticmethod
     def get_by_name(name: str) -> Optional[Role]:
-        """根据 name 查询单个角色"""
+        """
+        根据 name 查询单个角色
+        :param name: 角色名
+        :return: 角色对象（如果存在）
+        """
         sql = "SELECT * FROM role WHERE name = %s"
         with get_cursor() as cursor:
             cursor.execute(sql, (name,))
@@ -27,7 +32,11 @@ class RoleCRUD:
 
     @staticmethod
     def get_by_id(role_id: int) -> Optional[Role]:
-        """根据 ID 查询单个角色"""
+        """
+        根据 ID 查询单个角色
+        :param role_id: 角色ID
+        :return: 角色对象（如果存在）
+        """
         sql = "SELECT * FROM role WHERE id = %s"
         with get_cursor() as cursor:
             cursor.execute(sql, (role_id,))
@@ -36,7 +45,10 @@ class RoleCRUD:
 
     @staticmethod
     def get_all() -> List[Role]:
-        """查询所有角色"""
+        """
+        查询所有角色
+        :return: 角色对象列表
+        """
         sql = "SELECT * FROM role"
         with get_cursor() as cursor:
             cursor.execute(sql)
@@ -47,6 +59,8 @@ class RoleCRUD:
     def update_name(role_id: int, name: str) -> bool:
         """
         根据 ID 更新角色名
+        :param role_id: 角色ID
+        :param name: 新的角色名
         :return: 是否成功更新了记录
         """
         if role_id is None:
@@ -60,6 +74,7 @@ class RoleCRUD:
     def delete(role_id: int) -> bool:
         """
         根据 ID 删除角色
+        :param role_id: 角色ID
         :return: 是否成功删除了记录
         """
         sql = "DELETE FROM role WHERE id = %s"

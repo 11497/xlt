@@ -15,6 +15,7 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
     """
     依赖项：自动从 Authorization: Bearer xxx 中提取 token
     如果请求头缺失或格式不对，FastAPI 会自动返回 401
+    :return payload: 用户信息
     """
     payload = jwt_util.verify_token(token, expected_type="access")
     if payload is None:

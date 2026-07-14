@@ -9,6 +9,7 @@ class AnnouncementCRUD:
     def create(announcement: Announcement) -> int:
         """
         新增公告
+        :param announcement: 公告对象
         :return: 新插入记录的 id
         """
         sql = "INSERT INTO announcement (title, content, is_top) VALUES (%s, %s, %s)"
@@ -20,6 +21,7 @@ class AnnouncementCRUD:
     def update_update_time(announcement_id: int) -> bool:
         """
         更新公告的 update_time 字段为当前时间
+        :param announcement_id: 公告ID
         :return: 是否成功更新了记录
         """
         if announcement_id is None:
@@ -33,6 +35,10 @@ class AnnouncementCRUD:
     def update(announcement_id: int, title: str, content: str, is_top: int) -> bool:
         """
         修改公告信息（title、content、is_top），同时更新 update_time
+        :param announcement_id: 公告ID
+        :param title: 新的标题
+        :param content: 新的内容
+        :param is_top: 新的置顶状态（0/1）
         :return: 是否成功更新了记录
         """
         if announcement_id is None:
@@ -64,7 +70,11 @@ class AnnouncementCRUD:
 
     @staticmethod
     def get_by_id(announcement_id: int) -> Optional[Announcement]:
-        """根据 ID 查询单个公告"""
+        """
+        根据 ID 查询单个公告
+        :param announcement_id: 公告ID
+        :return: 公告对象（如果存在）
+        """
         sql = "SELECT * FROM announcement WHERE id = %s"
         with get_cursor() as cursor:
             cursor.execute(sql, (announcement_id,))
@@ -73,7 +83,10 @@ class AnnouncementCRUD:
 
     @staticmethod
     def get_all() -> List[Announcement]:
-        """查询所有公告"""
+        """
+        查询所有公告
+        :return: 公告对象列表
+        """
         sql = "SELECT * FROM announcement ORDER BY is_top DESC, create_time DESC"
         with get_cursor() as cursor:
             cursor.execute(sql)

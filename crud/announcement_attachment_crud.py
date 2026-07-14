@@ -9,6 +9,7 @@ class AnnouncementAttachmentCRUD:
     def create(attachment: AnnouncementAttachment) -> int:
         """
         新增公告附件
+        :param attachment: 附件对象
         :return: 新插入记录的 id
         """
         sql = "INSERT INTO announcement_attachment (announcement_id, filename, storage_path) VALUES (%s, %s, %s)"
@@ -32,7 +33,11 @@ class AnnouncementAttachmentCRUD:
 
     @staticmethod
     def get_by_id(attachment_id: int) -> Optional[AnnouncementAttachment]:
-        """根据 ID 查询单个公告附件"""
+        """
+        根据 ID 查询单个公告附件
+        :param attachment_id: 附件ID
+        :return: 附件对象或 None
+        """
         sql = "SELECT * FROM announcement_attachment WHERE id = %s"
         with get_cursor() as cursor:
             cursor.execute(sql, (attachment_id,))
@@ -41,7 +46,11 @@ class AnnouncementAttachmentCRUD:
 
     @staticmethod
     def get_by_announcement_id(announcement_id: int) -> List[AnnouncementAttachment]:
-        """根据公告 ID 查询所有附件"""
+        """
+        根据公告 ID 查询所有附件
+        :param announcement_id: 公告ID
+        :return: 附件对象列表
+        """
         sql = "SELECT * FROM announcement_attachment WHERE announcement_id = %s ORDER BY upload_time DESC"
         with get_cursor() as cursor:
             cursor.execute(sql, (announcement_id,))
@@ -50,7 +59,10 @@ class AnnouncementAttachmentCRUD:
 
     @staticmethod
     def get_all() -> List[AnnouncementAttachment]:
-        """查询所有公告附件"""
+        """
+        查询所有公告附件
+        :return: 附件对象列表
+        """
         sql = "SELECT * FROM announcement_attachment ORDER BY upload_time DESC"
         with get_cursor() as cursor:
             cursor.execute(sql)
@@ -61,6 +73,9 @@ class AnnouncementAttachmentCRUD:
     def update(attachment_id: int, filename: str, storage_path: str) -> bool:
         """
         根据 ID 更新附件文件名和存储路径
+        :param attachment_id: 附件ID
+        :param filename: 新的文件名
+        :param storage_path: 新的存储路径
         :return: 是否成功更新了记录
         """
         if attachment_id is None:
@@ -74,6 +89,7 @@ class AnnouncementAttachmentCRUD:
     def delete(attachment_id: int) -> bool:
         """
         根据 ID 删除公告附件
+        :param attachment_id: 附件ID
         :return: 是否成功删除了记录
         """
         sql = "DELETE FROM announcement_attachment WHERE id = %s"
