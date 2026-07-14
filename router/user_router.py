@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends
 
 from authentication.user_auth import require_admin, require_current_user
 from config.jwt_config import JWT_CONFIG
+from crud.role_user_crud import RoleUserCRUD
 from crud.user_crud import UserCRUD
 from model.result import Result
 from model.user_model import User
@@ -99,8 +100,12 @@ async def update_username(id: int, username: str, _admin: User = Depends(require
 @router.delete("/{id}")
 async def delete_user(id: int, _admin: User = Depends(require_admin)):
     """管理员删除用户"""
-    # TODO 删除前验证user下是否有绑定的关系
     result = Result()
+
+    # 验证目标用户是否有绑定的角色
+    roles = RoleUserCRUD.get_roles_by_user(id)
+    if roles:
+        return result.error(msg="用户下有绑定的角色，不能删除")
 
     delete_result = UserCRUD.delete(id)
     if not delete_result:

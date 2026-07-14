@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends
 
 from authentication.user_auth import require_admin, require_current_user
 from crud.knowledge_base_crud import KnowledgeBaseCRUD
+from crud.role_knowledge_base_crud import RoleKnowledgeBaseCRUD
 from model.result import Result
 from model.knowledge_base_model import KnowledgeBase
 from model.user_model import User
@@ -45,8 +46,12 @@ async def update_knowledge_base(knowledge_base: KnowledgeBase, _admin: User = De
 @router.delete("")
 async def delete_knowledge_base(id: int, _admin: User = Depends(require_admin)):
     """删除知识库"""
-    # TODO 删除前验证kb对应的role_kb是否存在
     result = Result()
+
+    # 验证目标知识库是否有绑定的角色
+    roles = RoleKnowledgeBaseCRUD.get_roles_by_knowledge_base(id)
+    if roles:
+        return result.error(msg="知识库下有绑定的角色，不能删除")
 
     delete_result = KnowledgeBaseCRUD.delete(id)
     if not delete_result:

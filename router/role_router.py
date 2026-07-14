@@ -2,6 +2,8 @@ from fastapi import APIRouter, Depends
 
 from authentication.user_auth import require_admin
 from crud.role_crud import RoleCRUD
+from crud.role_knowledge_base_crud import RoleKnowledgeBaseCRUD
+from crud.role_user_crud import RoleUserCRUD
 from model.result import Result
 from model.role_model import Role
 from model.user_model import User
@@ -54,8 +56,15 @@ async def update(role: Role, _admin: User = Depends(require_admin)):
 @router.delete("")
 async def delete(id: int, _admin: User = Depends(require_admin)):
     """删除角色"""
-    # TODO 删除前验证role下是否有绑定的关系
     result = Result()
+
+    # 验证目标角色是否有绑定的用户和知识库
+    users = RoleUserCRUD.get_users_by_role(id)
+    if users:
+        return result.error(msg="角色下有绑定的用户，不能删除")
+    knowledge_bases = RoleKnowledgeBaseCRUD.get_knowledge_base_by_role(id)
+    if knowledge_bases:
+        return result.error(msg="角色下有绑定的知识库，不能删除")
 
     delete_result = RoleCRUD.delete(id)
     if not delete_result:
