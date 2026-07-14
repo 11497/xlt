@@ -12,7 +12,7 @@ router = APIRouter(prefix="/api/announcement", tags=["announcement"])
 
 
 @router.post("")
-def create_announcement(announcement: Announcement, _admin: User = Depends(require_admin)):
+async def create_announcement(announcement: Announcement, _admin: User = Depends(require_admin)):
     """新增公告"""
     result = Result()
 
@@ -23,7 +23,7 @@ def create_announcement(announcement: Announcement, _admin: User = Depends(requi
 
 
 @router.get("/all")
-def get_all_announcements(_user: User = Depends(require_current_user)):
+async def get_all_announcements(_user: User = Depends(require_current_user)):
     """查看所有公告"""
     result = Result()
 
@@ -32,7 +32,7 @@ def get_all_announcements(_user: User = Depends(require_current_user)):
 
 
 @router.get("/{id}")
-def get_announcement_by_id(id: int, _user: User = Depends(require_current_user)):
+async def get_announcement_by_id(id: int, _user: User = Depends(require_current_user)):
     """根据id查询单个公告"""
     result = Result()
 
@@ -43,7 +43,7 @@ def get_announcement_by_id(id: int, _user: User = Depends(require_current_user))
 
 
 @router.put("")
-def update_announcement(announcement: Announcement, _admin: User = Depends(require_admin)):
+async def update_announcement(announcement: Announcement, _admin: User = Depends(require_admin)):
     """修改公告"""
     result = Result()
 
