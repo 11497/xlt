@@ -24,22 +24,3 @@ app.include_router(announcement_attachment_router.router)
 app.include_router(document_router.router)
 app.include_router(user_knowledge_base_router.router)
 
-@app.post("/upload")
-async def upload_read(file: UploadFile = File(...)):
-    content = await read_file_content(file)
-    return content
-
-@app.post("/upload/chunk")
-async def upload_read(file: UploadFile = File(...)):
-    content = await read_file_content(file)
-    return chunk_text_by_sentence(content)
-
-@app.post("/embedding")
-async def embedding(file: UploadFile = File(...)):
-    from model.result import Result
-    result = Result()
-    content = await read_file_content(file)
-    chunks = chunk_text_by_sentence(content)
-    from ai.embedding import EmbeddingService
-    embedding_result = EmbeddingService().embed_texts(texts=chunks)
-    return result.success(msg=str(len(embedding_result)), data=embedding_result)
