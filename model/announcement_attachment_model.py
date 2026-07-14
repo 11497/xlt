@@ -17,7 +17,11 @@ class AnnouncementAttachment:
 
     @classmethod
     def from_row(cls, row: dict) -> "AnnouncementAttachment":
-        """从数据库查询结果构建 AnnouncementAttachment 对象"""
+        """
+        从数据库查询结果构建 AnnouncementAttachment 对象
+        :param row: 数据库查询结果行
+        :return: AnnouncementAttachment 对象
+        """
         return cls(
             id=row["id"],
             announcement_id=row["announcement_id"],

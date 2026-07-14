@@ -12,7 +12,11 @@ class RoleKnowledgeBase:
 
     @classmethod
     def from_row(cls, row: dict) -> "RoleKnowledgeBase":
-        """从数据库查询结果构建 RoleKnowledgeBase 对象"""
+        """
+        从数据库查询结果构建 RoleKnowledgeBase 对象
+        :param row: 数据库查询结果行
+        :return: RoleKnowledgeBase 对象
+        """
         return cls(
             role_id=row["role_id"],
             knowledge_base_id=row["knowledge_base_id"],

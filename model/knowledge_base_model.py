@@ -13,7 +13,11 @@ class KnowledgeBase:
 
     @classmethod
     def from_row(cls, row: dict) -> "KnowledgeBase":
-        """从数据库查询结果构建 KnowledgeBase 对象"""
+        """
+        从数据库查询结果构建 KnowledgeBase 对象
+        :param row: 数据库查询结果行
+        :return: KnowledgeBase 对象
+        """
         return cls(
             id=row["id"],
             name=row["name"],

@@ -13,7 +13,11 @@ class Role:
 
     @classmethod
     def from_row(cls, row: dict) -> "Role":
-        """从数据库查询结果构建 Role 对象"""
+        """
+        从数据库查询结果构建 Role 对象
+        :param row: 数据库查询结果行
+        :return: Role 对象
+        """
         return cls(
             id=row["id"],
             name=row["name"],

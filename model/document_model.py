@@ -18,7 +18,11 @@ class Document:
 
     @classmethod
     def from_row(cls, row: dict) -> "Document":
-        """从数据库查询结果构建 Document 对象"""
+        """
+        从数据库查询结果构建 Document 对象
+        :param row: 数据库查询结果行
+        :return: Document 对象
+        """
         return cls(
             id=row["id"],
             knowledge_base_id=row["knowledge_base_id"],

@@ -15,7 +15,11 @@ class User:
 
     @classmethod
     def from_row(cls, row: dict) -> "User":
-        """从数据库查询结果构建 User 对象"""
+        """
+        从数据库查询结果构建 User 对象
+        :param row: 数据库查询结果行
+        :return: User 对象
+        """
         return cls(
             id=row["id"],
             username=row["username"],

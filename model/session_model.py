@@ -17,7 +17,11 @@ class Session:
 
     @classmethod
     def from_row(cls, row: dict) -> "Session":
-        """从数据库查询结果构建 Session 对象"""
+        """
+        从数据库查询结果构建 Session 对象
+        :param row: 数据库查询结果行
+        :return: Session 对象
+        """
         return cls(
             id=row["id"],
             user_id=row["user_id"],

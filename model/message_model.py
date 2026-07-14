@@ -18,7 +18,11 @@ class Message:
 
     @classmethod
     def from_row(cls, row: dict) -> "Message":
-        """从数据库查询结果构建 Message 对象"""
+        """
+        从数据库查询结果构建 Message 对象
+        :param row: 数据库查询结果行
+        :return: Message 对象
+        """
         # 如果数据库驱动未自动解析JSON，需手动loads；若已自动解析则直接使用 row["content"]
         content_data = row["content"]
         if isinstance(content_data, str):

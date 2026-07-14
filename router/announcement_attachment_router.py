@@ -17,6 +17,7 @@ router = APIRouter(prefix="/api/announcement_attachment", tags=["announcement_at
 async def validate_file(file: UploadFile) -> Optional[str]:
     """
     验证文件类型和大小
+    :param file: 上传的文件对象
     :return: 验证失败时返回错误信息，成功返回None
     """
     if not file.filename:
@@ -48,7 +49,13 @@ async def upload_attachments_batch(
     files: List[UploadFile] = File(...),
     _admin: User = Depends(require_admin)
 ):
-    """批量上传公告附件"""
+    """
+    批量上传公告附件
+    :param announcement_id: 公告ID
+    :param files: 上传的文件对象列表
+    :param _admin: 管理员用户对象
+    :return: 上传结果
+    """
     result = Result()
 
     # 验证公告是否存在
@@ -107,7 +114,13 @@ async def upload_attachment(
     file: UploadFile = File(...),
     _admin: User = Depends(require_admin)
 ):
-    """上传公告附件"""
+    """
+    上传公告附件
+    :param announcement_id: 公告ID
+    :param file: 上传的文件对象
+    :param _admin: 管理员用户对象
+    :return: 上传结果
+    """
     result = Result()
     
     # 验证公告是否存在
@@ -150,7 +163,13 @@ async def update_attachment(
     file: UploadFile = File(...),
     _admin: User = Depends(require_admin)
 ):
-    """修改公告附件"""
+    """
+    修改公告附件
+    :param attachment_id: 附件ID
+    :param file: 上传的文件对象
+    :param _admin: 管理员用户对象
+    :return: 修改结果
+    """
     result = Result()
     
     # 查询附件是否存在
@@ -187,7 +206,12 @@ async def download_attachment(
         attachment_id: int,
         _user: User = Depends(require_current_user)
 ):
-    """下载公告附件（生成预签名URL）"""
+    """
+    下载公告附件（生成预签名URL）
+    :param attachment_id: 附件ID
+    :param _user: 当前用户对象
+    :return: 下载链接
+    """
     result = Result()
 
     # 查询附件是否存在
@@ -217,7 +241,12 @@ async def delete_attachment(
     attachment_id: int,
     _admin: User = Depends(require_admin)
 ):
-    """删除公告附件"""
+    """
+    删除公告附件
+    :param attachment_id: 附件ID
+    :param _admin: 管理员用户对象
+    :return: 删除结果
+    """
     result = Result()
     
     # 查询附件是否存在
@@ -245,7 +274,12 @@ async def get_attachments_by_announcement(
     announcement_id: int,
     _user: User = Depends(require_current_user)
 ):
-    """根据公告ID查询所有附件"""
+    """
+    根据公告ID查询所有附件
+    :param announcement_id: 公告ID
+    :param _user: 当前用户对象
+    :return: 附件列表
+    """
     result = Result()
     
     # 验证公告是否存在
@@ -262,7 +296,12 @@ async def get_attachment_by_id(
     attachment_id: int,
     _user: User = Depends(require_current_user)
 ):
-    """根据ID查询单个附件"""
+    """
+    根据ID查询单个附件
+    :param attachment_id: 附件ID
+    :param _user: 当前用户对象
+    :return: 附件对象
+    """
     result = Result()
     
     attachment = AnnouncementAttachmentCRUD.get_by_id(attachment_id)

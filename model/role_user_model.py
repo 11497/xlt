@@ -12,7 +12,11 @@ class RoleUser:
 
     @classmethod
     def from_row(cls, row: dict) -> "RoleUser":
-        """从数据库查询结果构建 RoleUser 对象"""
+        """
+        从数据库查询结果构建 RoleUser 对象
+        :param row: 数据库查询结果行
+        :return: RoleUser 对象
+        """
         return cls(
             role_id=row["role_id"],
             user_id=row["user_id"],
