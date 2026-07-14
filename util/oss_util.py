@@ -5,21 +5,11 @@ from typing import Optional, Union
 import alibabacloud_oss_v2 as oss
 import alibabacloud_oss_v2.aio as oss_aio
 
-from config.oss_config import OSS_CONFIG
+from config.oss_config import OSS_CONFIG, DOC_CONTENT_TYPES
 
 
 class OSSUtil:
     """阿里云OSS工具类（异步SDK V2），支持文档类文件的上传、修改与删除"""
-
-    # 支持的文档类型及其Content-Type映射
-    DOC_CONTENT_TYPES = {
-        ".md": "text/markdown",
-        ".txt": "text/plain",
-        ".pdf": "application/pdf",
-        ".doc": "application/msword",
-        ".docs": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    }
 
     def __init__(self):
         credentials_provider = oss.credentials.StaticCredentialsProvider(

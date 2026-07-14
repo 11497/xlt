@@ -11,3 +11,10 @@ OSS_CONFIG = {
     "connect_timeout": 10,       # 连接超时(秒)
     "read_timeout": 30           # 读取超时(秒)
 }
+
+DOC_CONTENT_TYPES = {
+    ".md": "text/markdown",
+    ".txt": "text/plain",
+    ".pdf": "application/pdf",
+    ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+}
