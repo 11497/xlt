@@ -1,6 +1,6 @@
 <script setup>
 import {useCurrentUser} from "@/hooks/useCurrentUser.js";
-import {ref, watch} from "vue";
+import {ref, watch, nextTick} from "vue";
 import {sessionByUserId} from "@/api/session.js";
 import {messageBySessionId} from "@/api/message.js";
 import {ElMessage} from "element-plus";
@@ -37,6 +37,56 @@ const handleSessionClick = async (sessionId) => {
     ElMessage.error(res.msg);
   }
 };
+
+const inputContent = ref("");
+const textareaRef = ref(null);
+const messagesContainer = ref(null);
+
+// 自动调整 textarea 高度（1~5行）
+const autoResizeTextarea = () => {
+  const el = textareaRef.value;
+  if (!el) return;
+
+  el.style.height = "auto"; // 重置高度以正确计算 scrollHeight
+
+  const lineHeight = 24; // 与 CSS 中 line-height 保持一致
+  const maxHeight = lineHeight * 5; // 最多5行
+
+  if (el.scrollHeight <= maxHeight) {
+    el.style.height = el.scrollHeight + "px";
+    el.style.overflowY = "hidden";
+  } else {
+    el.style.height = maxHeight + "px";
+    el.style.overflowY = "auto";
+  }
+};
+
+// 发送消息
+const handleSend = () => {
+  const content = inputContent.value.trim();
+  if (!content) return;
+
+  // TODO: 调用发送API
+  console.log("发送:", content);
+
+  // 本地追加消息（演示用）
+  messages.value.push({ content, role: "user" });
+  inputContent.value = "";
+
+  // 重置输入框高度
+  nextTick(() => {
+    autoResizeTextarea();
+    scrollToBottom();
+  });
+};
+
+// 滚动到底部
+const scrollToBottom = () => {
+  nextTick(() => {
+    const container = messagesContainer.value;
+    if (container) container.scrollTop = container.scrollHeight;
+  });
+};
 </script>
 
 <template>
@@ -53,10 +103,10 @@ const handleSessionClick = async (sessionId) => {
         <el-button type="primary" class="sessions-create-btn">创建对话</el-button>
         <div class="sessions-list">
           <div
-            v-for="session in sessions"
-            :key="session.id"
-            class="session-item"
-            @click="handleSessionClick(session.id)"
+              v-for="session in sessions"
+              :key="session.id"
+              class="session-item"
+              @click="handleSessionClick(session.id)"
           >
             <div class="session-name">{{ session.name }}</div>
           </div>
@@ -65,7 +115,33 @@ const handleSessionClick = async (sessionId) => {
         </div>
       </aside>
 
-      <section class="main-chat">聊天</section>
+      <section class="main-chat">
+        <!-- 上方：消息列表区域 -->
+        <div class="chat-messages" ref="messagesContainer">
+          <div v-if="messages.length === 0" class="empty-text">暂无消息记录</div>
+          <div
+              v-for="(msg, index) in messages"
+              :key="index"
+              class="message-item"
+          >
+            {{ msg.content }}
+          </div>
+        </div>
+
+        <!-- 下方：输入区域 -->
+        <div class="chat-input-area">
+          <textarea
+            v-model="inputContent"
+            class="chat-textarea"
+            placeholder="输入消息..."
+            rows="1"
+            @keydown.enter.exact.prevent="handleSend"
+            @input="autoResizeTextarea"
+            ref="textareaRef"
+          ></textarea>
+          <el-button type="primary" class="send-btn" @click="handleSend">发送</el-button>
+        </div>
+      </section>
     </main>
 
     <footer class="app-footer">Copyright © 2026-2026 · 校灵通</footer>
@@ -214,9 +290,60 @@ body {
 /* 6. 聊天区域：占据剩余宽度，允许内部滚动 */
 .main-chat {
   flex: 1;
-  overflow-y: auto; /* 聊天记录过多时，仅聊天区域内部滚动 */
-  padding: 16px; /* 聊天内容的内边距 */
-  min-height: 0; /* 关键：解决flex容器内的滚动问题 */
+  display: flex;
+  flex-direction: column;
+  min-height: 0; /* 关键：允许内部 flex 子项收缩 */
+  overflow: hidden;
+}
+
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  min-height: 0; /* ⚠️ 关键 */
+}
+
+.message-item {
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  background-color: #f0f2f5;
+  border-radius: 8px;
+  font-size: 14px;
+  line-height: 1.6;
+  word-break: break-word;
+}
+
+.chat-input-area {
+  flex-shrink: 0; /* 不被压缩 */
+  display: flex;
+  align-items: flex-end; /* 按钮对齐底部 */
+  gap: 8px;
+  padding: 12px 16px;
+  border-top: 1px solid #dcdfe6;
+  background-color: #fff;
+}
+
+.chat-textarea {
+  flex: 1;
+  resize: none; /* 禁止手动拖拽缩放 */
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  padding: 8px 12px;
+  font-size: 14px;
+  line-height: 24px; /* 与 JS 中 lineHeight 一致 */
+  max-height: 120px; /* 5行 × 24px = 120px，CSS兜底 */
+  outline: none;
+  transition: border-color 0.2s;
+  font-family: inherit;
+}
+
+.chat-textarea:focus {
+  border-color: #409eff;
+}
+
+.send-btn {
+  flex-shrink: 0;
+  height: 40px;
 }
 
 /* 7. Footer：固定在底部，固定高度 */
