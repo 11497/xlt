@@ -19,7 +19,7 @@ class Result:
         :param data: 数据
         :return: JSON 字符串
         """
-        self.code = 0
+        self.code = 1
         self.msg = msg
         self.data = data
         return self.json()
@@ -31,7 +31,7 @@ class Result:
         :param data: 数据
         :return: JSON 字符串
         """
-        self.code = 1
+        self.code = 0
         self.msg = msg
         self.data = data
         return self.json()
