@@ -63,18 +63,17 @@ async def register(user: User):
     return result.success(msg="注册成功")
 
 @router.post("/login")
-async def login(username: str, password: str):
+async def login(user: User):
     """
     用户登录
-    :param username: 用户名
-    :param password: 密码
+    :param user: 用户对象
     :return: 登录成功后的 JWT 令牌
     """
     result = Result()
-    login_user = UserCRUD.get_by_username(username)
+    login_user = UserCRUD.get_by_username(user.username)
     if not login_user:
         return result.error(msg="用户名不存在")
-    if login_user.password != password:
+    if login_user.password != user.password:
         return result.error(msg="密码错误")
     # 生成 JWT 令牌
     access_token = jwt_util.create_access_token(data={"user_id": login_user.id})
