@@ -24,7 +24,8 @@ drop table if exists message;
 create table message (
     id int auto_increment primary key comment '消息id',
     session_id int not null comment '会话id',
-    content json NOT NULL COMMENT '消息内容(JSON格式)',
+    role varchar(255) not null comment '角色',
+    content json NOT NULL COMMENT '消息内容',
     create_time datetime default current_timestamp comment '创建时间',
     foreign key (session_id) references session(id)
 ) comment '消息';

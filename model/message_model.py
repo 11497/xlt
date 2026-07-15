@@ -9,8 +9,9 @@ from datetime import datetime
 class Message:
     """Message 数据模型，对应 xlt.message 表"""
     session_id: int
+    role: str
     content: dict[str, Any]
-    created_time: datetime
+    create_time: datetime
     id: Optional[int] = field(default=None)  # 新建时 id 为 None，查询时自动填充
 
     def to_dict(self) -> dict:
@@ -31,6 +32,7 @@ class Message:
         return cls(
             id=row["id"],
             session_id=row["session_id"],
+            role=row["role"],
             content=content_data,
-            created_time=row["created_time"],
+            create_time=row["create_time"],
         )
