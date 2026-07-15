@@ -70,7 +70,7 @@ const handleSend = () => {
   console.log("发送:", content);
 
   // 本地追加消息（演示用）
-  messages.value.push({ content, role: "user" });
+  messages.value.push({content, role: "user"});
   inputContent.value = "";
 
   // 重置输入框高度
@@ -118,26 +118,32 @@ const scrollToBottom = () => {
       <section class="main-chat">
         <!-- 上方：消息列表区域 -->
         <div class="chat-messages" ref="messagesContainer">
-          <div v-if="messages.length === 0" class="empty-text">暂无消息记录</div>
           <div
               v-for="(msg, index) in messages"
               :key="index"
-              class="message-item"
+              class="message-row"
+              :class="msg.role === 'user' ? 'is-user' : 'is-assistant'"
           >
-            {{ msg.content }}
+            <!-- 角色标签 -->
+            <span class="message-role">{{ msg.role === 'user' ? '我' : 'AI 助手' }}</span>
+
+            <!-- 消息气泡 -->
+            <div class="message-bubble">
+              {{ msg.content }}
+            </div>
           </div>
         </div>
 
         <!-- 下方：输入区域 -->
         <div class="chat-input-area">
           <textarea
-            v-model="inputContent"
-            class="chat-textarea"
-            placeholder="输入消息..."
-            rows="1"
-            @keydown.enter.exact.prevent="handleSend"
-            @input="autoResizeTextarea"
-            ref="textareaRef"
+              v-model="inputContent"
+              class="chat-textarea"
+              placeholder="输入消息..."
+              rows="1"
+              @keydown.enter.exact.prevent="handleSend"
+              @input="autoResizeTextarea"
+              ref="textareaRef"
           ></textarea>
           <el-button type="primary" class="send-btn" @click="handleSend">发送</el-button>
         </div>
@@ -300,17 +306,58 @@ body {
   flex: 1;
   overflow-y: auto;
   padding: 16px;
-  min-height: 0; /* ⚠️ 关键 */
+  min-height: 0;
 }
 
-.message-item {
-  padding: 8px 12px;
-  margin-bottom: 8px;
-  background-color: #f0f2f5;
-  border-radius: 8px;
+/* ===== 消息行容器：控制整体对齐 ===== */
+.message-row {
+  display: flex;
+  flex-direction: column; /* 角色名在上，气泡在下 */
+  margin-bottom: 16px;
+}
+
+/* Assistant 消息：靠左 */
+.message-row.is-assistant {
+  align-self: flex-start;
+  align-items: flex-start;
+}
+
+/* User 消息：靠右 */
+.message-row.is-user {
+  align-self: flex-end;
+  align-items: flex-end;
+}
+
+/* ===== 角色标签 ===== */
+.message-role {
+  font-size: 12px;
+  color: #909399;
+  margin-bottom: 4px;
+  padding: 0 4px;
+}
+
+/* ===== 消息气泡 ===== */
+.message-bubble {
+  padding: 10px 14px;
   font-size: 14px;
   line-height: 1.6;
   word-break: break-word;
+  border-radius: 8px;
+  position: relative;
+}
+
+/* Assistant 气泡样式 */
+.is-assistant .message-bubble {
+  background-color: #f0f2f5;
+  color: #303133;
+  border-top-left-radius: 2px; /* 左上角小圆角，模拟对话指向 */
+}
+
+/* User 气泡样式 */
+.is-user .message-bubble {
+  background-color: #409eff;
+  color: #fff;
+  border-top-right-radius: 2px; /* 右上角小圆角 */
 }
 
 .chat-input-area {
