@@ -12,9 +12,9 @@ const request = axios.create({
 request.interceptors.request.use(
     (config) => {
         const loginUser = JSON.parse(localStorage.getItem('loginUser'))
-        if (loginUser && loginUser.token) {
+        if (loginUser) {
             // 修改此处：使用标准的 Authorization 头，并添加 Bearer 前缀
-            config.headers.Authorization = `Bearer ${loginUser.token}`
+            config.headers.Authorization = `Bearer ${loginUser}`
         }
         return config
     },
