@@ -25,7 +25,7 @@ create table message (
     id int auto_increment primary key comment '消息id',
     session_id int not null comment '会话id',
     role varchar(255) not null comment '角色',
-    content json NOT NULL COMMENT '消息内容',
+    content text comment '消息内容',
     create_time datetime default current_timestamp comment '创建时间',
     foreign key (session_id) references session(id)
 ) comment '消息';
@@ -97,19 +97,21 @@ values ('admin', '123456', 1),
 
 insert into role (name)
 values ('新芒'),
-       ('教职工');
+       ('教职工'),
+       ('学生');
 
 insert into role_user (role_id, user_id)
 values (1, 1),
-       (2, 2);
+       (3, 2);
 
 insert into knowledge_base (name)
 values ('图书馆'),
-       ('教职工');
+       ('教职工'),
+       ('学生');
 
 insert into role_knowledge_base (role_id, knowledge_base_id)
 values (1, 1),
-       (2, 2);
+       (3, 2);
 
 insert into announcement (title, content, is_top)
 values ('测试公告', '这是一条测试公告', 0),
