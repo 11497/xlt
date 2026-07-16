@@ -6,6 +6,7 @@ import {chat, deleteMessagesAfter, messageBySessionId} from "@/api/message.js";
 import {ElMessage, ElMessageBox} from "element-plus";
 import MarkdownIt from 'markdown-it';
 import router from "@/router/index.js";
+import {House, SwitchButton} from "@element-plus/icons-vue";
 
 const md = new MarkdownIt({html: true, linkify: true, typographer: true});
 
@@ -194,15 +195,29 @@ const createSessionBtn = async () => {
     ElMessage.error(res.msg);
   }
 }
+
+// 切换到我的页面
+const switchToMyPage = async () => {
+  if (user.value?.is_admin === 1) {
+    await router.push({path: "/admin"})
+  } else {
+    await router.push({path: "/user"})
+  }
+}
 </script>
 
 <template>
   <div class="app-layout"> <!-- 替换 common-layout -->
     <header class="app-header">
       <div class="header-left">校灵通</div>
-      <div class="header-center">中间</div>
+      <div class="header-center"></div>
       <div class="header-right">
-        <a href="javascript:0" @click="logout">退出登录 【{{ user?.username }}】</a>
+        <a href="javascript:0" @click="switchToMyPage" class="my-btn">
+          <el-icon><House /></el-icon> 我的
+        </a>
+        <a href="javascript:0" @click="logout" class="logout-btn">
+          <el-icon><SwitchButton/></el-icon> 退出登录 【{{ user?.username }}】
+        </a>
       </div>
     </header>
 
@@ -295,13 +310,16 @@ body {
   align-items: center;
   gap: 16px;
   padding: 0 20px;
-  background-color: #f5f7fa; /* 可选：添加背景色区分 */
+  background-image: linear-gradient(to right, #00547d, #007fa4, #00aaa0);
+
 }
 
 .header-left {
-  font-size: 20px;
-  font-weight: bold;
-  white-space: nowrap;
+    color: white;
+    font-size: 40px;
+    font-family: 楷体;
+    line-height: 60px;
+    font-weight: bolder;
 }
 
 .header-center {
@@ -554,8 +572,19 @@ body {
 }
 
 a {
-  color: red;
   text-decoration: none;
+}
+
+.logout-btn {
+  color: red;
+  margin: 0 15px;
+  font-size: 18px;
+}
+
+.my-btn {
+  color: white;
+  margin: 0 15px;
+  font-size: 18px;
 }
 
 /* ===== 会话项改为 flex 布局 ===== */
