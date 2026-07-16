@@ -4,12 +4,17 @@ import {userLogin} from "@/api/user.js";
 import {ElMessage} from "element-plus";
 import {useRouter} from "vue-router";
 
-let userForm = ref({username: "", password: "", is_admin: 0, id: 0});
+let userForm = ref({username: "", password: ""});
 const router = useRouter();
 
 // 登录
 const login = async () => {
-    const result = await userLogin(userForm.value);
+    const result = await userLogin({
+      username: userForm.value.username,
+      password: userForm.value.password,
+      is_admin: 0,
+      id: 0
+    });
     if (result.code) {
         // 1. 提示信息
         ElMessage.success('登录成功');

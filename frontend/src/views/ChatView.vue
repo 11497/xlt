@@ -2,13 +2,18 @@
 import {useCurrentUser} from "@/hooks/useCurrentUser.js";
 import {ref, watch, nextTick} from "vue";
 import {sessionByUserId} from "@/api/session.js";
-import {messageBySessionId} from "@/api/message.js";
-import {ElMessage} from "element-plus";
+import {chat, messageBySessionId} from "@/api/message.js";
+import {ElMessage, ElMessageBox} from "element-plus";
+import MarkdownIt from 'markdown-it';
+import router from "@/router/index.js";
+
+const md = new MarkdownIt({html: true, linkify: true, typographer: true});
 
 const {user} = useCurrentUser();
 
 let sessions = ref([]);
 const sessionsLoading = ref(false);
+let currentSessionId = ref(0);
 
 watch(
     () => user.value?.id,
@@ -32,7 +37,8 @@ const handleSessionClick = async (sessionId) => {
   const res = await messageBySessionId(sessionId);
   if (res.code) {
     messages.value = res.data;
-    console.log(messages.value);
+    currentSessionId.value = sessionId;
+    scrollToBottom();
   } else {
     ElMessage.error(res.msg);
   }
@@ -62,22 +68,35 @@ const autoResizeTextarea = () => {
 };
 
 // 发送消息
-const handleSend = () => {
+const handleSend = async () => {
   const content = inputContent.value.trim();
   if (!content) return;
 
-  // TODO: 调用发送API
-  console.log("发送:", content);
+  const current_content = content;
 
-  // 本地追加消息（演示用）
+  // 本地追加消息
   messages.value.push({content, role: "user"});
   inputContent.value = "";
 
   // 重置输入框高度
-  nextTick(() => {
+  await nextTick(() => {
     autoResizeTextarea();
     scrollToBottom();
   });
+
+  await chat({
+    id: null,
+    role: "user",
+    content: current_content,
+    session_id: currentSessionId.value,
+    create_time: new Date().toISOString()
+  })
+
+  await handleSessionClick(currentSessionId.value);
+  const res = await sessionByUserId(user.value.id);
+  sessions.value = res.data;
+
+  scrollToBottom();
 };
 
 // 滚动到底部
@@ -87,6 +106,20 @@ const scrollToBottom = () => {
     if (container) container.scrollTop = container.scrollHeight;
   });
 };
+
+const logout = () => {
+    ElMessageBox.confirm('确定要退出登录吗?', '提示', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+    }).then(async () => {
+        ElMessage.success('退出成功');
+        localStorage.removeItem('loginUser');
+        await router.push({path: '/login'});
+    }).catch(() => {
+        ElMessage.info('已取消退出')
+    })
+}
 </script>
 
 <template>
@@ -94,7 +127,9 @@ const scrollToBottom = () => {
     <header class="app-header">
       <div class="header-left">校灵通</div>
       <div class="header-center">中间</div>
-      <div class="header-right">欢迎，{{ user?.username }}</div>
+      <div class="header-right">
+        <a href="javascript:0" @click="logout">退出登录 【{{ user?.username }}】</a>
+      </div>
     </header>
 
     <main class="app-main">
@@ -118,18 +153,13 @@ const scrollToBottom = () => {
       <section class="main-chat">
         <!-- 上方：消息列表区域 -->
         <div class="chat-messages" ref="messagesContainer">
-          <div
-              v-for="(msg, index) in messages"
-              :key="index"
-              class="message-row"
-              :class="msg.role === 'user' ? 'is-user' : 'is-assistant'"
-          >
-            <!-- 角色标签 -->
+          <div v-for="(msg, index) in messages" :key="index" class="message-row"
+               :class="msg.role === 'user' ? 'is-user' : 'is-assistant'">
             <span class="message-role">{{ msg.role === 'user' ? '我' : 'AI 助手' }}</span>
-
-            <!-- 消息气泡 -->
             <div class="message-bubble">
-              {{ msg.content }}
+              <!-- ✅ 用户消息保持纯文本，AI消息使用 v-html 渲染 Markdown -->
+              <template v-if="msg.role === 'user'">{{ msg.content }}</template>
+              <div v-else class="markdown-body" v-html="md.render(msg.content)"></div>
             </div>
           </div>
         </div>
@@ -190,14 +220,6 @@ body {
 
 .header-right {
   white-space: nowrap;
-}
-
-/* 3. Main：占据除 header 和 footer 之外的所有剩余空间 */
-.el-main {
-  flex: 1;
-  padding: 0; /* 去除 el-main 默认的 20px padding，避免产生滚动条 */
-  overflow: hidden; /* 防止内容溢出导致外层出现滚动条 */
-  min-height: 0; /* 关键：允许flex容器收缩 */
 }
 
 /* 4. Main 内部容器：横向排列，占满父级高度 */
@@ -402,5 +424,10 @@ body {
   justify-content: center;
   background-color: #f5f7fa;
   border-top: 1px solid #dcdfe6;
+}
+
+a {
+    color: red;
+    text-decoration: none;
 }
 </style>
