@@ -561,6 +561,7 @@ body {
   outline: none;
   transition: border-color 0.2s;
   font-family: inherit;
+  box-sizing: border-box;
 }
 
 .chat-textarea:focus {
