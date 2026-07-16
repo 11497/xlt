@@ -2,7 +2,7 @@
 import {useCurrentUser} from "@/hooks/useCurrentUser.js";
 import {ref, watch, nextTick} from "vue";
 import {createSession, deleteSession, renameSession, sessionByUserId} from "@/api/session.js";
-import {chat, messageBySessionId} from "@/api/message.js";
+import {chat, deleteMessagesAfter, messageBySessionId} from "@/api/message.js";
 import {ElMessage, ElMessageBox} from "element-plus";
 import MarkdownIt from 'markdown-it';
 import router from "@/router/index.js";
@@ -153,6 +153,27 @@ const handleDelete = (session) => {
   });
 };
 
+// 删除消息
+const handleDeleteMessage = (msg) => {
+  ElMessageBox.confirm(`确定要删除该消息吗？`, '删除', {
+    confirmButtonText: '确定',
+    cancelButtonText: '取消',
+    type: 'warning'
+  }).then(async () => {
+    const res = await deleteMessagesAfter(
+        currentSessionId.value,
+        msg.id
+    )
+    if (res.code) {
+      ElMessage.success("删除成功");
+      await handleSessionClick(currentSessionId.value);
+    } else {
+      ElMessage.error(res.msg);
+    }
+  }).catch(() => {
+  });
+};
+
 // 创建会话
 const createSessionBtn = async () => {
   const res = await createSession({
@@ -169,6 +190,8 @@ const createSessionBtn = async () => {
     sessions.value = result.data;
     currentSessionId.value = res.data.id;
     messages.value = []
+  } else {
+    ElMessage.error(res.msg);
   }
 }
 </script>
@@ -192,6 +215,7 @@ const createSessionBtn = async () => {
               v-for="session in sessions"
               :key="session.id"
               class="session-item"
+              :class="{ 'is-active': session.id === currentSessionId }"
               @click="handleSessionClick(session.id)"
           >
             <div class="session-name">{{ session.name }}</div>
@@ -223,10 +247,11 @@ const createSessionBtn = async () => {
                :class="msg.role === 'user' ? 'is-user' : 'is-assistant'">
             <span class="message-role">{{ msg.role === 'user' ? '我' : 'AI 助手' }}</span>
             <div class="message-bubble">
-              <!-- ✅ 用户消息保持纯文本，AI消息使用 v-html 渲染 Markdown -->
+              <!-- 用户消息保持纯文本，AI消息使用 v-html 渲染 Markdown -->
               <template v-if="msg.role === 'user'">{{ msg.content }}</template>
               <div v-else class="markdown-body" v-html="md.render(msg.content)"></div>
             </div>
+            <el-button class="message-delete-btn" size="small" type="danger" text @click="handleDeleteMessage(msg)">删除</el-button>
           </div>
         </div>
 
@@ -359,6 +384,23 @@ body {
   background-color: #f5f7fa;
 }
 
+/* 当前选中的会话 - 蓝底 */
+.session-item.is-active {
+  background-color: #409eff;
+}
+
+.session-item.is-active .session-name {
+  color: #fff;
+}
+
+.session-item.is-active .session-more-btn {
+  color: #fff;
+}
+
+.session-item.is-active:hover {
+  background-color: #409eff;
+}
+
 .session-item:last-child {
   border-bottom: none;
 }
@@ -432,6 +474,25 @@ body {
   word-break: break-word;
   border-radius: 8px;
   position: relative;
+}
+
+/* 消息删除按钮 */
+.message-delete-btn {
+  opacity: 0;
+  transition: opacity 0.2s;
+  align-self: flex-end;
+}
+
+.message-row.is-user .message-delete-btn {
+  align-self: flex-end;
+}
+
+.message-row.is-assistant .message-delete-btn {
+  align-self: flex-start;
+}
+
+.message-row:hover .message-delete-btn {
+  opacity: 1;
 }
 
 /* Assistant 气泡样式 */
