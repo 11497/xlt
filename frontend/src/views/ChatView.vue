@@ -6,7 +6,7 @@ import {chat, deleteMessagesAfter, messageBySessionId} from "@/api/message.js";
 import {ElMessage, ElMessageBox} from "element-plus";
 import MarkdownIt from 'markdown-it';
 import router from "@/router/index.js";
-import {House, SwitchButton} from "@element-plus/icons-vue";
+import {ChatLineSquare, Delete, EditPen, House, Position, SwitchButton} from "@element-plus/icons-vue";
 
 const md = new MarkdownIt({html: true, linkify: true, typographer: true});
 
@@ -223,7 +223,7 @@ const switchToMyPage = async () => {
 
     <main class="app-main">
       <aside class="main-left">
-        <div class="sessions-header">对话列表</div>
+        <div class="sessions-header"><el-icon><ChatLineSquare /></el-icon> 对话列表</div>
         <el-button type="primary" class="sessions-create-btn" @click="createSessionBtn">创建对话</el-button>
         <div class="sessions-list">
           <div
@@ -245,8 +245,12 @@ const switchToMyPage = async () => {
                 <span class="session-more-btn" @click.stop>⋯</span>
               </template>
               <div class="session-popover-menu">
-                <div class="menu-item" @click.stop="handleRename(session)">重命名</div>
-                <div class="menu-item danger" @click.stop="handleDelete(session)">删除</div>
+                <div class="menu-item" @click.stop="handleRename(session)">
+                  <el-icon><EditPen /></el-icon> 重命名
+                </div>
+                <div class="menu-item danger" @click.stop="handleDelete(session)">
+                  <el-icon><Delete /></el-icon> 删除
+                </div>
               </div>
             </el-popover>
           </div>
@@ -266,7 +270,13 @@ const switchToMyPage = async () => {
               <template v-if="msg.role === 'user'">{{ msg.content }}</template>
               <div v-else class="markdown-body" v-html="md.render(msg.content)"></div>
             </div>
-            <el-button class="message-delete-btn" size="small" type="danger" text @click="handleDeleteMessage(msg)">删除</el-button>
+            <el-button
+                class="message-delete-btn"
+                size="small"
+                type="danger"
+                text
+                @click="handleDeleteMessage(msg)"
+            ><el-icon><Delete /></el-icon> 删除</el-button>
           </div>
         </div>
 
@@ -281,7 +291,9 @@ const switchToMyPage = async () => {
               @input="autoResizeTextarea"
               ref="textareaRef"
           ></textarea>
-          <el-button type="primary" class="send-btn" @click="handleSend">发送</el-button>
+          <el-button type="primary" class="send-btn" @click="handleSend">
+            <el-icon><Position /></el-icon> 发送
+          </el-button>
         </div>
       </section>
     </main>
@@ -346,8 +358,7 @@ body {
   border-right: 1px solid #dcdfe6;
   display: flex;
   flex-direction: column;
-  min-height: 0; /* ✅ 保留 */
-  /* 删除 height: 100%; */
+  min-height: 0; /* 保留 */
 }
 
 /* 会话列表头部 */
@@ -360,7 +371,7 @@ body {
 }
 
 .sessions-create-btn {
-  margin: 15px 15px 5px 6px;
+  margin: 15px 15px 10px 10px;
 }
 
 /* 会话列表容器 - 需要固定高度和滚动条 */
