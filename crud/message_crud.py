@@ -50,7 +50,7 @@ class MessageCRUD:
         :param message_id: 消息ID
         :return: 是否成功删除了记录
         """
-        sql = "DELETE FROM message WHERE session_id = %s AND id > %s"
+        sql = "DELETE FROM message WHERE session_id = %s AND id >= %s"
         with get_cursor() as cursor:
             affected = cursor.execute(sql, (session_id, message_id))
             return affected > 0
