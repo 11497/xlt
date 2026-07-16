@@ -404,13 +404,14 @@ body {
 /* 每个会话项 */
 .session-item {
   padding: 12px 16px;
+  margin: 4px 8px;
   cursor: pointer;
   transition: background-color 0.2s;
-  border-bottom: 1px solid #f0f0f0;
+  border-radius: 8px;
 }
 
 .session-item:hover {
-  background-color: #f5f7fa;
+  background-color: #e8f1ff;
 }
 
 /* 当前选中的会话 - 蓝底 */
