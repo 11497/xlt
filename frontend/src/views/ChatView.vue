@@ -1,7 +1,7 @@
 <script setup>
 import {useCurrentUser} from "@/hooks/useCurrentUser.js";
 import {ref, watch, nextTick} from "vue";
-import {sessionByUserId} from "@/api/session.js";
+import {createSession, deleteSession, renameSession, sessionByUserId} from "@/api/session.js";
 import {chat, messageBySessionId} from "@/api/message.js";
 import {ElMessage, ElMessageBox} from "element-plus";
 import MarkdownIt from 'markdown-it';
@@ -108,17 +108,68 @@ const scrollToBottom = () => {
 };
 
 const logout = () => {
-    ElMessageBox.confirm('确定要退出登录吗?', '提示', {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        type: 'warning'
-    }).then(async () => {
-        ElMessage.success('退出成功');
-        localStorage.removeItem('loginUser');
-        await router.push({path: '/login'});
-    }).catch(() => {
-        ElMessage.info('已取消退出')
-    })
+  ElMessageBox.confirm('确定要退出登录吗?', '提示', {
+    confirmButtonText: '确定',
+    cancelButtonText: '取消',
+    type: 'warning'
+  }).then(async () => {
+    ElMessage.success('退出成功');
+    localStorage.removeItem('loginUser');
+    await router.push({path: '/login'});
+  }).catch(() => {
+    ElMessage.info('已取消退出')
+  })
+}
+
+// 重命名会话
+const handleRename = (session) => {
+  ElMessageBox.prompt(`确定要重命名会话「${session.name}」吗？`, '重命名', {
+    confirmButtonText: '确定',
+    cancelButtonText: '取消',
+    type: 'info'
+  }).then(async ({value}) => {
+    await renameSession(session.id, value)
+    const res = await sessionByUserId(user.value.id);
+    sessions.value = res.data;
+  }).catch(() => {
+  });
+};
+
+// 删除会话
+const handleDelete = (session) => {
+  ElMessageBox.confirm(`确定要删除会话「${session.name}」吗？`, '删除', {
+    confirmButtonText: '确定',
+    cancelButtonText: '取消',
+    type: 'warning'
+  }).then(async () => {
+    await deleteSession(session.id)
+    const res = await sessionByUserId(user.value.id);
+    sessions.value = res.data;
+    if (currentSessionId.value === session.id) {
+      currentSessionId.value = 0;
+      messages.value = [];
+    }
+  }).catch(() => {
+  });
+};
+
+// 创建会话
+const createSessionBtn = async () => {
+  const res = await createSession({
+    user_id: user.value.id,
+    name: "新建会话",
+    create_time: null,
+    update_time: null,
+    id: null
+  })
+
+  if (res.code) {
+    ElMessage.success("创建成功");
+    const result = await sessionByUserId(user.value.id);
+    sessions.value = result.data;
+    currentSessionId.value = res.data.id;
+    messages.value = []
+  }
 }
 </script>
 
@@ -135,7 +186,7 @@ const logout = () => {
     <main class="app-main">
       <aside class="main-left">
         <div class="sessions-header">对话列表</div>
-        <el-button type="primary" class="sessions-create-btn">创建对话</el-button>
+        <el-button type="primary" class="sessions-create-btn" @click="createSessionBtn">创建对话</el-button>
         <div class="sessions-list">
           <div
               v-for="session in sessions"
@@ -144,6 +195,21 @@ const logout = () => {
               @click="handleSessionClick(session.id)"
           >
             <div class="session-name">{{ session.name }}</div>
+            <!-- 三个小点图标 + 弹出框 -->
+            <el-popover
+                placement="bottom-end"
+                :width="120"
+                trigger="click"
+                popper-class="session-popover"
+            >
+              <template #reference>
+                <span class="session-more-btn" @click.stop>⋯</span>
+              </template>
+              <div class="session-popover-menu">
+                <div class="menu-item" @click.stop="handleRename(session)">重命名</div>
+                <div class="menu-item danger" @click.stop="handleDelete(session)">删除</div>
+              </div>
+            </el-popover>
           </div>
           <div v-if="sessionsLoading" class="loading-text">加载中...</div>
           <div v-else-if="sessions && sessions.length === 0" class="empty-text">暂无会话</div>
@@ -427,7 +493,66 @@ body {
 }
 
 a {
-    color: red;
-    text-decoration: none;
+  color: red;
+  text-decoration: none;
+}
+
+/* ===== 会话项改为 flex 布局 ===== */
+.session-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* ===== 三个点按钮：默认隐藏，hover 时显示 ===== */
+.session-more-btn {
+  display: none; /* 默认隐藏 */
+  font-size: 18px;
+  color: #909399;
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+  flex-shrink: 0;
+  user-select: none;
+  border-radius: 4px;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.session-more-btn:hover {
+  color: #303133;
+  background-color: #e4e7ed;
+}
+
+/* 鼠标移入 session-item 时显示三个点 */
+.session-item:hover .session-more-btn {
+  display: inline-block;
+}
+
+/* ===== 弹出框菜单样式 ===== */
+.session-popover-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.session-popover-menu .menu-item {
+  padding: 8px 12px;
+  font-size: 14px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+  color: #303133;
+}
+
+.session-popover-menu .menu-item:hover {
+  background-color: #f5f7fa;
+}
+
+.session-popover-menu .menu-item.danger {
+  color: #f56c6c;
+}
+
+.session-popover-menu .menu-item.danger:hover {
+  background-color: #fef0f0;
 }
 </style>
