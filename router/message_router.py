@@ -146,7 +146,7 @@ async def chat(
         MessageCRUD.create(ai_message)
         
         # 如果是第一轮对话，总结对话并更新会话名称
-        if is_first_round:
+        if is_first_round and session.name == "新建会话":
             conversation_messages = [
                 {"role": "user", "content": message.content},
                 {"role": "assistant", "content": full_response}
