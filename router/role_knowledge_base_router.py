@@ -1,6 +1,6 @@
 from typing import List
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 
 from authentication.user_auth import require_admin
 from crud.role_knowledge_base_crud import RoleKnowledgeBaseCRUD
@@ -55,34 +55,60 @@ async def batch_remove_roles_from_knowledge_base(
     return result.success(msg="删除角色成功")
 
 
-@router.get("/roles_by_knowledge_base/{knowledge_base_id}")
-async def get_roles_by_knowledge_base(
-        knowledge_base_id: int,
-        _admin: User = Depends(require_admin)):
-    """
-    获取指定知识库的所有角色ID
-    :param knowledge_base_id: 知识库ID
-    :param _admin: 管理员用户对象
-    :return: 角色ID列表
-    """
-    result = Result()
-    role_ids = RoleKnowledgeBaseCRUD.get_roles_by_knowledge_base(knowledge_base_id)
-    return result.success(data=role_ids)
-
-
-@router.get("/knowledge_base_by_role/{role_id}")
+@router.get("/role/{role_id}/knowledge_bases")
 async def get_knowledge_base_by_role(
         role_id: int,
-        _admin: User = Depends(require_admin)):
+        page: int = Query(1, ge=1, description="页码"),
+        page_size: int = Query(10, ge=1, le=100, description="每页条数")
+):
     """
-    获取指定角色的所有知识库ID
+    按角色分页查询关联的知识库
     :param role_id: 角色ID
-    :param _admin: 管理员用户对象
-    :return: 知识库ID列表
+    :param page: 页码，默认1
+    :param page_size: 每页条数，默认10，最大100
+    :return: 分页知识库列表及总数
     """
     result = Result()
-    knowledge_base_ids = RoleKnowledgeBaseCRUD.get_knowledge_base_by_role(role_id)
-    return result.success(data=knowledge_base_ids)
+
+    knowledge_bases, total = RoleKnowledgeBaseCRUD.get_page_knowledge_base_by_role(
+        role_id=role_id,
+        page=page,
+        page_size=page_size
+    )
+    return result.success(msg="查询成功", data={
+        "list": knowledge_bases,
+        "total": total,
+        "page": page,
+        "page_size": page_size
+    })
+
+
+@router.get("/knowledge_base/{knowledge_base_id}/roles")
+async def get_roles_by_knowledge_base(
+        knowledge_base_id: int,
+        page: int = Query(1, ge=1, description="页码"),
+        page_size: int = Query(10, ge=1, le=100, description="每页条数")
+):
+    """
+    按知识库分页查询关联的角色
+    :param knowledge_base_id: 知识库ID
+    :param page: 页码，默认1
+    :param page_size: 每页条数，默认10，最大100
+    :return: 分页角色列表及总数
+    """
+    result = Result()
+
+    roles, total = RoleKnowledgeBaseCRUD.get_page_roles_by_knowledge_base(
+        knowledge_base_id=knowledge_base_id,
+        page=page,
+        page_size=page_size
+    )
+    return result.success(msg="查询成功", data={
+        "list": roles,
+        "total": total,
+        "page": page,
+        "page_size": page_size
+    })
 
 
 @router.post("/assign_single")

@@ -1,5 +1,7 @@
-from typing import List
+from typing import List, Any
 
+from model.knowledge_base_model import KnowledgeBase
+from model.role_model import Role
 from util.db_util import get_cursor
 
 
@@ -124,3 +126,77 @@ class RoleKnowledgeBaseCRUD:
         with get_cursor() as cursor:
             affected = cursor.execute(sql, (knowledge_base_id,))
             return affected > 0
+
+    @staticmethod
+    def get_page_knowledge_base_by_role(
+            role_id: int,
+            page: int = 1,
+            page_size: int = 10
+    ) -> tuple[list[KnowledgeBase], int | Any]:
+        """
+        按角色分页查询关联的知识库
+        :param role_id: 角色ID
+        :param page: 页码（从1开始）
+        :param page_size: 每页条数
+        :return: (知识库列表, 总记录数)
+        """
+        offset = (page - 1) * page_size
+
+        sql_count = ("SELECT COUNT(*) AS total FROM role_knowledge_base rkb "
+                     "JOIN knowledge_base kb ON rkb.knowledge_base_id = kb.id "
+                     "WHERE rkb.role_id = %s")
+        sql_data = ("SELECT kb.* FROM role_knowledge_base rkb "
+                    "JOIN knowledge_base kb ON rkb.knowledge_base_id = kb.id "
+                    "WHERE rkb.role_id = %s "
+                    "LIMIT %s OFFSET %s")
+
+        with get_cursor() as cursor:
+            cursor.execute(sql_count, (role_id,))
+            count_row = cursor.fetchone()
+            if isinstance(count_row, dict):
+                total = count_row.get("total", count_row.get("COUNT(*)", 0))
+            else:
+                total = count_row[0] if count_row else 0
+
+            cursor.execute(sql_data, (role_id, page_size, offset))
+            rows = cursor.fetchall()
+            knowledge_bases = [KnowledgeBase.from_row(r) for r in rows]
+
+        return knowledge_bases, total
+
+    @staticmethod
+    def get_page_roles_by_knowledge_base(
+            knowledge_base_id: int,
+            page: int = 1,
+            page_size: int = 10
+    ) -> tuple[list[Role], int | Any]:
+        """
+        按知识库分页查询关联的角色
+        :param knowledge_base_id: 知识库ID
+        :param page: 页码（从1开始）
+        :param page_size: 每页条数
+        :return: (角色列表, 总记录数)
+        """
+        offset = (page - 1) * page_size
+
+        sql_count = ("SELECT COUNT(*) AS total FROM role_knowledge_base rkb "
+                     "JOIN role r ON rkb.role_id = r.id "
+                     "WHERE rkb.knowledge_base_id = %s")
+        sql_data = ("SELECT r.* FROM role_knowledge_base rkb "
+                    "JOIN role r ON rkb.role_id = r.id "
+                    "WHERE rkb.knowledge_base_id = %s "
+                    "LIMIT %s OFFSET %s")
+
+        with get_cursor() as cursor:
+            cursor.execute(sql_count, (knowledge_base_id,))
+            count_row = cursor.fetchone()
+            if isinstance(count_row, dict):
+                total = count_row.get("total", count_row.get("COUNT(*)", 0))
+            else:
+                total = count_row[0] if count_row else 0
+
+            cursor.execute(sql_data, (knowledge_base_id, page_size, offset))
+            rows = cursor.fetchall()
+            roles = [Role.from_row(r) for r in rows]
+
+        return roles, total
