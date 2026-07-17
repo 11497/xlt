@@ -82,7 +82,7 @@ class UserKnowledgeBaseCRUD:
             items = [row['knowledge_base_id'] for row in rows]
 
         return {
-            "items": items,
+            "list": items,
             "total": total,
             "page": page,
             "page_size": page_size
@@ -119,7 +119,7 @@ class UserKnowledgeBaseCRUD:
             items = [row['user_id'] for row in rows]
 
         return {
-            "items": items,
+            "list": items,
             "total": total,
             "page": page,
             "page_size": page_size
