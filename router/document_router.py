@@ -19,7 +19,6 @@ router = APIRouter(prefix="/api/document", tags=["document"])
 
 
 # TODO 向量归一化、去重
-# TODO 文档向量存储
 
 async def validate_file(file: UploadFile) -> Optional[str]:
     """
@@ -48,71 +47,6 @@ async def validate_file(file: UploadFile) -> Optional[str]:
         return "文件内容不能为空"
 
     return None
-
-
-@router.post("/upload/batch")
-async def upload_documents_batch(
-        knowledge_base_id: int = Form(...),
-        files: List[UploadFile] = File(...),
-        _admin: User = Depends(require_admin)
-):
-    """
-    批量上传文档到知识库
-    :param knowledge_base_id: 知识库ID
-    :param files: 上传的文件对象列表
-    :param _admin: 管理员用户对象
-    :return: 上传结果
-    """
-    result = Result()
-
-    # 验证知识库是否存在
-    knowledge_base = KnowledgeBaseCRUD.get_by_id(knowledge_base_id)
-    if not knowledge_base:
-        return result.error(msg="知识库不存在")
-
-    # 验证文件列表
-    if not files:
-        return result.error(msg="请选择要上传的文件")
-
-    # 存储成功和失败的文件信息
-    success_count = 0
-    failed_files = []
-    documents_to_create = []
-
-    # 先验证所有文件
-    for file in files:
-        error_msg = await validate_file(file)
-        if error_msg:
-            failed_files.append({"filename": file.filename, "reason": error_msg})
-            continue
-        documents_to_create.append((knowledge_base_id, file.filename, f"knowledge_base/{knowledge_base_id}/{file.filename}"))
-
-    # 上传文件到OSS
-    async with OSSUtil() as oss_client:
-        for i, file in enumerate(files):
-            # 跳过已标记为失败的文件
-            if any(f["filename"] == file.filename for f in failed_files):
-                continue
-            try:
-                content = await file.read()
-                storage_path = f"knowledge_base/{knowledge_base_id}/{file.filename}"
-                await oss_client.upload_file(storage_path, content)
-                success_count += 1
-            except Exception as e:
-                failed_files.append({"filename": file.filename, "reason": f"上传失败：{str(e)}"})
-
-    # 批量插入数据库
-    if documents_to_create:
-        DocumentCRUD.batch_create(documents_to_create)
-    return result.success(
-        msg=f"批量上传完成",
-        data={
-            "total_count": len(files),
-            "success_count": success_count,
-            "failed_count": len(failed_files),
-            "failed_files": failed_files
-        }
-    )
 
 
 @router.post("/upload")
@@ -179,69 +113,6 @@ async def upload_document(
     )
 
     return result.success(msg="上传成功", data={"id": document_id, "filename": file.filename})
-
-
-@router.put("/update")
-async def update_document(
-        document_id: int = Form(...),
-        file: UploadFile = File(...),
-        _admin: User = Depends(require_admin)
-):
-    """
-    修改文档
-    :param document_id: 文档ID
-    :param file: 上传的文件对象
-    :param _admin: 管理员用户对象
-    :return: 修改文档对象
-    """
-    result = Result()
-
-    # 查询文档是否存在
-    document = DocumentCRUD.get_by_id(document_id)
-    if not document:
-        return result.error(msg="文档不存在")
-
-    # 验证文件
-    error_msg = await validate_file(file)
-    if error_msg:
-        return result.error(msg=error_msg)
-
-    # 生成新的OSS存储路径
-    storage_path = f"knowledge_base/{document.knowledge_base_id}/{file.filename}"
-
-    # 读取文件内容
-    content = await file.read()
-
-    # 上传到OSS（覆盖旧文件）
-    try:
-        async with OSSUtil() as oss_client:
-            await oss_client.update_file(storage_path, content)
-    except Exception as e:
-        return result.error(msg=f"文件修改失败：{str(e)}")
-
-    # 文档向量化更新
-    await file.seek(0)  # 重置文件指针
-    content = await read_file_content(file)
-    chunks = chunk_text_by_sentence(content)
-    embeddings = EmbeddingService().embed_texts(chunks)
-
-    # 将向量存储到chroma
-    chroma_service = ChromaService()
-    chroma_service.delete_document_embeddings(
-        knowledge_base_id=document.knowledge_base_id,
-        document_id=document_id
-    )
-    chroma_service.add_document_embeddings(
-        knowledge_base_id=document.knowledge_base_id,
-        document_id=document_id,
-        chunks=chunks,
-        embeddings = embeddings
-    )
-
-    # 更新数据库记录（同时更新文件名和存储路径）
-    DocumentCRUD.update(document_id, file.filename, storage_path)
-
-    return result.success(msg="修改成功", data={"id": document_id, "filename": file.filename})
 
 
 @router.get("/download/{document_id}")
