@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 
 from authentication.user_auth import require_admin, require_current_user
 from config.jwt_config import JWT_CONFIG
@@ -80,16 +80,27 @@ async def login(user: User):
     return result.success(msg="登录成功", data=access_token)
 
 @router.get("/all")
-async def get_all_user(_admin: User = Depends(require_admin)):
+async def get_all_user(
+        page: int = Query(1, ge=1, description="页码"),
+        page_size: int = Query(10, ge=1, le=100, description="每页条数"),
+        _admin: User = Depends(require_admin)
+):
     """
-    查询所有用户信息（管理员）
+    分页查询所有用户信息（管理员）
+    :param page: 页码，默认1
+    :param page_size: 每页条数，默认10，最大100
     :param _admin: 管理员用户对象
-    :return: 用户列表
+    :return: 分页用户列表及总数
     """
     result = Result()
 
-    users = UserCRUD.get_all()
-    return result.success(msg="查询成功", data=users)
+    users, total = UserCRUD.get_page(page=page, page_size=page_size)
+    return result.success(msg="查询成功", data={
+        "list": users,
+        "total": total,
+        "page": page,
+        "page_size": page_size
+    })
 
 @router.get("")
 async def get_user(user: User = Depends(require_current_user)):

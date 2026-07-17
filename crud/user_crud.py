@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Tuple
 from util.db_util import get_cursor
 from model.user_model import User
 
@@ -54,6 +54,37 @@ class UserCRUD:
             cursor.execute(sql)
             rows = cursor.fetchall()
             return [User.from_row(r) for r in rows]
+
+    @staticmethod
+    def get_page(page: int = 1, page_size: int = 10) -> Tuple[List[User], int]:
+        """
+        分页查询用户
+        :param page: 页码（从1开始）
+        :param page_size: 每页条数
+        :return: (用户列表, 总记录数)
+        """
+        offset = (page - 1) * page_size
+
+        # 使用别名确保字段名可预测
+        sql_count = "SELECT COUNT(*) AS total FROM user"
+        sql_data = "SELECT * FROM user LIMIT %s OFFSET %s"
+
+        with get_cursor() as cursor:
+            # 获取总数
+            cursor.execute(sql_count)
+            count_row = cursor.fetchone()
+            # 兼容字典游标和元组游标
+            if isinstance(count_row, dict):
+                total = count_row.get("total", count_row.get("COUNT(*)", 0))
+            else:
+                total = count_row[0] if count_row else 0
+
+            # 获取分页数据
+            cursor.execute(sql_data, (page_size, offset))
+            rows = cursor.fetchall()
+            users = [User.from_row(r) for r in rows]
+
+        return users, total
 
     @staticmethod
     def update_username(user_id: int, username: str) -> bool:
