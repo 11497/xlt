@@ -104,7 +104,7 @@ class AnnouncementCRUD:
         offset = (page - 1) * page_size
 
         sql_count = "SELECT COUNT(*) AS total FROM announcement"
-        sql_data = "SELECT * FROM announcement ORDER BY create_time DESC LIMIT %s OFFSET %s"
+        sql_data = "SELECT * FROM announcement ORDER BY is_top DESC, create_time DESC LIMIT %s OFFSET %s"
 
         with get_cursor() as cursor:
             # 获取总数（兼容字典游标和元组游标）
