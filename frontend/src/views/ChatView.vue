@@ -2,7 +2,7 @@
 import {useCurrentUser} from "@/hooks/useCurrentUser.js";
 import {ref, watch, nextTick} from "vue";
 import {createSession, deleteSession, renameSession, sessionByUserId} from "@/api/session.js";
-import {chat, deleteMessagesAfter, messageBySessionId} from "@/api/message.js";
+import {chat, deleteMessagesAfter, deleteMessagesBySessionId, messageBySessionId} from "@/api/message.js";
 import {ElMessage, ElMessageBox} from "element-plus";
 import MarkdownIt from 'markdown-it';
 import router from "@/router/index.js";
@@ -143,6 +143,7 @@ const handleDelete = (session) => {
     cancelButtonText: '取消',
     type: 'warning'
   }).then(async () => {
+    await deleteMessagesBySessionId(session.id)
     await deleteSession(session.id)
     const res = await sessionByUserId(user.value.id);
     sessions.value = res.data;
