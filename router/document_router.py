@@ -8,6 +8,7 @@ from ai.embedding import EmbeddingService
 from authentication.user_auth import require_admin, require_current_user
 from crud.document_crud import DocumentCRUD
 from crud.knowledge_base_crud import KnowledgeBaseCRUD
+from crud.user_knowledge_base_crud import UserKnowledgeBaseCRUD
 from model.document_model import Document
 from model.result import Result
 from model.user_model import User
@@ -194,16 +195,25 @@ async def delete_document(
 async def get_documents_by_knowledge_base(
         knowledge_base_id: int,
         page: int = Query(1, ge=1, description="页码"),
-        page_size: int = Query(10, ge=1, le=100, description="每页条数")
+        page_size: int = Query(10, ge=1, le=100, description="每页条数"),
+        user: User = Depends(require_current_user)
 ):
     """
     按知识库分页查询文档
     :param knowledge_base_id: 知识库ID
     :param page: 页码，默认1
     :param page_size: 每页条数，默认10，最大100
+    :param user: 当前用户对象
     :return: 分页文档列表及总数
     """
     result = Result()
+
+    # 验证用户是否有权限访问该知识库
+    if user.is_admin == 0:
+        knowledge_bases = UserKnowledgeBaseCRUD.get_knowledge_bases_by_user(user.id)
+        if knowledge_base_id not in [kb.id for kb in knowledge_bases]:
+            return result.error(msg="用户没有权限访问该知识库")
+
 
     documents, total = DocumentCRUD.get_page_by_knowledge_base(
         knowledge_base_id=knowledge_base_id,

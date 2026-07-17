@@ -59,13 +59,15 @@ async def batch_remove_roles_from_knowledge_base(
 async def get_knowledge_base_by_role(
         role_id: int,
         page: int = Query(1, ge=1, description="页码"),
-        page_size: int = Query(10, ge=1, le=100, description="每页条数")
+        page_size: int = Query(10, ge=1, le=100, description="每页条数"),
+        _admin: User = Depends(require_admin)
 ):
     """
     按角色分页查询关联的知识库
     :param role_id: 角色ID
     :param page: 页码，默认1
     :param page_size: 每页条数，默认10，最大100
+    :param _admin: 管理员用户对象
     :return: 分页知识库列表及总数
     """
     result = Result()
@@ -87,13 +89,15 @@ async def get_knowledge_base_by_role(
 async def get_roles_by_knowledge_base(
         knowledge_base_id: int,
         page: int = Query(1, ge=1, description="页码"),
-        page_size: int = Query(10, ge=1, le=100, description="每页条数")
+        page_size: int = Query(10, ge=1, le=100, description="每页条数"),
+        _admin: User = Depends(require_admin)
 ):
     """
     按知识库分页查询关联的角色
     :param knowledge_base_id: 知识库ID
     :param page: 页码，默认1
     :param page_size: 每页条数，默认10，最大100
+    :param _admin: 管理员用户对象
     :return: 分页角色列表及总数
     """
     result = Result()

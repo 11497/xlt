@@ -59,10 +59,15 @@ async def batch_remove_users_from_role(
 async def get_users_by_role(
         role_id: int,
         page: int = Query(1, ge=1, description="页码"),
-        page_size: int = Query(10, ge=1, le=100, description="每页条数")
+        page_size: int = Query(10, ge=1, le=100, description="每页条数"),
+        _admin: User = Depends(require_admin)
 ):
     """
     按角色分页查询关联的用户
+    :param role_id: 角色ID
+    :param page: 页码，默认1
+    :param page_size: 每页条数，默认10，最大100
+    :param _admin: 管理员用户对象
     """
     result = Result()
 
@@ -83,12 +88,21 @@ async def get_users_by_role(
 async def get_roles_by_user(
         user_id: int,
         page: int = Query(1, ge=1, description="页码"),
-        page_size: int = Query(10, ge=1, le=100, description="每页条数")
+        page_size: int = Query(10, ge=1, le=100, description="每页条数"),
+        user: User = Depends(require_current_user)
 ):
     """
     按用户分页查询关联的角色
+    :param user_id: 用户ID
+    :param page: 页码，默认1
+    :param page_size: 每页条数，默认10，最大100
+    :param user: 当前用户对象
     """
     result = Result()
+
+    # 验证用户是否有查询权限
+    if user.id != user_id and user.is_admin == 0:
+        result.error(msg="没有权限查询其他用户的角色")
 
     roles, total = RoleUserCRUD.get_page_roles_by_user(
         user_id=user_id,

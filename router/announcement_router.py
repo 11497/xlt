@@ -31,12 +31,14 @@ async def create_announcement(announcement: Announcement,
 @router.get("/all")
 async def get_all_announcements(
         page: int = Query(1, ge=1, description="页码"),
-        page_size: int = Query(10, ge=1, le=100, description="每页条数")
+        page_size: int = Query(10, ge=1, le=100, description="每页条数"),
+        _user: User = Depends(require_current_user)
 ):
     """
     分页查询所有公告
     :param page: 页码，默认1
     :param page_size: 每页条数，默认10，最大100
+    :param _user: 当前用户对象
     :return: 分页公告列表及总数
     """
     result = Result()

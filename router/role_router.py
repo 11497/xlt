@@ -33,10 +33,12 @@ async def create_role(role: Role, _admin: User = Depends(require_admin)):
 @router.get("/all")
 async def get_all_role(
         page: int = Query(1, ge=1, description="页码"),
-        page_size: int = Query(10, ge=1, le=100, description="每页条数")
+        page_size: int = Query(10, ge=1, le=100, description="每页条数"),
+        _admin: User = Depends(require_admin)
 ):
     """
     分页查询所有角色
+    :param _admin: 管理员用户对象
     :param page: 页码，默认1
     :param page_size: 每页条数，默认10，最大100
     :return: 分页角色列表及总数
