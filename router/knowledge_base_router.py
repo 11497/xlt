@@ -4,6 +4,7 @@ from ai.chroma_service import ChromaService
 from authentication.user_auth import require_admin, require_current_user
 from crud.knowledge_base_crud import KnowledgeBaseCRUD
 from crud.role_knowledge_base_crud import RoleKnowledgeBaseCRUD
+from crud.user_knowledge_base_crud import UserKnowledgeBaseCRUD
 from model.result import Result
 from model.knowledge_base_model import KnowledgeBase
 from model.user_model import User
@@ -95,3 +96,26 @@ async def delete_knowledge_base(id: int, _admin: User = Depends(require_admin)):
     chroma_service.delete_knowledge_base(id)
 
     return result.success(msg="删除知识库成功")
+
+@router.get("/{id}")
+async def get_by_id(id: int, user: User = Depends(require_current_user)):
+    """
+    根据ID查询知识库
+    :param id: 知识库ID
+    :param user: 当前用户对象
+    :return: 知识库对象
+    """
+    result = Result()
+
+    # 检查知识库是否存在
+    knowledge_base = KnowledgeBaseCRUD.get_by_id(id)
+    if not knowledge_base:
+        return result.error(msg="知识库不存在")
+
+    # 检查当前用户是否有访问权限
+    if user.is_admin == 0:
+        knowledge_base_ids = UserKnowledgeBaseCRUD.get_knowledge_bases_by_user(user.id)
+        if knowledge_base.id not in knowledge_base_ids:
+            return result.error(msg="您没有权限访问该知识库")
+
+    return result.success(msg="查询成功", data=knowledge_base)
