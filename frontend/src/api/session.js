@@ -7,5 +7,3 @@ export const deleteSession = (session_id) => request.delete(`/session/${session_
 export const renameSession = (session_id, name) => request.put(`/session/name?session_id=${session_id}&name=${name}`)
 
 export const createSession = (session) => request.post("/session", session)
-
-export const getAllSessions = () => request.get("/session/all")
