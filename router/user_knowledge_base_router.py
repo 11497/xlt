@@ -5,7 +5,7 @@ from crud.user_knowledge_base_crud import UserKnowledgeBaseCRUD
 from model.result import Result
 from model.user_model import User
 
-router = APIRouter(prefix="/user_knowledge_base", tags=["user_knowledge_base"])
+router = APIRouter(prefix="/api/user_knowledge_base", tags=["user_knowledge_base"])
 
 
 @router.get("/knowledge_bases")
