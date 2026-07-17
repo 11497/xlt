@@ -119,12 +119,12 @@ async def upload_document(
 @router.get("/download/{document_id}")
 async def download_document(
         document_id: int,
-        _user: User = Depends(require_current_user)
+        user: User = Depends(require_current_user)
 ):
     """
     下载文档（生成预签名URL）
     :param document_id: 文档ID
-    :param _user: 当前用户对象
+    :param user: 当前用户对象
     :return: 下载链接文档对象
     """
     result = Result()
@@ -133,6 +133,12 @@ async def download_document(
     document = DocumentCRUD.get_by_id(document_id)
     if not document:
         return result.error(msg="文档不存在")
+
+    # 验证用户是否有权限访问该知识库
+    if user.is_admin == 0:
+        knowledge_bases = UserKnowledgeBaseCRUD.get_knowledge_bases_by_user(user.id)
+        if document.knowledge_base_id not in [kb for kb in knowledge_bases]:
+            return result.error(msg="用户没有权限访问该知识库")
 
     # 生成预签名URL用于下载
     try:
@@ -211,7 +217,7 @@ async def get_documents_by_knowledge_base(
     # 验证用户是否有权限访问该知识库
     if user.is_admin == 0:
         knowledge_bases = UserKnowledgeBaseCRUD.get_knowledge_bases_by_user(user.id)
-        if knowledge_base_id not in [kb.id for kb in knowledge_bases]:
+        if knowledge_base_id not in [kb for kb in knowledge_bases]:
             return result.error(msg="用户没有权限访问该知识库")
 
 
@@ -231,17 +237,24 @@ async def get_documents_by_knowledge_base(
 @router.get("/{document_id}")
 async def get_document_by_id(
         document_id: int,
-        _user: User = Depends(require_current_user)
+        user: User = Depends(require_current_user)
 ):
     """
     根据ID查询单个文档
     :param document_id: 文档ID
-    :param _user: 当前用户对象
+    :param user: 当前用户对象
     :return: 文档对象
     """
     result = Result()
 
+    # 验证文档是否存在
     document = DocumentCRUD.get_by_id(document_id)
     if not document:
         return result.error(msg="文档不存在")
+
+    # 验证用户是否有权限访问该知识库
+    if user.is_admin == 0:
+        knowledge_bases = UserKnowledgeBaseCRUD.get_knowledge_bases_by_user(user.id)
+        if document.knowledge_base_id not in [kb for kb in knowledge_bases]:
+            return result.error(msg="用户没有权限访问该知识库")
     return result.success(msg="查询成功", data=document)
