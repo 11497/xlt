@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Tuple
 from util.db_util import get_cursor
 from model.document_model import Document
 
@@ -124,3 +124,38 @@ class DocumentCRUD:
         with get_cursor() as cursor:
             cursor.execute(sql, (knowledge_base_id,))
             return cursor.rowcount
+
+    @staticmethod
+    def get_page_by_knowledge_base(
+            knowledge_base_id: int,
+            page: int = 1,
+            page_size: int = 10
+    ) -> Tuple[List[Document], int]:
+        """
+        按知识库分页查询文档
+        :param knowledge_base_id: 知识库ID
+        :param page: 页码（从1开始）
+        :param page_size: 每页条数
+        :return: (文档列表, 总记录数)
+        """
+        offset = (page - 1) * page_size
+
+        sql_count = "SELECT COUNT(*) AS total FROM document WHERE knowledge_base_id = %s"
+        sql_data = ("SELECT * FROM document WHERE knowledge_base_id = %s "
+                    "ORDER BY create_time DESC LIMIT %s OFFSET %s")
+
+        with get_cursor() as cursor:
+            # 获取总数（兼容字典游标和元组游标）
+            cursor.execute(sql_count, (knowledge_base_id,))
+            count_row = cursor.fetchone()
+            if isinstance(count_row, dict):
+                total = count_row.get("total", count_row.get("COUNT(*)", 0))
+            else:
+                total = count_row[0] if count_row else 0
+
+            # 获取分页数据
+            cursor.execute(sql_data, (knowledge_base_id, page_size, offset))
+            rows = cursor.fetchall()
+            documents = [Document.from_row(r) for r in rows]
+
+        return documents, total

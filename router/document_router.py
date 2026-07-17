@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Optional, List
 
-from fastapi import APIRouter, Depends, UploadFile, File, Form
+from fastapi import APIRouter, Depends, UploadFile, File, Form, Query
 
 from ai.chroma_service import ChromaService
 from ai.embedding import EmbeddingService
@@ -193,23 +193,29 @@ async def delete_document(
 @router.get("/knowledge_base/{knowledge_base_id}")
 async def get_documents_by_knowledge_base(
         knowledge_base_id: int,
-        _user: User = Depends(require_current_user)
+        page: int = Query(1, ge=1, description="页码"),
+        page_size: int = Query(10, ge=1, le=100, description="每页条数")
 ):
     """
-    根据知识库ID查询所有文档
+    按知识库分页查询文档
     :param knowledge_base_id: 知识库ID
-    :param _user: 当前用户对象
-    :return: 文档列表
+    :param page: 页码，默认1
+    :param page_size: 每页条数，默认10，最大100
+    :return: 分页文档列表及总数
     """
     result = Result()
 
-    # 验证知识库是否存在
-    knowledge_base = KnowledgeBaseCRUD.get_by_id(knowledge_base_id)
-    if not knowledge_base:
-        return result.error(msg="知识库不存在")
-
-    documents = DocumentCRUD.get_by_knowledge_base_id(knowledge_base_id)
-    return result.success(msg="查询成功", data=documents)
+    documents, total = DocumentCRUD.get_page_by_knowledge_base(
+        knowledge_base_id=knowledge_base_id,
+        page=page,
+        page_size=page_size
+    )
+    return result.success(msg="查询成功", data={
+        "list": documents,
+        "total": total,
+        "page": page,
+        "page_size": page_size
+    })
 
 
 @router.get("/{document_id}")
