@@ -47,7 +47,7 @@ const pwdRules = {
           callback();
         }
       },
-      trigger: 'blur'  // ← 关键！没有这行自定义校验不会触发
+      trigger: 'blur'
     },
     { min: 6, message: '密码长度不能少于6位', trigger: 'blur' },
     { max: 20, message: '密码长度不能超过20位', trigger: 'blur' }
@@ -90,7 +90,7 @@ const submitPassword = async () => {
 </script>
 
 <template>
-  <div class="common-layout">
+  <div class="container">
     <el-container>
       <!-- 顶部公告 -->
       <el-header>
@@ -178,6 +178,10 @@ const submitPassword = async () => {
 </template>
 
 <style scoped>
+.container {
+  margin: 15px 0;
+}
+
 .announcement-text {
   text-align: center;
 }
@@ -207,11 +211,5 @@ a {
   justify-content: center;
   font-weight: bold;
   font-size: 16px;
-}
-
-/* 让 descriptions 的 label 列宽度固定且居中 */
-:deep(.desc-label) {
-  width: 100px !important;
-  text-align: center !important;
 }
 </style>

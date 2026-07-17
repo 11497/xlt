@@ -54,9 +54,14 @@ onMounted(async () => {
 </template>
 
 <style scoped>
+body {
+  margin: 0;
+}
+
 .container {
   /* 设置固定高度，可根据实际页面布局调整 */
   height: 600px;
   width: 100%;
+  margin: 15px 0;
 }
 </style>

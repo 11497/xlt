@@ -3,7 +3,7 @@ import {onMounted, ref} from "vue";
 import {getAllAnnouncements} from "@/api/announcement.js";
 import {getAnnouncementAttachments, downloadAnnouncementAttachment} from "@/api/anouncement_attachment.js";
 import {ElMessage} from "element-plus";
-import {InfoFilled, Download, Close} from "@element-plus/icons-vue";
+import {InfoFilled, Download} from "@element-plus/icons-vue";
 
 let announcementList = ref([]);
 
@@ -116,14 +116,11 @@ const handleCurrentChange = async () => {
       top="5vh"
       destroy-on-close
       align-center
-      class="announcement-detail-dialog"
-      :show-close="false"
   >
-    <!-- 自定义右上角关闭按钮样式（可选，el-dialog默认自带红叉） -->
-    <template #header="{ close }">
-      <div class="dialog-header">
-        <span class="dialog-title">{{ currentAnnouncement?.title }}</span>
-        <el-icon class="close-icon" @click="close"><Close /></el-icon>
+    <!-- 弹窗头部样式 -->
+    <template #header>
+      <div style="text-align: center; font-size: 18px; font-weight: bold;">
+        {{ currentAnnouncement?.title }}
       </div>
     </template>
 
@@ -164,38 +161,6 @@ const handleCurrentChange = async () => {
 <style scoped>
 .container {
   margin: 15px 0;
-}
-
-/* 弹窗头部样式 */
-.dialog-header {
-  display: flex;
-  justify-content: center; /* 标题居中 */
-  align-items: center;
-  position: relative;
-  width: 100%;
-  padding-right: 20px;
-}
-
-.dialog-title {
-  font-size: 18px;
-  font-weight: bold;
-  text-align: center;
-  flex: 1;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-
-.close-icon {
-  position: absolute;
-  right: 15px;
-  cursor: pointer;
-  color: #f56c6c;
-  font-size: 18px;
-}
-
-.close-icon:hover {
-  color: #d9363e;
 }
 
 /* 中间内容区：可滚动 */

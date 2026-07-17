@@ -326,7 +326,7 @@ body {
 .header-left {
     color: white;
     font-size: 40px;
-    font-family: 楷体;
+    font-family: 楷体, serif;
     line-height: 60px;
     font-weight: bolder;
 }
@@ -405,6 +405,10 @@ body {
   cursor: pointer;
   transition: background-color 0.2s;
   border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: rgb(243 243 243);
 }
 
 .session-item:hover {
@@ -595,13 +599,6 @@ a {
   color: white;
   margin: 0 15px;
   font-size: 18px;
-}
-
-/* ===== 会话项改为 flex 布局 ===== */
-.session-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
 }
 
 /* ===== 三个点按钮：默认隐藏，hover 时显示 ===== */
