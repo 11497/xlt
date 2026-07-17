@@ -198,11 +198,7 @@ const createSessionBtn = async () => {
 
 // 切换到我的页面
 const switchToMyPage = async () => {
-  if (user.value?.is_admin === 1) {
-    await router.push({path: "/admin"})
-  } else {
-    await router.push({path: "/user"})
-  }
+  await router.push({path: "/user"})
 }
 </script>
 

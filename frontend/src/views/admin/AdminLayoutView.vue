@@ -5,7 +5,6 @@ import {useRouter} from "vue-router";
 import {useCurrentUser} from "@/hooks/useCurrentUser.js";
 import {
   ChatLineSquare, ChatSquare,
-  HomeFilled,
   Message,
   Notebook,
   Service,
@@ -66,10 +65,6 @@ const switchToChat = async () => {
         <el-aside width="200px" class="aside">
           <!-- 左侧菜单栏 -->
           <el-menu router>
-            <el-menu-item index="my">
-              <el-icon><HomeFilled /></el-icon> 我的
-            </el-menu-item>
-
             <el-menu-item index="user">
               <el-icon><UserFilled/></el-icon> 用户管理
             </el-menu-item>

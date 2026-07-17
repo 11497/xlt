@@ -1,12 +1,12 @@
 <script setup>
-import {ref, watch} from 'vue';
+import {ref} from 'vue';
 import {ElMessage, ElMessageBox} from "element-plus";
 import {useRouter} from "vue-router";
 import {useCurrentUser} from "@/hooks/useCurrentUser.js";
 import {
   ChatLineSquare,
   ChatSquare,
-  HomeFilled,
+  HomeFilled, Management,
   Message,
   Notebook,
   Service,
@@ -16,16 +16,6 @@ import {
 const router = useRouter();
 
 const {user} = useCurrentUser();
-
-watch(
-    () => user.value?.is_admin,
-    async (isAdmin) => {
-      if (isAdmin === 1) {
-        await router.push('/admin');
-      }
-    },
-    {immediate: true}
-);
 
 const logout = () => {
   ElMessageBox.confirm('确定要退出登录吗?', '提示', {
@@ -44,6 +34,10 @@ const logout = () => {
 const switchToChat = async () => {
   await router.push({path: "/chat"})
 }
+
+const switchToAdmin = async () => {
+  await router.push({path: "/admin"})
+}
 </script>
 
 <template>
@@ -52,8 +46,11 @@ const switchToChat = async () => {
       <el-header class="header">
         <span class="title">校灵通</span>
         <span class="right_tool">
-          <a href="javascript:0" @click="switchToChat" class="chat-btn">
+          <a href="javascript:0" @click="switchToChat" class="chat-btn" v-if="user?.is_admin === 0">
             <el-icon><ChatLineSquare /></el-icon> 聊天
+          </a>
+          <a href="javascript:0" @click="switchToAdmin" class="chat-btn" v-if="user?.is_admin === 1">
+            <el-icon><Management /></el-icon> 管理
           </a>
           <a href="javascript:0" @click="logout" class="logout-btn">
             <el-icon><SwitchButton/></el-icon> 退出登录 【{{ user?.username }}】
@@ -67,23 +64,23 @@ const switchToChat = async () => {
           <!-- 左侧菜单栏 -->
           <el-menu router>
             <el-menu-item index="my">
-              <el-icon><HomeFilled /></el-icon> 我的
-            </el-menu-item>
-
-            <el-menu-item index="role">
-              <el-icon><Service /></el-icon> 角色
-            </el-menu-item>
-
-            <el-menu-item index="knowledgeBase">
-              <el-icon><Notebook /></el-icon> 知识库
+              <el-icon><HomeFilled /></el-icon> 我的信息
             </el-menu-item>
 
             <el-menu-item index="announcement">
-               <el-icon><Message /></el-icon> 公告
+              <el-icon><Message /></el-icon> 查看公告
+            </el-menu-item>
+
+            <el-menu-item index="role">
+              <el-icon><Service /></el-icon> 我的角色
+            </el-menu-item>
+
+            <el-menu-item index="knowledgeBase">
+              <el-icon><Notebook /></el-icon> 我的知识库
             </el-menu-item>
 
             <el-menu-item index="session">
-              <el-icon><ChatSquare /></el-icon> 会话
+              <el-icon><ChatSquare /></el-icon> 我的会话
             </el-menu-item>
           </el-menu>
         </el-aside>
