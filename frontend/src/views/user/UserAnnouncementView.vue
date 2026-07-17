@@ -2,6 +2,7 @@
 import {onMounted, ref} from "vue";
 import {getAllAnnouncements} from "@/api/announcement.js";
 import {ElMessage} from "element-plus";
+import {InfoFilled} from "@element-plus/icons-vue";
 
 let announcementList = ref([]);
 
@@ -36,25 +37,38 @@ const handleCurrentChange = async () => {
 </script>
 
 <template>
-  <!-- 表格 -->
-  <!-- TODO: 表格 -->
+<!-- 表格 -->
   <div class="container">
     <el-table :data="announcementList" border style="width: 100%" @selection-change="handleSelectionChange">
-      <el-table-column type="selection" width="55" align="center"/>
-      <el-table-column prop="name" label="姓名" width="120" align="center"/>
+      <!-- 序号：根据当前页码和每页条数动态计算 -->
+      <el-table-column label="序号" width="80" align="center">
+        <template #default="scope">
+          {{ (currentPage - 1) * pageSize + scope.$index + 1 }}
+        </template>
+      </el-table-column>
+
+      <!-- 标题：过长内容自动省略 -->
+      <el-table-column prop="title" label="标题" min-width="200" show-overflow-tooltip align="center"/>
+
+      <!-- 是否置顶 -->
+      <el-table-column prop="is_top" label="是否置顶" width="120" align="center">
+        <template #default="scope">
+          {{ scope.row.is_top ? '是' : '否' }}
+        </template>
+      </el-table-column>
+
+      <!-- 发布时间 -->
+      <el-table-column prop="create_time" label="发布时间" width="180" align="center"/>
+
+      <!-- 修改时间 -->
+      <el-table-column prop="update_time" label="修改时间" width="180" align="center"/>
+
+      <!-- 详情按钮 -->
       <el-table-column label="操作" width="200" align="center">
         <template #default="scope">
-          <el-button type="primary" size="small" @click="edit(scope.row.id)">
-            <el-icon>
-              <Check/>
-            </el-icon>
-            编辑
-          </el-button>
-          <el-button type="danger" size="small" @click="deleteById(scope.row.id)">
-            <el-icon>
-              <Delete/>
-            </el-icon>
-            删除
+          <el-button type="info" size="small" @click="showDetail(scope.row)">
+            <el-icon><InfoFilled /></el-icon>
+            详情
           </el-button>
         </template>
       </el-table-column>
@@ -77,5 +91,7 @@ const handleCurrentChange = async () => {
 </template>
 
 <style scoped>
-
+.container {
+    margin: 15px 0;
+}
 </style>
