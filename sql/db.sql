@@ -64,7 +64,7 @@ drop table if exists document;
 create table document (
     id int auto_increment primary key comment '文档id',
     knowledge_base_id int not null comment '知识库id',
-    filename varchar(255) not null unique comment '文档文件名',
+    filename varchar(255) not null comment '文档文件名',
     storage_path varchar(500) not null comment '文档存储路径',
     create_time datetime not null default current_timestamp comment '创建时间',
     update_time datetime not null default current_timestamp comment '更新时间',
