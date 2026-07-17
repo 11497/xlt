@@ -4,7 +4,6 @@ import ChatView from "@/views/ChatView.vue";
 import AdminLayoutView from "@/views/admin/AdminLayoutView.vue";
 import UserLayoutView from "@/views/user/UserLayoutView.vue";
 import UserMyView from "@/views/user/UserMyView.vue";
-import AdminMyView from "@/views/admin/AdminMyView.vue";
 import AdminAnnouncementView from "@/views/admin/AdminAnnouncementView.vue";
 import AdminSessionView from "@/views/admin/AdminSessionView.vue";
 import AdminKnowledgeBaseView from "@/views/admin/AdminKnowledgeBaseView.vue";
@@ -21,7 +20,6 @@ const routes = [
         component: AdminLayoutView,
         redirect: "/admin/my",
         children: [
-            {path: "my", name: "admin-my", component: AdminMyView},
             {path: "announcement", name: "admin-announcement", component: AdminAnnouncementView},
             {path: "knowledgeBase", name: "admin-knowledgeBase", component: AdminKnowledgeBaseView},
             {path: "role", name: "admin-role", component: AdminRoleView},
