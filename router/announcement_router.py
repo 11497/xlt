@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 
 from authentication.user_auth import require_admin, require_current_user
 from crud.announcement_attachment_crud import AnnouncementAttachmentCRUD
@@ -29,16 +29,25 @@ async def create_announcement(announcement: Announcement,
 
 
 @router.get("/all")
-async def get_all_announcements(_user: User = Depends(require_current_user)):
+async def get_all_announcements(
+        page: int = Query(1, ge=1, description="页码"),
+        page_size: int = Query(10, ge=1, le=100, description="每页条数")
+):
     """
-    查看所有公告
-    :param _user: 当前用户对象
-    :return: 所有公告列表
+    分页查询所有公告
+    :param page: 页码，默认1
+    :param page_size: 每页条数，默认10，最大100
+    :return: 分页公告列表及总数
     """
     result = Result()
 
-    announcements = AnnouncementCRUD.get_all()
-    return result.success(msg="查询所有公告成功", data=announcements)
+    announcements, total = AnnouncementCRUD.get_page(page=page, page_size=page_size)
+    return result.success(msg="查询成功", data={
+        "list": announcements,
+        "total": total,
+        "page": page,
+        "page_size": page_size
+    })
 
 
 @router.get("/{id}")
