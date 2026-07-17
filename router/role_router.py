@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, Query
 
-from authentication.user_auth import require_admin
+from authentication.user_auth import require_admin, require_current_user
 from crud.role_crud import RoleCRUD
 from crud.role_knowledge_base_crud import RoleKnowledgeBaseCRUD
 from crud.role_user_crud import RoleUserCRUD
@@ -53,7 +53,7 @@ async def get_all_role(
         "page_size": page_size
     })
 
-@router.get("/{role_name}")
+@router.get("/name/{role_name}")
 async def get_by_name(role_name: str, _admin: User = Depends(require_admin)):
     """
     根据角色名查询角色
@@ -66,6 +66,25 @@ async def get_by_name(role_name: str, _admin: User = Depends(require_admin)):
     role = RoleCRUD.get_by_name(role_name)
     if role is None:
         return result.error(msg="角色不存在")
+    return result.success(msg="查询角色成功", data=role)
+
+@router.get("/id/{role_id}")
+async def get_by_id(role_id: int, user: User = Depends(require_current_user)):
+    """
+    根据角色ID查询角色
+    :param role_id: 角色ID
+    :param user: 用户对象
+    :return: 角色对象
+    """
+    result = Result()
+
+    # 校验用户是否有权限查询该角色
+    if user.is_admin == 0:
+        roles = RoleUserCRUD.get_roles_by_user(user.id)
+        if role_id not in roles:
+            return result.error(msg="用户没有权限查询该角色")
+
+    role = RoleCRUD.get_by_id(role_id)
     return result.success(msg="查询角色成功", data=role)
 
 @router.put("")

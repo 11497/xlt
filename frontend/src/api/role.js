@@ -7,7 +7,10 @@ export const createRole = (role) => request.post("/role", role);
 export const getAllRoles = (page, pageSize) => request.get(`/role/all?page=${page}&page_size=${pageSize}`);
 
 // 根据角色名查询角色
-export const getRoleByName = (roleName) => request.get(`/role/${roleName}`);
+export const getRoleByName = (roleName) => request.get(`/role/name/${roleName}`);
+
+// 根据角色ID查询角色
+export const getRoleById = (roleId) => request.get(`/role/id/${roleId}`);
 
 // 更新角色
 export const updateRole = (role) => request.put("/role", role);
