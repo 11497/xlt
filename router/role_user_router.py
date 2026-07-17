@@ -1,6 +1,6 @@
 from typing import List
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 
 from authentication.user_auth import require_admin, require_current_user
 from crud.role_user_crud import RoleUserCRUD
@@ -55,34 +55,52 @@ async def batch_remove_users_from_role(
     return result.success(msg="移除用户成功")
 
 
-@router.get("/users_by_role/{role_id}")
+@router.get("/role/{role_id}/users")
 async def get_users_by_role(
         role_id: int,
-        _user: User = Depends(require_current_user)):
+        page: int = Query(1, ge=1, description="页码"),
+        page_size: int = Query(10, ge=1, le=100, description="每页条数")
+):
     """
-    获取指定角色下的所有用户ID
-    :param role_id: 角色ID
-    :param _user: 当前用户对象
-    :return: 用户ID列表
+    按角色分页查询关联的用户
     """
     result = Result()
-    user_ids = RoleUserCRUD.get_users_by_role(role_id)
-    return result.success(data=user_ids)
+
+    users, total = RoleUserCRUD.get_page_users_by_role(
+        role_id=role_id,
+        page=page,
+        page_size=page_size
+    )
+    return result.success(msg="查询成功", data={
+        "list": users,
+        "total": total,
+        "page": page,
+        "page_size": page_size
+    })
 
 
-@router.get("/roles_by_user/{user_id}")
+@router.get("/user/{user_id}/roles")
 async def get_roles_by_user(
         user_id: int,
-        _admin: User = Depends(require_admin)):
+        page: int = Query(1, ge=1, description="页码"),
+        page_size: int = Query(10, ge=1, le=100, description="每页条数")
+):
     """
-    获取指定用户的所有角色ID（管理员）
-    :param user_id: 用户ID
-    :param _admin: 管理员用户对象
-    :return: 角色ID列表
+    按用户分页查询关联的角色
     """
     result = Result()
-    role_ids = RoleUserCRUD.get_roles_by_user(user_id)
-    return result.success(data=role_ids)
+
+    roles, total = RoleUserCRUD.get_page_roles_by_user(
+        user_id=user_id,
+        page=page,
+        page_size=page_size
+    )
+    return result.success(msg="查询成功", data={
+        "list": roles,
+        "total": total,
+        "page": page,
+        "page_size": page_size
+    })
 
 
 @router.get("/my_roles")

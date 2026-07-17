@@ -1,5 +1,7 @@
-from typing import List
+from typing import List, Tuple
 
+from model.role_model import Role
+from model.user_model import User
 from util.db_util import get_cursor
 
 
@@ -126,3 +128,77 @@ class RoleUserCRUD:
         with get_cursor() as cursor:
             affected = cursor.execute(sql, (user_id,))
             return affected > 0
+
+    @staticmethod
+    def get_page_users_by_role(
+            role_id: int,
+            page: int = 1,
+            page_size: int = 10
+    ) -> Tuple[List[User], int]:
+        """
+        按角色分页查询关联的用户
+        :param role_id: 角色ID
+        :param page: 页码（从1开始）
+        :param page_size: 每页条数
+        :return: (用户列表, 总记录数)
+        """
+        offset = (page - 1) * page_size
+
+        sql_count = ("SELECT COUNT(*) AS total FROM role_user ru "
+                     "JOIN user u ON ru.user_id = u.id "
+                     "WHERE ru.role_id = %s")
+        sql_data = ("SELECT u.* FROM role_user ru "
+                    "JOIN user u ON ru.user_id = u.id "
+                    "WHERE ru.role_id = %s "
+                    "LIMIT %s OFFSET %s")
+
+        with get_cursor() as cursor:
+            cursor.execute(sql_count, (role_id,))
+            count_row = cursor.fetchone()
+            if isinstance(count_row, dict):
+                total = int(count_row.get("total", count_row.get("COUNT(*)", 0)))
+            else:
+                total = int(count_row[0]) if count_row else 0
+
+            cursor.execute(sql_data, (role_id, page_size, offset))
+            rows = cursor.fetchall()
+            users = [User.from_row(r) for r in rows]
+
+        return users, total
+
+    @staticmethod
+    def get_page_roles_by_user(
+            user_id: int,
+            page: int = 1,
+            page_size: int = 10
+    ) -> Tuple[List[Role], int]:
+        """
+        按用户分页查询关联的角色
+        :param user_id: 用户ID
+        :param page: 页码（从1开始）
+        :param page_size: 每页条数
+        :return: (角色列表, 总记录数)
+        """
+        offset = (page - 1) * page_size
+
+        sql_count = ("SELECT COUNT(*) AS total FROM role_user ru "
+                     "JOIN role r ON ru.role_id = r.id "
+                     "WHERE ru.user_id = %s")
+        sql_data = ("SELECT r.* FROM role_user ru "
+                    "JOIN role r ON ru.role_id = r.id "
+                    "WHERE ru.user_id = %s "
+                    "LIMIT %s OFFSET %s")
+
+        with get_cursor() as cursor:
+            cursor.execute(sql_count, (user_id,))
+            count_row = cursor.fetchone()
+            if isinstance(count_row, dict):
+                total = int(count_row.get("total", count_row.get("COUNT(*)", 0)))
+            else:
+                total = int(count_row[0]) if count_row else 0
+
+            cursor.execute(sql_data, (user_id, page_size, offset))
+            rows = cursor.fetchall()
+            roles = [Role.from_row(r) for r in rows]
+
+        return roles, total
