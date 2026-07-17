@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Body
 
 from authentication.user_auth import require_admin, require_current_user
 from config.jwt_config import JWT_CONFIG
@@ -117,9 +117,10 @@ async def get_user(user: User = Depends(require_current_user)):
 
 @router.put("/username")
 async def update_username(
-        id: int,
-        username: str,
-        _admin: User = Depends(require_admin)):
+        id: int = Body(..., alias="id"),
+        username: str = Body(..., alias="username"),
+        _admin: User = Depends(require_admin)
+):
     """
     管理员更新用户名
     :param id: 用户ID
@@ -161,11 +162,12 @@ async def delete_user(id: int, _admin: User = Depends(require_admin)):
         return result.error(msg="用户不存在")
     return result.success(msg="删除成功")
 
-@router.post("/password")
+@router.put("/password")
 async def update_password(
-        old_password: str,
-        new_password: str,
-        user: User = Depends(require_current_user)):
+        old_password: str = Body(..., alias="oldPassword"),
+        new_password: str = Body(..., alias="newPassword"),
+        user: User = Depends(require_current_user)
+):
     """
     用户更新密码
     :param old_password: 旧密码
@@ -189,9 +191,10 @@ async def update_password(
 
 @router.put("/admin-status")
 async def set_user_admin_status(
-        id: int,
-        is_admin: int,
-        admin: User = Depends(require_admin)):
+        id: int = Body(..., alias="id"),
+        is_admin: int = Body(..., alias="isAdmin"),
+        admin: User = Depends(require_admin)
+):
     """
     管理员设置用户权限
     :param id: 用户ID
