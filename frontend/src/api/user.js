@@ -18,7 +18,6 @@ export const updateUsername = (data) => request.put("/user/username", null, { pa
 // 管理员删除用户
 export const deleteUser = (id) => request.delete(`/user/${id}`);
 
-
 // 用户更新密码
 export const updatePassword = (data) => request.post("/user/password", null, { params: data });
 
