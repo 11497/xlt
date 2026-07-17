@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Tuple
 from util.db_util import get_cursor
 from model.session_model import Session
 from datetime import datetime
@@ -92,3 +92,32 @@ class SessionCRUD:
             cursor.execute(sql)
             rows = cursor.fetchall()
             return [Session.from_row(row) for row in rows]
+
+    @staticmethod
+    def get_page(page: int = 1, page_size: int = 10) -> Tuple[List[Session], int]:
+        """
+        分页查询会话
+        :param page: 页码（从1开始）
+        :param page_size: 每页条数
+        :return: (会话列表, 总记录数)
+        """
+        offset = (page - 1) * page_size
+
+        sql_count = "SELECT COUNT(*) AS total FROM session"
+        sql_data = "SELECT * FROM session LIMIT %s OFFSET %s"
+
+        with get_cursor() as cursor:
+            # 获取总数，兼容字典游标和元组游标
+            cursor.execute(sql_count)
+            count_row = cursor.fetchone()
+            if isinstance(count_row, dict):
+                total = int(count_row.get("total", count_row.get("COUNT(*)", 0)))
+            else:
+                total = int(count_row[0]) if count_row else 0
+
+            # 获取分页数据
+            cursor.execute(sql_data, (page_size, offset))
+            rows = cursor.fetchall()
+            sessions = [Session.from_row(r) for r in rows]
+
+        return sessions, total
