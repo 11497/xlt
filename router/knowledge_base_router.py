@@ -33,10 +33,10 @@ async def create_knowledge_base(knowledge_base: KnowledgeBase,
     return result.success(msg="创建知识库成功", data={"id": knowledge_base_id})
 
 @router.get("/all")
-async def get_all_knowledge_bases(_user: User = Depends(require_current_user)):
+async def get_all_knowledge_bases(_admin: User = Depends(require_admin)):
     """
-    查询所有知识库（开放给所有用户）
-    :param _user: 当前用户对象
+    查询所有知识库
+    :param _admin: 管理员用户对象
     :return: 知识库列表
     """
     result = Result()
