@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 
 from authentication.user_auth import require_admin
 from crud.role_crud import RoleCRUD
@@ -31,16 +31,25 @@ async def create_role(role: Role, _admin: User = Depends(require_admin)):
     return result.success(msg="创建角色成功")
 
 @router.get("/all")
-async def get_all_role(_admin: User = Depends(require_admin)):
+async def get_all_role(
+        page: int = Query(1, ge=1, description="页码"),
+        page_size: int = Query(10, ge=1, le=100, description="每页条数")
+):
     """
-    查询所有角色
-    :param _admin: 管理员用户对象
-    :return: 角色列表
+    分页查询所有角色
+    :param page: 页码，默认1
+    :param page_size: 每页条数，默认10，最大100
+    :return: 分页角色列表及总数
     """
     result = Result()
 
-    roles = RoleCRUD.get_all()
-    return result.success(msg="查询所有角色成功", data=roles)
+    roles, total = RoleCRUD.get_page(page=page, page_size=page_size)
+    return result.success(msg="查询成功", data={
+        "list": roles,
+        "total": total,
+        "page": page,
+        "page_size": page_size
+    })
 
 @router.get("/{role_name}")
 async def get_by_name(role_name: str, _admin: User = Depends(require_admin)):

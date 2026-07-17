@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Tuple
 from util.db_util import get_cursor
 from model.role_model import Role
 
@@ -54,6 +54,35 @@ class RoleCRUD:
             cursor.execute(sql)
             rows = cursor.fetchall()
             return [Role.from_row(r) for r in rows]
+
+    @staticmethod
+    def get_page(page: int = 1, page_size: int = 10) -> Tuple[List[Role], int]:
+        """
+        分页查询角色
+        :param page: 页码（从1开始）
+        :param page_size: 每页条数
+        :return: (角色列表, 总记录数)
+        """
+        offset = (page - 1) * page_size
+
+        sql_count = "SELECT COUNT(*) AS total FROM role"
+        sql_data = "SELECT * FROM role LIMIT %s OFFSET %s"
+
+        with get_cursor() as cursor:
+            # 获取总数，兼容字典游标和元组游标
+            cursor.execute(sql_count)
+            count_row = cursor.fetchone()
+            if isinstance(count_row, dict):
+                total = int(count_row.get("total", count_row.get("COUNT(*)", 0)))
+            else:
+                total = int(count_row[0]) if count_row else 0
+
+            # 获取分页数据
+            cursor.execute(sql_data, (page_size, offset))
+            rows = cursor.fetchall()
+            roles = [Role.from_row(r) for r in rows]
+
+        return roles, total
 
     @staticmethod
     def update_name(role_id: int, name: str) -> bool:
