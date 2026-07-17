@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 from util.db_util import get_cursor
 from model.knowledge_base_model import KnowledgeBase
@@ -56,6 +56,35 @@ class KnowledgeBaseCRUD:
             cursor.execute(sql)
             rows = cursor.fetchall()
             return [KnowledgeBase.from_row(r) for r in rows]
+
+    @staticmethod
+    def get_page(page: int = 1, page_size: int = 10) -> Tuple[List[KnowledgeBase], int]:
+        """
+        分页查询知识库
+        :param page: 页码（从1开始）
+        :param page_size: 每页条数
+        :return: (知识库列表, 总记录数)
+        """
+        offset = (page - 1) * page_size
+
+        sql_count = "SELECT COUNT(*) AS total FROM knowledge_base"
+        sql_data = "SELECT * FROM knowledge_base LIMIT %s OFFSET %s"
+
+        with get_cursor() as cursor:
+            # 获取总数（兼容字典游标和元组游标）
+            cursor.execute(sql_count)
+            count_row = cursor.fetchone()
+            if isinstance(count_row, dict):
+                total = count_row.get("total", count_row.get("COUNT(*)", 0))
+            else:
+                total = count_row[0] if count_row else 0
+
+            # 获取分页数据
+            cursor.execute(sql_data, (page_size, offset))
+            rows = cursor.fetchall()
+            knowledge_bases = [KnowledgeBase.from_row(r) for r in rows]
+
+        return knowledge_bases, total
 
     @staticmethod
     def delete(knowledge_base_id: int) -> bool:

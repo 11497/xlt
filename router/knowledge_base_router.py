@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 
 from ai.chroma_service import ChromaService
 from authentication.user_auth import require_admin, require_current_user
@@ -33,16 +33,25 @@ async def create_knowledge_base(knowledge_base: KnowledgeBase,
     return result.success(msg="创建知识库成功", data={"id": knowledge_base_id})
 
 @router.get("/all")
-async def get_all_knowledge_bases(_admin: User = Depends(require_admin)):
+async def get_all_knowledge_bases(
+        page: int = Query(1, ge=1, description="页码"),
+        page_size: int = Query(10, ge=1, le=100, description="每页条数")
+):
     """
-    查询所有知识库
-    :param _admin: 管理员用户对象
-    :return: 知识库列表
+    分页查询所有知识库
+    :param page: 页码，默认1
+    :param page_size: 每页条数，默认10，最大100
+    :return: 分页知识库列表及总数
     """
     result = Result()
 
-    knowledge_bases = KnowledgeBaseCRUD.get_all()
-    return result.success(msg="查询所有知识库成功", data=knowledge_bases)
+    knowledge_bases, total = KnowledgeBaseCRUD.get_page(page=page, page_size=page_size)
+    return result.success(msg="查询成功", data={
+        "list": knowledge_bases,
+        "total": total,
+        "page": page,
+        "page_size": page_size
+    })
 
 @router.put("")
 async def update_knowledge_base(knowledge_base: KnowledgeBase,
