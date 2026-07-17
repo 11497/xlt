@@ -1,40 +1,41 @@
 <script setup>
 import {onMounted, ref} from "vue";
 import {ElMessage} from "element-plus";
-import {InfoFilled, Download} from "@element-plus/icons-vue";
+import {InfoFilled} from "@element-plus/icons-vue";
 import {getKnowledgeBases} from "@/api/user_knowledge_base.js";
-import {downloadDocument, getDocumentListByKnowledgeBase} from "@/api/document.js";
+import DocumentDialog from "@/views/user/DocumentDialog.vue";
+import {getKnowledgeBaseById} from "@/api/knowledge_base.js";
 
 let knowledgeBaseList = ref([]);
+let knowledgeBaseIdList = ref([]);
 
 let currentPage = ref(1);
 let pageSize = ref(5);
 let total = ref(0);
 const background = ref(true);
 
-// 详情弹窗相关状态
-const detailDialogVisible = ref(false);
-const currentKnowledgeBase = ref(null);
+const docDialogRef = ref(null);
+
+const openDocDialog = (kbId, kbName) => {
+  docDialogRef.value?.open(kbId, kbName);
+};
 
 const getKnowledgeBase = async () => {
   const res = await getKnowledgeBases(currentPage.value, pageSize.value);
   if (res.code === 1) {
-    knowledgeBaseList.value = res.data.list;
+    knowledgeBaseIdList.value = res.data.list;
+
+    for (let kbId of knowledgeBaseIdList.value) {
+      const kb = await getKnowledgeBaseById(kbId);
+      knowledgeBaseList.value.push(kb.data);
+    }
+
     total.value = res.data.total;
     currentPage.value = res.data.page;
     pageSize.value = res.data.page_size;
   } else {
     ElMessage.error(res.msg);
   }
-}
-
-// 显示文档
-const showDetail = async (row) => {
-}
-
-// 下载附件
-const handleDownload = async (documentId) => {
-  await downloadDocument(documentId);
 }
 
 onMounted(async () => {
@@ -62,8 +63,8 @@ const handleCurrentChange = async () => {
       <el-table-column prop="name" label="名字" width="200" show-overflow-tooltip align="center"/>
       <el-table-column label="操作" width="200" align="center">
         <template #default="scope">
-          <el-button type="info" size="small" @click="showDetail(scope.row)">
-            <el-icon><InfoFilled /></el-icon> 文档
+          <el-button type="info" size="small" @click="openDocDialog(scope.row.id, scope.row.name)">
+            <el-icon><InfoFilled /></el-icon> 查看文档
           </el-button>
         </template>
       </el-table-column>
@@ -85,16 +86,7 @@ const handleCurrentChange = async () => {
   </div>
 
   <!-- 文档弹窗 -->
-  <el-dialog
-      v-model="detailDialogVisible"
-      :title="currentKnowledgeBase?.name"
-      width="60%"
-      top="5vh"
-      destroy-on-close
-      align-center
-  >
-
-  </el-dialog>
+  <DocumentDialog ref="docDialogRef"/>
 </template>
 
 <style scoped>
