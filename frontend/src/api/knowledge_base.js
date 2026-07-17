@@ -11,3 +11,6 @@ export const updateKnowledgeBase = (knowledgeBase) => request.put("/knowledge_ba
 
 // 删除知识库
 export const deleteKnowledgeBase = (id) => request.delete(`/knowledge_base?id=${id}`)
+
+// 根据ID查询知识库
+export const getKnowledgeBaseById = (id) => request.get(`/knowledge_base/${id}`)
