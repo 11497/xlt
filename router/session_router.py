@@ -68,6 +68,30 @@ async def get_sessions_by_user_id(user_id: int, current_user: User = Depends(req
     return result.success(msg="查询成功", data=sessions)
 
 
+@router.get("/user/page")
+async def get_user_session_page(
+        page: int = Query(1, ge=1, description="页码"),
+        page_size: int = Query(10, ge=1, le=100, description="每页条数"),
+        user: User = Depends(require_current_user)
+):
+    """
+    分页查询当前用户的会话
+    :param page: 页码，默认1
+    :param page_size: 每页条数，默认10，最大100
+    :param user: 当前用户对象
+    :return: 分页会话列表及总数
+    """
+    result = Result()
+
+    sessions, total = SessionCRUD.get_page(page=page, page_size=page_size, user_id=user.id)
+    return result.success(msg="查询成功", data={
+        "list": sessions,
+        "total": total,
+        "page": page,
+        "page_size": page_size
+    })
+
+
 @router.get("/{session_id}")
 async def get_session(
         session_id: int,

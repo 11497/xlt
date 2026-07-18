@@ -94,21 +94,28 @@ class SessionCRUD:
             return [Session.from_row(row) for row in rows]
 
     @staticmethod
-    def get_page(page: int = 1, page_size: int = 10) -> Tuple[List[Session], int]:
+    def get_page(page: int = 1, page_size: int = 10, user_id: Optional[int] = None) -> Tuple[List[Session], int]:
         """
         分页查询会话
         :param page: 页码（从1开始）
         :param page_size: 每页条数
+        :param user_id: 用户ID（可选）
         :return: (会话列表, 总记录数)
         """
         offset = (page - 1) * page_size
 
-        sql_count = "SELECT COUNT(*) AS total FROM session"
+        sql_count = "SELECT COUNT(*) FROM session"
         sql_data = "SELECT * FROM session LIMIT %s OFFSET %s"
+        if user_id is not None:
+            sql_count = "SELECT COUNT(*) AS total FROM session WHERE user_id = %s"
+            sql_data = "SELECT * FROM session WHERE user_id = %s LIMIT %s OFFSET %s"
 
         with get_cursor() as cursor:
             # 获取总数，兼容字典游标和元组游标
-            cursor.execute(sql_count)
+            if user_id is not None:
+                cursor.execute(sql_count, (user_id,))
+            else:
+                cursor.execute(sql_count)
             count_row = cursor.fetchone()
             if isinstance(count_row, dict):
                 total = int(count_row.get("total", count_row.get("COUNT(*)", 0)))
@@ -116,7 +123,10 @@ class SessionCRUD:
                 total = int(count_row[0]) if count_row else 0
 
             # 获取分页数据
-            cursor.execute(sql_data, (page_size, offset))
+            if user_id is not None:
+                cursor.execute(sql_data, (user_id, page_size, offset))
+            else:
+                cursor.execute(sql_data, (page_size, offset))
             rows = cursor.fetchall()
             sessions = [Session.from_row(r) for r in rows]
 
