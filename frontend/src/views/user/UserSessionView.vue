@@ -1,6 +1,6 @@
 <script setup>
 import {onMounted, ref} from "vue";
-import {pageGetUserSessions} from "@/api/session.js";
+import {deleteSession, pageGetUserSessions} from "@/api/session.js";
 import {ElMessage} from "element-plus";
 import {InfoFilled} from "@element-plus/icons-vue";
 import SessionMessageDialog from "@/views/user/SessionMessageDialog.vue";
@@ -11,6 +11,9 @@ let currentPage = ref(1);
 let pageSize = ref(5);
 let total = ref(0);
 const background = ref(true);
+
+// 存储当前选中的行
+const selectedRows = ref([]);
 
 const getSessions = async () => {
   const res = await pageGetUserSessions(currentPage.value, pageSize.value);
@@ -36,6 +39,33 @@ const handleCurrentChange = async () => {
   await getSessions();
 }
 
+// 选中行变化时的回调
+const handleSelectionChange = (rows) => {
+  selectedRows.value = rows;
+}
+
+// 批量删除
+const handleDelete = async () => {
+  try {
+    const results = await Promise.allSettled(
+      selectedRows.value.map(row => deleteSession(row.id))
+    );
+
+    const successCount = results.filter(r => r.status === 'fulfilled' && r.value.code === 1).length;
+
+    if (successCount > 0) {
+      ElMessage.success(`成功删除 ${successCount} 条会话`);
+    } else {
+      ElMessage.error('删除失败');
+    }
+  } catch (e) {
+    ElMessage.error('删除请求异常');
+  } finally {
+    await getSessions();
+    selectedRows.value = []; // 清空选中状态
+  }
+}
+
 const dialogVisible = ref(false);
 const currentSessionId = ref(null);
 const currentSessionName = ref("");
@@ -49,9 +79,17 @@ const showMessage = (row) => {
 </script>
 
 <template>
+  <!-- 操作按钮区域 -->
+  <div class="container action-bar">
+    <el-button type="danger" :disabled="selectedRows.length === 0" @click="handleDelete">
+      删除
+    </el-button>
+  </div>
+
   <!-- 表格部分 -->
   <div class="container">
-    <el-table :data="sessionList" border style="width: 100%">
+    <el-table :data="sessionList" border style="width: 100%" @selection-change="handleSelectionChange">
+      <el-table-column type="selection" width="55" align="center"/>
       <el-table-column label="序号" width="80" align="center">
         <template #default="scope">
           {{ (currentPage - 1) * pageSize + scope.$index + 1 }}
@@ -95,5 +133,10 @@ const showMessage = (row) => {
 <style scoped>
 .container {
   margin: 15px 0;
+}
+
+.action-bar {
+  display: flex;
+  justify-content: flex-end;
 }
 </style>
