@@ -13,6 +13,7 @@ import UserKnowledgeBaseView from "@/views/user/UserKnowledgeBaseView.vue";
 import UserAnnouncementView from "@/views/user/UserAnnouncementView.vue";
 import UserRoleView from "@/views/user/UserRoleView.vue";
 import UserSessionView from "@/views/user/UserSessionView.vue";
+import AdminIndexView from "@/views/admin/AdminIndexView.vue";
 
 const routes = [
     {path: '/', name: 'login', component: LoginView},
@@ -22,8 +23,9 @@ const routes = [
         path: "/admin",
         name: "admin",
         component: AdminLayoutView,
-        redirect: "/admin/my",
+        redirect: "/admin/index",
         children: [
+            {path: "index", name: "admin-index", component: AdminIndexView},
             {path: "announcement", name: "admin-announcement", component: AdminAnnouncementView},
             {path: "knowledgeBase", name: "admin-knowledgeBase", component: AdminKnowledgeBaseView},
             {path: "role", name: "admin-role", component: AdminRoleView},

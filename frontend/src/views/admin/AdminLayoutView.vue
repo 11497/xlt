@@ -4,7 +4,7 @@ import {ElMessage, ElMessageBox} from "element-plus";
 import {useRouter} from "vue-router";
 import {useCurrentUser} from "@/hooks/useCurrentUser.js";
 import {
-  ChatLineSquare, ChatSquare,
+  ChatLineSquare, ChatSquare, House,
   Message,
   Notebook,
   Service,
@@ -65,6 +65,10 @@ const switchToChat = async () => {
         <el-aside width="200px" class="aside">
           <!-- 左侧菜单栏 -->
           <el-menu router>
+            <el-menu-item index="index">
+              <el-icon><House /></el-icon> 首页
+            </el-menu-item>
+
             <el-menu-item index="user">
               <el-icon><UserFilled/></el-icon> 用户管理
             </el-menu-item>
