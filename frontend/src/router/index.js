@@ -1,6 +1,6 @@
 import {createRouter, createWebHistory} from 'vue-router'
 import LoginView from "@/views/LoginView.vue";
-import ChatView from "@/views/ChatView.vue";
+import ChatView from "@/views/chat/ChatView.vue";
 import AdminLayoutView from "@/views/admin/AdminLayoutView.vue";
 import UserLayoutView from "@/views/user/UserLayoutView.vue";
 import UserMyView from "@/views/user/UserMyView.vue";
