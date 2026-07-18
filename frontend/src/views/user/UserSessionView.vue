@@ -1,7 +1,7 @@
 <script setup>
 import {onMounted, ref} from "vue";
 import {deleteSession, pageGetUserSessions} from "@/api/session.js";
-import {ElMessage} from "element-plus";
+import {ElMessage, ElMessageBox} from "element-plus";
 import {InfoFilled} from "@element-plus/icons-vue";
 import SessionMessageDialog from "@/views/user/SessionMessageDialog.vue";
 
@@ -44,9 +44,21 @@ const handleSelectionChange = (rows) => {
   selectedRows.value = rows;
 }
 
-// 批量删除
+// 修改后的批量删除方法
 const handleDelete = async () => {
   try {
+    // 弹出确认框
+    await ElMessageBox.confirm(
+      `确定要删除选中的 ${selectedRows.value.length} 条会话吗？删除后不可恢复。`,
+      '删除确认',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning',
+      }
+    );
+
+    // 用户点击确认后执行删除
     const results = await Promise.allSettled(
       selectedRows.value.map(row => deleteSession(row.id))
     );
@@ -59,6 +71,11 @@ const handleDelete = async () => {
       ElMessage.error('删除失败');
     }
   } catch (e) {
+    // 用户点击取消时，ElMessageBox 会 reject，这里判断是否为取消操作
+    if (e === 'cancel' || e?.action === 'cancel') {
+      // 用户主动取消，不做任何提示
+      return;
+    }
     ElMessage.error('删除请求异常');
   } finally {
     await getSessions();
