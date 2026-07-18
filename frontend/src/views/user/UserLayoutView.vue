@@ -1,5 +1,4 @@
 <script setup>
-import {ref} from 'vue';
 import {ElMessage, ElMessageBox} from "element-plus";
 import {useRouter} from "vue-router";
 import {useCurrentUser} from "@/hooks/useCurrentUser.js";
@@ -102,7 +101,7 @@ const switchToAdmin = async () => {
 .title {
   color: white;
   font-size: 40px;
-  font-family: 楷体;
+  font-family: 楷体,serif;
   line-height: 60px;
   font-weight: bolder;
 }
