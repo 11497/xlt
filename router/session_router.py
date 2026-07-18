@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, Query
 
 from authentication.user_auth import require_current_user, require_admin
+from crud.message_crud import MessageCRUD
 from crud.session_crud import SessionCRUD
 from model.result import Result
 from model.session_model import Session
@@ -130,6 +131,9 @@ async def delete_session(
     # 验证该会话是否属于当前用户
     if not session or (session.user_id != user.id and user.is_admin == 0):
         return result.error(msg="会话不存在或无权删除")
+
+    # 删除会话下的所有消息
+    MessageCRUD.delete_by_session_id(session_id)
     
     delete_result = SessionCRUD.delete(session_id)
     if not delete_result:
