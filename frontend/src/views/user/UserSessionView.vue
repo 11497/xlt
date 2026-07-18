@@ -3,6 +3,7 @@ import {onMounted, ref} from "vue";
 import {pageGetUserSessions} from "@/api/session.js";
 import {ElMessage} from "element-plus";
 import {InfoFilled} from "@element-plus/icons-vue";
+import SessionMessageDialog from "@/views/user/SessionMessageDialog.vue";
 
 let sessionList = ref([]);
 
@@ -34,6 +35,17 @@ const handleSizeChange = async () => {
 const handleCurrentChange = async () => {
   await getSessions();
 }
+
+const dialogVisible = ref(false);
+const currentSessionId = ref(null);
+const currentSessionName = ref("");
+
+// showMessage 方法
+const showMessage = (row) => {
+  currentSessionId.value = row.id;
+  currentSessionName.value = row.name;
+  dialogVisible.value = true;
+};
 </script>
 
 <template>
@@ -71,6 +83,13 @@ const handleCurrentChange = async () => {
         @current-change="handleCurrentChange"
     />
   </div>
+
+  <!-- 会话详情弹窗 -->
+  <SessionMessageDialog
+    v-model:visible="dialogVisible"
+    :session-id="currentSessionId"
+    :session-name="currentSessionName"
+  />
 </template>
 
 <style scoped>
