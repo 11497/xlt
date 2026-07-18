@@ -17,3 +17,6 @@ export const getAllSessions = (page = 1, pageSize = 10) => request.get(`/session
 
 // 查询会话详情
 export const getSessionById = (sessionId) => request.get(`/session/${sessionId}`);
+
+// 分页查询当前用户的会话
+export const pageGetUserSessions = (page = 1, pageSize = 10) => request.get(`/session/user/page?page=${page}&page_size=${pageSize}`);
