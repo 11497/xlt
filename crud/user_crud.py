@@ -138,3 +138,32 @@ class UserCRUD:
         with get_cursor() as cursor:
             affected = cursor.execute(sql, (is_admin, user_id))
             return affected > 0
+
+    @staticmethod
+    def search(content: str) -> List[User]:
+        """
+        根据用户名或ID查询用户
+        :param content: 搜索内容
+        :return: 用户列表
+        """
+        users = []
+
+        sql1 = "SELECT * FROM user WHERE id = %s"
+        with get_cursor() as cursor:
+            cursor.execute(sql1, (content,))
+            rows = cursor.fetchall()
+
+            if rows:
+                for row in rows:
+                    users.append(User.from_row(row))
+
+        sql2 = "SELECT * FROM user WHERE username LIKE %s"
+        with get_cursor() as cursor:
+            cursor.execute(sql2, (f"%{content}%",))
+            rows = cursor.fetchall()
+
+            if rows:
+                for row in rows:
+                    users.append(User.from_row(row))
+
+        return users

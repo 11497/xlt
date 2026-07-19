@@ -245,3 +245,16 @@ async def set_user_admin_status(
 
     updated_user = UserCRUD.get_by_id(id)
     return result.success(msg="用户权限更新成功", data=updated_user)
+
+@router.get("/search/{content}")
+async def search_user(content: str, _admin: User = Depends(require_admin)):
+    """
+    管理员根据用户名或ID查询用户
+    :param content: 搜索内容
+    :param _admin: 管理员用户对象
+    :return: 用户列表
+    """
+    result = Result()
+
+    users = UserCRUD.search(content)
+    return result.success(msg="查询成功", data=users)
