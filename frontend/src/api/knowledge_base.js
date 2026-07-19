@@ -14,3 +14,6 @@ export const deleteKnowledgeBase = (id) => request.delete(`/knowledge_base?id=${
 
 // 根据ID查询知识库
 export const getKnowledgeBaseById = (id) => request.get(`/knowledge_base/${id}`)
+
+// 管理员搜索知识库
+export const searchKnowledgeBases = (content) => request.get(`/knowledge_base/search/${content}`)
