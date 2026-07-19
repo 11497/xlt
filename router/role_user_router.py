@@ -1,6 +1,7 @@
 from typing import List
 
 from fastapi import APIRouter, Depends, Query
+from fastapi.params import Body
 
 from authentication.user_auth import require_admin, require_current_user
 from crud.role_user_crud import RoleUserCRUD
@@ -11,8 +12,8 @@ router = APIRouter(prefix="/api/role_user", tags=["role_user"])
 
 @router.post("/assign")
 async def batch_assign_users_to_role(
-        role_id: int,
-        user_ids: List[int],
+        role_id: int = Body(..., alias="role_id"),
+        user_ids: List[int] = Body(..., alias="user_ids"),
         _admin: User = Depends(require_admin)):
     """
     批量为角色分配用户
