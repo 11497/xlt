@@ -1,7 +1,7 @@
 <script setup>
 import {onMounted, ref} from "vue";
-import {createAnnouncement, deleteAnnouncements, getAllAnnouncements} from "@/api/announcement.js";
-import {getAnnouncementAttachments} from "@/api/anouncement_attachment.js";
+import {createAnnouncement, deleteAnnouncements, getAllAnnouncements, updateAnnouncement} from "@/api/announcement.js";
+import {downloadAnnouncementAttachment, getAnnouncementAttachments} from "@/api/anouncement_attachment.js";
 import {ElMessage, ElMessageBox} from "element-plus";
 import {InfoFilled, Download, Delete, Plus} from "@element-plus/icons-vue";
 
@@ -31,33 +31,16 @@ const publishForm = ref({
 const getAnnouncement = async () => {
   const res = await getAllAnnouncements(currentPage.value, pageSize.value);
   if (res.code === 1) {
-    announcementList.value = res.data.list;
+    // 将列表中的 is_top 字段从 int (1/0) 转换为 boolean (true/false)
+    announcementList.value = res.data.list.map(item => ({
+      ...item,
+      is_top: Boolean(item.is_top)
+    }));
     total.value = res.data.total;
     currentPage.value = res.data.page;
     pageSize.value = res.data.page_size;
   } else {
     ElMessage.error(res.msg);
-  }
-}
-
-// 显示详情并加载附件
-const showDetail = async (row) => {
-  currentAnnouncement.value = {...row}; // 浅拷贝，避免直接修改原数据
-  detailDialogVisible.value = true;
-  attachmentList.value = [];
-
-  attachmentLoading.value = true;
-  try {
-    const res = await getAnnouncementAttachments(row.id);
-    if (res.code === 1) {
-      attachmentList.value = res.data || [];
-    } else {
-      ElMessage.error(res.msg || '获取附件失败');
-    }
-  } catch (e) {
-    console.error(e);
-  } finally {
-    attachmentLoading.value = false;
   }
 }
 
@@ -128,11 +111,81 @@ const handleUploadAttachment = async (file) => {
   return false; // 阻止 el-upload 默认行为，改为手动上传
 }
 
+// 用于存储公告的原始数据，用于比较
+let originalAnnouncement = ref(null);
+
+// 显示详情并加载附件
+const showDetail = async (row) => {
+  // 使用深拷贝，并转换 is_top 为布尔值，避免引用同一个对象
+  const rowData = JSON.parse(JSON.stringify(row));
+  rowData.is_top = Boolean(rowData.is_top);
+
+  currentAnnouncement.value = rowData;
+  // 保存一份原始数据的副本
+  originalAnnouncement.value = JSON.parse(JSON.stringify(rowData));
+
+  detailDialogVisible.value = true;
+  attachmentList.value = [];
+
+  attachmentLoading.value = true;
+  try {
+    const res = await getAnnouncementAttachments(row.id);
+    if (res.code === 1) {
+      attachmentList.value = res.data || [];
+    } else {
+      ElMessage.error(res.msg || '获取附件失败');
+    }
+  } catch (e) {
+    console.error(e);
+  } finally {
+    attachmentLoading.value = false;
+  }
+}
+
 // 保存公告详情
 const handleSaveAnnouncement = async () => {
-  // TODO: 调用更新公告 API
-  console.log('保存公告:', currentAnnouncement.value);
-  ElMessage.success('保存成功');
+  // 1. 变更检测
+  if (!originalAnnouncement.value) return;
+
+  const isChanged =
+    currentAnnouncement.value.title !== originalAnnouncement.value.title ||
+    currentAnnouncement.value.content !== originalAnnouncement.value.content ||
+    currentAnnouncement.value.is_top !== originalAnnouncement.value.is_top;
+
+  if (!isChanged) {
+    ElMessage.info('内容未作任何修改');
+    return;
+  }
+
+  // 2. 构建符合后端模型要求的对象
+  const updatedAnnouncement = {
+    id: currentAnnouncement.value.id,
+    title: currentAnnouncement.value.title,
+    content: currentAnnouncement.value.content,
+    is_top: currentAnnouncement.value.is_top ? 1 : 0, // 模型中 is_top 是 int 类型
+    create_time: currentAnnouncement.value.create_time,
+    update_time: new Date(),
+  };
+
+  try {
+    // 3. 调用更新公告 API
+    const res = await updateAnnouncement(updatedAnnouncement);
+
+    if (res.code === 1) {
+      ElMessage.success('保存成功');
+      // 更新原始数据，以便后续再次比较
+      originalAnnouncement.value = JSON.parse(JSON.stringify(currentAnnouncement.value));
+      // 刷新列表数据
+      await getAnnouncement();
+      // 4. 关闭详情弹窗
+      detailDialogVisible.value = false;
+    } else {
+      ElMessage.error(res.msg || '保存失败');
+    }
+  } catch (e) {
+    console.error(e);
+    ElMessage.error('保存请求发生异常');
+  }
 }
 
 // 发布公告
@@ -167,8 +220,7 @@ const handlePublishAnnouncement = async () => {
 
 // 下载附件（保留原有逻辑）
 const handleDownload = async (attachmentId) => {
-  // await downloadAnnouncementAttachment(attachmentId);
-  ElMessage.info('下载功能待实现');
+  await downloadAnnouncementAttachment(attachmentId);
 }
 
 onMounted(async () => {
