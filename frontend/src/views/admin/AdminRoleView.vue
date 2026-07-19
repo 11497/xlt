@@ -3,6 +3,7 @@ import {onMounted, ref} from "vue";
 import {ElMessage, ElMessageBox} from "element-plus";
 import {InfoFilled, Delete, Plus, User, Notebook} from "@element-plus/icons-vue";
 import {createRole, deleteRole, getAllRoles, updateRole} from "@/api/role.js";
+import RoleUserDialog from "@/views/admin/RoleUserDialog.vue";
 
 // 列表相关状态
 let userList = ref([]);
@@ -118,6 +119,17 @@ const handleRoleDetailSave = async () => {
   roleDetailVisible.value = false;
   await getRole();
 }
+
+// 关联用户弹窗
+const roleUserDialogVisible = ref(false);
+const currentRoleId = ref(null);
+const currentRoleName = ref('');
+
+const handleRelationUser = (row) => {
+  currentRoleId.value = row.id;
+  currentRoleName.value = row.name;
+  roleUserDialogVisible.value = true;
+}
 </script>
 
 <template>
@@ -154,7 +166,7 @@ const handleRoleDetailSave = async () => {
       <!--   关联列   -->
       <el-table-column label="关联用户" width="200" align="center">
         <template #default="scope">
-          <el-button type="info" size="small" @click="" class="action-buttons">
+          <el-button type="info" size="small" @click="handleRelationUser(scope.row)" class="action-buttons">
             <el-icon><User /></el-icon> 关联用户
           </el-button>
         </template>
@@ -195,6 +207,13 @@ const handleRoleDetailSave = async () => {
       <el-button type="primary" @click="handleRoleDetailSave">保存</el-button>
     </template>
   </el-dialog>
+
+  <!-- 关联用户弹窗 -->
+  <RoleUserDialog
+      v-model:visible="roleUserDialogVisible"
+      :role-id="currentRoleId"
+      :role-name="currentRoleName"
+  />
 </template>
 
 <style scoped>
