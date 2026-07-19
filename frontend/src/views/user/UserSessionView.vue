@@ -154,6 +154,7 @@ const showMessage = (row) => {
 
 .action-bar {
   display: flex;
-  justify-content: flex-end;
+  gap: 10px;
+  margin-bottom: 0;
 }
 </style>
