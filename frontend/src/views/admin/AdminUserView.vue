@@ -2,7 +2,7 @@
 import {onMounted, ref} from "vue";
 import {ElMessage, ElMessageBox} from "element-plus";
 import {InfoFilled, Delete, Plus, RefreshRight} from "@element-plus/icons-vue";
-import {deleteUser, getAllUsers, setAdminStatus, updateUsername, userRegister} from "@/api/user.js";
+import {deleteUser, getAllUsers, resetPassword, setAdminStatus, updateUsername, userRegister} from "@/api/user.js";
 
 // 列表相关状态
 let userList = ref([]);
@@ -209,14 +209,20 @@ const handleAddSubmit = async () => {
 }
 
 // 重置密码
-const handleResetPassword = (row) => {
+const handleResetPassword =  (row) => {
   ElMessageBox.confirm(
       `确定要重置用户「${row.username}」的密码吗？`,
       '重置密码确认',
       {confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning'}
-  ).then(() => {
-    // TODO: 在此处调用重置密码接口，方法留空
-    console.log('重置密码，用户:', row);
+  ).then(async () => {
+    const res = await resetPassword(row.id);
+
+    if (res.code === 1) {
+      ElMessage.success('重置密码成功');
+      await getUser();
+    } else {
+      ElMessage.error(res.msg || '重置密码失败');
+    }
   }).catch(() => {
     // 用户取消
   });
