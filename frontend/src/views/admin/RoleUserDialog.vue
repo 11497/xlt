@@ -2,7 +2,7 @@
 import {ref, watch} from "vue";
 import {ElMessage, ElMessageBox} from "element-plus";
 import {Delete, Plus} from "@element-plus/icons-vue";
-import {getUsersByRole} from "@/api/role_user.js";
+import {batchAssignUsersToRole, getUsersByRole} from "@/api/role_user.js";
 import {searchUsers} from "@/api/user.js";
 
 const props = defineProps({
@@ -108,15 +108,15 @@ const handleCreateRelation = async () => {
     ElMessage.warning('请先搜索并选择一个用户');
     return;
   }
-  // TODO 调用后端接口创建关联，例如：
-  // const res = await createRoleUserApi({role_id: props.roleId, user_id: selectedUser.value.id});
-  // if (res.code === 1) {
-  //   ElMessage.success('关联成功');
-  //   addDialogVisible.value = false;
-  //   await getRoleUsers();
-  // } else {
-  //   ElMessage.error(res.msg);
-  // }
+  const res = await batchAssignUsersToRole(props.roleId, [selectedUser.value.id]);
+
+  if (res.code === 1) {
+    ElMessage.success('关联成功');
+    addDialogVisible.value = false;
+    await getRoleUsers();
+  } else {
+    ElMessage.error(res.msg);
+  }
   ElMessage.success('关联成功');
   addDialogVisible.value = false;
   await getRoleUsers();
