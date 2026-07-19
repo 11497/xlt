@@ -3,6 +3,7 @@ import {ref, watch} from "vue";
 import {ElMessage, ElMessageBox} from "element-plus";
 import {Delete, Plus} from "@element-plus/icons-vue";
 import {getUsersByRole} from "@/api/role_user.js";
+import {searchUsers} from "@/api/user.js";
 
 const props = defineProps({
   visible: {type: Boolean, default: false},
@@ -22,7 +23,6 @@ const selectedRows = ref([]);
 
 // 获取关联用户列表
 const getRoleUsers = async () => {
-  // TODO 调用后端接口获取关联用户列表，例如：
   const res = await getUsersByRole(props.roleId, currentPage.value, pageSize.value);
   if (res.code === 1) {
     userList.value = res.data.list;
@@ -90,13 +90,13 @@ const handleSearch = async () => {
     ElMessage.warning('请输入用户ID或用户名进行搜索');
     return;
   }
-  // TODO 调用后端接口搜索用户，例如：
-  // const res = await searchUsersApi(searchKeyword.value);
-  // if (res.code === 1) {
-  //   searchResults.value = res.data;
-  // } else {
-  //   ElMessage.error(res.msg);
-  // }
+
+  const res = await searchUsers(searchKeyword.value);
+  if (res.code === 1) {
+    searchResults.value = res.data;
+  } else {
+    ElMessage.error(res.msg);
+  }
 }
 
 const handleSelectUser = (user) => {
