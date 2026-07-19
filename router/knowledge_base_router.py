@@ -57,6 +57,22 @@ async def get_all_knowledge_bases(
         "page_size": page_size
     })
 
+@router.get("/search/{content}")
+async def search_knowledge_base(
+        content: str,
+        _admin: User = Depends(require_admin),
+):
+    """
+    管理员根据ID或名字查询知识库
+    :param content: 查询内容
+    :param _admin: 管理员用户对象
+    :return: 查询结果
+    """
+    result = Result()
+
+    knowledge_bases = KnowledgeBaseCRUD.search(content)
+    return result.success(msg="查询成功", data=knowledge_bases)
+
 @router.put("")
 async def update_knowledge_base(knowledge_base: KnowledgeBase,
                                 _admin: User = Depends(require_admin)):

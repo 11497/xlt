@@ -97,3 +97,32 @@ class KnowledgeBaseCRUD:
         with get_cursor() as cursor:
             affected = cursor.execute(sql, (knowledge_base_id,))
             return affected > 0
+
+    @staticmethod
+    def search(content: str) -> List[KnowledgeBase]:
+        """
+        根据用户名或ID查询用户
+        :param content: 搜索内容
+        :return: 用户列表
+        """
+        knowledge_bases = []
+
+        sql1 = "SELECT * FROM knowledge_base WHERE id = %s"
+        with get_cursor() as cursor:
+            cursor.execute(sql1, (content,))
+            rows = cursor.fetchall()
+
+            if rows:
+                for row in rows:
+                    knowledge_bases.append(KnowledgeBase.from_row(row))
+
+        sql2 = "SELECT * FROM knowledge_base WHERE name LIKE %s"
+        with get_cursor() as cursor:
+            cursor.execute(sql2, (f"%{content}%",))
+            rows = cursor.fetchall()
+
+            if rows:
+                for row in rows:
+                    knowledge_bases.append(KnowledgeBase.from_row(row))
+
+        return knowledge_bases
