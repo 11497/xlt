@@ -10,7 +10,8 @@ export const userInfo = () => request.get("/user");
 export const userRegister = (user) => request.post("/user/register", user);
 
 // 分页查询所有用户信息（管理员）
-export const getAllUsers = (params) => request.get("/user/all", params);
+export const getAllUsers = (page = 1, pageSize = 10) =>
+    request.get("/user/all", { params: { page, page_size: pageSize } });
 
 // 管理员更新用户名
 export const updateUsername = (data) => request.put("/user/username", data);
