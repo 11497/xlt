@@ -1,7 +1,11 @@
 <script setup>
 import {onMounted, ref} from "vue";
 import {createAnnouncement, deleteAnnouncements, getAllAnnouncements, updateAnnouncement} from "@/api/announcement.js";
-import {downloadAnnouncementAttachment, getAnnouncementAttachments} from "@/api/anouncement_attachment.js";
+import {
+  deleteAnnouncementAttachment,
+  downloadAnnouncementAttachment,
+  getAnnouncementAttachments, uploadAnnouncementAttachment
+} from "@/api/anouncement_attachment.js";
 import {ElMessage, ElMessageBox} from "element-plus";
 import {InfoFilled, Download, Delete, Plus} from "@element-plus/icons-vue";
 
@@ -93,22 +97,50 @@ const handleDeleteAttachment = async (attachmentId, filename) => {
       cancelButtonText: '取消',
       type: 'warning',
     });
-    // TODO: 调用删除附件 API
-    console.log('准备删除的附件ID:', attachmentId);
-    // 模拟删除成功，从本地列表移除
-    attachmentList.value = attachmentList.value.filter(item => item.id !== attachmentId);
-    ElMessage.success('附件删除成功');
+
+    // 1. 调用删除附件 API
+    const res = await deleteAnnouncementAttachment(attachmentId);
+
+    if (res.code === 1) {
+      // 2. 从本地列表移除
+      attachmentList.value = attachmentList.value.filter(item => item.id !== attachmentId);
+      ElMessage.success('附件删除成功');
+    } else {
+      ElMessage.error(res.msg || '删除失败');
+    }
   } catch (e) {
-    // 用户取消
+    // 用户取消或请求异常
+    if (e !== 'cancel') {
+      console.error(e);
+      ElMessage.error('删除请求发生异常');
+    }
   }
 }
 
 // 上传附件
 const handleUploadAttachment = async (file) => {
-  // TODO: 调用上传附件 API
-  console.log('准备上传的文件:', file);
-  ElMessage.info('上传功能待实现');
-  return false; // 阻止 el-upload 默认行为，改为手动上传
+  // 1. 创建 FormData 对象
+  const formData = new FormData();
+  formData.append('file', file.raw); // file.raw 是原始的 File 对象
+  formData.append('announcement_id', currentAnnouncement.value.id); // 获取当前正在编辑的公告ID
+
+  try {
+    // 2. 调用上传附件 API
+    const res = await uploadAnnouncementAttachment(formData);
+
+    if (res.code === 1) {
+      // 3. 上传成功，将新附件添加到列表
+      attachmentList.value.push(res.data);
+      ElMessage.success('附件上传成功');
+    } else {
+      ElMessage.error(res.msg || '上传失败');
+    }
+  } catch (e) {
+    console.error(e);
+    ElMessage.error('上传请求发生异常');
+  }
+
+  return false; // 阻止 el-upload 默认行为
 }
 
 // 用于存储公告的原始数据，用于比较
