@@ -8,6 +8,7 @@ import {
   getAllKnowledgeBases,
   updateKnowledgeBase
 } from "@/api/knowledge_base.js";
+import DocumentDialog from "@/views/admin/DocumentDialog.vue";
 
 // 列表相关状态
 let knowledgeBaseList = ref([]);
@@ -163,6 +164,12 @@ const handleDetailSave = async () => {
 const handleDetailCancel = () => {
   detailDialogVisible.value = false;
 };
+
+const documentDialogRef = ref(null);
+
+const openDocumentDialog = (row) => {
+  documentDialogRef.value.open(row.id, row.name);
+};
 </script>
 
 <template>
@@ -195,7 +202,7 @@ const handleDetailCancel = () => {
       </el-table-column>
       <el-table-column label="文档" width="200" align="center">
         <template #default="scope">
-          <el-button type="info" size="small" @click="">
+          <el-button type="info" size="small" @click="openDocumentDialog(scope.row)">
             <el-icon><Document /></el-icon> 查看文档
           </el-button>
         </template>
@@ -245,6 +252,9 @@ const handleDetailCancel = () => {
       <el-button type="primary" @click="handleDetailSave">保存</el-button>
     </template>
   </el-dialog>
+
+  <!-- 文档列表弹窗 -->
+  <DocumentDialog ref="documentDialogRef" />
 </template>
 
 <style scoped>
