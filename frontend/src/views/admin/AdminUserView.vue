@@ -2,9 +2,9 @@
 import {onMounted, ref} from "vue";
 import {ElMessage, ElMessageBox} from "element-plus";
 import {InfoFilled, Delete, Plus, RefreshRight} from "@element-plus/icons-vue";
-import {deleteUser, getAllUsers, userRegister} from "@/api/user.js";
+import {deleteUser, getAllUsers, setAdminStatus, updateUsername, userRegister} from "@/api/user.js";
 
-// ==================== 列表相关状态 ====================
+// 列表相关状态
 let userList = ref([]);
 let currentPage = ref(1);
 let pageSize = ref(5);
@@ -12,18 +12,19 @@ let total = ref(0);
 const background = ref(true);
 const selectedRows = ref([]);
 
-// ==================== 弹窗相关状态 ====================
+// 弹窗相关状态
 // 控制弹窗显示
 const dialogVisible = ref(false);
 // 弹窗模式: 'detail' | 'add'
 const dialogMode = ref('detail');
 // 弹窗表单数据
 const dialogForm = ref({
+  id: null,
   username: '',
   is_admin: false
 });
 
-// ==================== 获取用户列表 ====================
+// 获取用户列表
 const getUser = async () => {
   const res = await getAllUsers(currentPage.value, pageSize.value);
   if (res.code === 1) {
@@ -96,19 +97,77 @@ const handleBatchDelete = async () => {
   }
 }
 
+// 用于存储打开弹窗时的原始数据快照
+const originalForm = ref({
+  username: '',
+  is_admin: false
+});
+
 // 用户详情弹窗
 const handleDetail = (row) => {
   dialogMode.value = 'detail';
   dialogForm.value = {
+    id: row.id,
+    username: row.username,
+    is_admin: Boolean(row.is_admin)
+  };
+  // 保存原始数据快照用于变更检测
+  originalForm.value = {
+    id: row.id,
     username: row.username,
     is_admin: Boolean(row.is_admin)
   };
   dialogVisible.value = true;
 }
 
-const handleSaveDetail = () => {
-  // TODO: 在此处调用保存/更新用户接口，方法留空
-  console.log('保存用户详情:', dialogForm.value);
+// 保存用户详情（分别检测、分别调用）
+const handleSaveDetail = async () => {
+  const usernameChanged = dialogForm.value.username !== originalForm.value.username;
+  const isAdminChanged = dialogForm.value.is_admin !== originalForm.value.is_admin;
+
+  // 两个属性都没有修改，直接关闭窗口
+  if (!usernameChanged && !isAdminChanged) {
+    dialogVisible.value = false;
+    return;
+  }
+
+  try {
+    // 用户名被修改，单独调用更新用户名方法
+    if (usernameChanged) {
+      const res = await updateUsername({
+        id: dialogForm.value.id,
+        username: dialogForm.value.username.trim()
+      })
+
+      if (res.code === 1) {
+        ElMessage.success('更新用户名成功');
+      } else {
+        ElMessage.error(res.msg || '更新用户名失败');
+      }
+    }
+
+    // 管理员权限被修改，单独调用更新管理员权限方法
+    if (isAdminChanged) {
+      const res = await setAdminStatus({
+        id: dialogForm.value.id,
+        isAdmin: dialogForm.value.is_admin ? 1 : 0
+      })
+
+      if (res.code === 1) {
+        ElMessage.success('更新权限成功');
+      } else {
+        ElMessage.error(res.msg || '更新权限失败');
+      }
+    }
+
+    // 更新原始快照，避免重复提交
+    originalForm.value = { ...dialogForm.value };
+    dialogVisible.value = false;
+    await getUser();
+  } catch (e) {
+    console.error(e);
+    ElMessage.error('保存请求发生异常');
+  }
 }
 
 // 新增用户弹窗
