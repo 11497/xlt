@@ -2,7 +2,12 @@
 import {onMounted, ref} from "vue";
 import {ElMessage, ElMessageBox} from "element-plus";
 import {InfoFilled, Delete, Plus, Document} from "@element-plus/icons-vue";
-import {createKnowledgeBase, deleteKnowledgeBase, getAllKnowledgeBases} from "@/api/knowledge_base.js";
+import {
+  createKnowledgeBase,
+  deleteKnowledgeBase,
+  getAllKnowledgeBases,
+  updateKnowledgeBase
+} from "@/api/knowledge_base.js";
 
 // 列表相关状态
 let knowledgeBaseList = ref([]);
@@ -47,7 +52,7 @@ const handleCreateCancel = () => {
   createDialogVisible.value = false;
 };
 
-// ========== 批量删除相关 ==========
+// 批量删除相关
 const handleBatchDelete = () => {
   if (selectedRows.value.length === 0) {
     ElMessage.warning("请先选择要删除的知识库");
@@ -112,6 +117,52 @@ const handleCurrentChange = async () => {
 const handleSelectionChange = (rows) => {
   selectedRows.value = rows;
 }
+
+// 详情弹窗相关
+const detailDialogVisible = ref(false);
+const detailForm = ref({
+  id: "",
+  name: "",
+  originalName: "" // 用于对比名称是否更改
+});
+
+const openDetailDialog = (row) => {
+  detailForm.value.id = row.id;
+  detailForm.value.name = row.name;
+  detailForm.value.originalName = row.name;
+  detailDialogVisible.value = true;
+};
+
+const handleDetailSave = async () => {
+  const newName = detailForm.value.name.trim();
+  if (!newName) {
+    ElMessage.warning("知识库名称不能为空");
+    return;
+  }
+  if (newName === detailForm.value.originalName) {
+    ElMessage.info("名称未修改，无需保存");
+    detailDialogVisible.value = false;
+    return;
+  }
+
+  const res = await updateKnowledgeBase({
+    id: detailForm.value.id,
+    name: newName
+  });
+
+  if (res.code === 1) {
+    ElMessage.success("修改成功");
+  } else {
+    ElMessage.error(res.msg);
+  }
+
+  detailDialogVisible.value = false;
+  await getKnowledgeBase();
+};
+
+const handleDetailCancel = () => {
+  detailDialogVisible.value = false;
+};
 </script>
 
 <template>
@@ -137,7 +188,7 @@ const handleSelectionChange = (rows) => {
       <el-table-column prop="name" label="知识库名称" width="250" show-overflow-tooltip align="center"/>
       <el-table-column label="操作" width="200" align="center">
         <template #default="scope">
-          <el-button type="info" size="small" @click="">
+          <el-button type="info" size="small" @click="openDetailDialog(scope.row)">
             <el-icon><InfoFilled /></el-icon> 详情
           </el-button>
         </template>
@@ -176,6 +227,22 @@ const handleSelectionChange = (rows) => {
     <template #footer>
       <el-button @click="handleCreateCancel">取消</el-button>
       <el-button type="primary" @click="handleCreate">确认</el-button>
+    </template>
+  </el-dialog>
+
+  <!-- 知识库详情弹窗 -->
+  <el-dialog v-model="detailDialogVisible" title="知识库详情" width="420" :close-on-click-modal="false">
+    <el-form label-width="100px">
+      <el-form-item label="知识库ID">
+        <el-input v-model="detailForm.id" disabled />
+      </el-form-item>
+      <el-form-item label="知识库名称">
+        <el-input v-model="detailForm.name" placeholder="请输入知识库名称" clearable />
+      </el-form-item>
+    </el-form>
+    <template #footer>
+      <el-button @click="handleDetailCancel">取消</el-button>
+      <el-button type="primary" @click="handleDetailSave">保存</el-button>
     </template>
   </el-dialog>
 </template>
