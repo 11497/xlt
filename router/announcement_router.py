@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, Query
+from fastapi.params import Body
 
 from authentication.user_auth import require_admin, require_current_user
 from crud.announcement_attachment_crud import AnnouncementAttachmentCRUD
@@ -91,7 +92,7 @@ async def update_announcement(announcement: Announcement,
 
 
 @router.delete("")
-async def delete_announcements(ids: list[int],
+async def delete_announcements(ids: list[int] = Body(..., alias="ids"),
                               _admin: User = Depends(require_admin)):
     """
     批量删除公告
