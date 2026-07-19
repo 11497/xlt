@@ -175,6 +175,7 @@ const showDetail = async (row) => {
 }
 
 // 保存公告详情
+// 保存公告详情
 const handleSaveAnnouncement = async () => {
   // 1. 变更检测
   if (!originalAnnouncement.value) return;
@@ -189,7 +190,19 @@ const handleSaveAnnouncement = async () => {
     return;
   }
 
-  // 2. 构建符合后端模型要求的对象
+  // 2. 弹出确认框
+  try {
+    await ElMessageBox.confirm('确定要保存对公告的修改吗？', '提示', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning',
+    });
+  } catch (e) {
+    // 用户点击了取消，直接返回
+    return;
+  }
+
+  // 3. 构建符合后端模型要求的对象
   const updatedAnnouncement = {
     id: currentAnnouncement.value.id,
     title: currentAnnouncement.value.title,
@@ -200,7 +213,7 @@ const handleSaveAnnouncement = async () => {
   };
 
   try {
-    // 3. 调用更新公告 API
+    // 4. 调用更新公告 API
     const res = await updateAnnouncement(updatedAnnouncement);
 
     if (res.code === 1) {
@@ -209,7 +222,7 @@ const handleSaveAnnouncement = async () => {
       originalAnnouncement.value = JSON.parse(JSON.stringify(currentAnnouncement.value));
       // 刷新列表数据
       await getAnnouncement();
-      // 4. 关闭详情弹窗
+      // 5. 关闭详情弹窗
       detailDialogVisible.value = false;
     } else {
       ElMessage.error(res.msg || '保存失败');
