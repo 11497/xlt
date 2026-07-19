@@ -1,7 +1,7 @@
 <script setup>
 import {onMounted, ref} from "vue";
 import {ElMessage, ElMessageBox} from "element-plus";
-import {InfoFilled, Delete, Plus, RefreshRight} from "@element-plus/icons-vue";
+import {InfoFilled, Delete, Plus, User, Notebook} from "@element-plus/icons-vue";
 import {createRole, deleteRole, getAllRoles} from "@/api/role.js";
 
 // 列表相关状态
@@ -109,16 +109,27 @@ const handleAddRole = async () => {
           {{ (currentPage - 1) * pageSize + scope.$index + 1 }}
         </template>
       </el-table-column>
-      <el-table-column prop="name" label="角色名" width="200" show-overflow-tooltip align="center"/>
+      <el-table-column prop="name" label="角色名" width="250" show-overflow-tooltip align="center"/>
       <!-- 操作列 -->
-      <el-table-column label="操作" width="400" align="center">
+      <el-table-column label="操作" width="200" align="center">
         <template #default="scope">
           <el-button type="info" size="small" @click="" class="action-buttons">
             <el-icon><InfoFilled /></el-icon> 角色详情
           </el-button>
-
+        </template>
+      </el-table-column>
+      <!--   关联列   -->
+      <el-table-column label="关联用户" width="200" align="center">
+        <template #default="scope">
           <el-button type="info" size="small" @click="" class="action-buttons">
-            <el-icon><InfoFilled /></el-icon> 知识库详情
+            <el-icon><User /></el-icon> 关联用户
+          </el-button>
+        </template>
+      </el-table-column>
+      <el-table-column label="关联知识库" width="200" align="center">
+        <template #default="scope">
+          <el-button type="info" size="small" @click="" class="action-buttons">
+            <el-icon><Notebook /></el-icon> 关联知识库
           </el-button>
         </template>
       </el-table-column>
