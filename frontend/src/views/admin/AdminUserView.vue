@@ -2,7 +2,7 @@
 import {onMounted, ref} from "vue";
 import {ElMessage, ElMessageBox} from "element-plus";
 import {InfoFilled, Delete, Plus, RefreshRight} from "@element-plus/icons-vue";
-import {getAllUsers} from "@/api/user.js";
+import {getAllUsers, userRegister} from "@/api/user.js";
 
 // ==================== 列表相关状态 ====================
 let userList = ref([]);
@@ -96,9 +96,31 @@ const handleAddUser = () => {
   dialogVisible.value = true;
 }
 
-const handleAddSubmit = () => {
-  // TODO: 在此处调用新增用户接口，方法留空
-  console.log('新增用户:', dialogForm.value);
+const handleAddSubmit = async () => {
+  if (!dialogForm.value.username?.trim()) {
+    ElMessage.warning('用户名不能为空');
+    return;
+  }
+  try {
+    const payload = {
+      username: dialogForm.value.username.trim(),
+      is_admin: dialogForm.value.is_admin ? 1 : 0,
+      password: '123456',
+      id: null
+    };
+    const res = await userRegister(payload);
+
+    if (res.code === 1) {
+      ElMessage.success('新增成功');
+      dialogVisible.value = false;
+      await getUser();
+    } else {
+      ElMessage.error(res.msg || '新增失败');
+    }
+  } catch (e) {
+    console.error(e);
+    ElMessage.error('新增请求发生异常');
+  }
 }
 
 // 重置密码
