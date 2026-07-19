@@ -45,7 +45,7 @@ onMounted(async () => {
       <el-table-column
         prop="name"
         label="角色名字"
-        min-width="200"
+        width="200"
         show-overflow-tooltip
         align="center"
       />
