@@ -4,6 +4,7 @@ import {ElMessage, ElMessageBox} from "element-plus";
 import {InfoFilled, Delete, Plus, User, Notebook} from "@element-plus/icons-vue";
 import {createRole, deleteRole, getAllRoles, updateRole} from "@/api/role.js";
 import RoleUserDialog from "@/views/admin/RoleUserDialog.vue";
+import RoleKnowledgeBaseDialog from "@/views/admin/RoleKnowledgeBaseDialog.vue";
 
 // 列表相关状态
 let userList = ref([]);
@@ -130,6 +131,15 @@ const handleRelationUser = (row) => {
   currentRoleName.value = row.name;
   roleUserDialogVisible.value = true;
 }
+
+// 关联知识库弹窗
+const roleKbDialogVisible = ref(false);
+
+const handleRelationKb = (row) => {
+  currentRoleId.value = row.id;
+  currentRoleName.value = row.name;
+  roleKbDialogVisible.value = true;
+}
 </script>
 
 <template>
@@ -174,7 +184,7 @@ const handleRelationUser = (row) => {
       <el-table-column label="关联知识库" width="200" align="center">
         <template #default="scope">
           <!--     TODO 关联知识库页面     -->
-          <el-button type="info" size="small" @click="" class="action-buttons">
+          <el-button type="info" size="small" @click="handleRelationKb(scope.row)" class="action-buttons">
             <el-icon><Notebook /></el-icon> 关联知识库
           </el-button>
         </template>
@@ -212,6 +222,13 @@ const handleRelationUser = (row) => {
   <!-- 关联用户弹窗 -->
   <RoleUserDialog
       v-model:visible="roleUserDialogVisible"
+      :role-id="currentRoleId"
+      :role-name="currentRoleName"
+  />
+
+  <!-- 关联知识库弹窗 -->
+  <RoleKnowledgeBaseDialog
+      v-model:visible="roleKbDialogVisible"
       :role-id="currentRoleId"
       :role-name="currentRoleName"
   />
