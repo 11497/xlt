@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, Query
 
 from ai.chroma_service import ChromaService
 from authentication.user_auth import require_admin, require_current_user
+from crud.document_crud import DocumentCRUD
 from crud.knowledge_base_crud import KnowledgeBaseCRUD
 from crud.role_knowledge_base_crud import RoleKnowledgeBaseCRUD
 from crud.user_knowledge_base_crud import UserKnowledgeBaseCRUD
@@ -87,13 +88,16 @@ async def delete_knowledge_base(id: int, _admin: User = Depends(require_admin)):
     if roles:
         return result.error(msg="知识库下有绑定的角色，不能删除")
 
-    delete_result = KnowledgeBaseCRUD.delete(id)
-    if not delete_result:
-        return result.error(msg="删除知识库失败")
-
     # 从chroma删除向量
     chroma_service = ChromaService()
     chroma_service.delete_knowledge_base(id)
+
+    # 删除知识库中的文档
+    DocumentCRUD.delete_by_knowledge_base_id(id)
+
+    delete_result = KnowledgeBaseCRUD.delete(id)
+    if not delete_result:
+        return result.error(msg="删除知识库失败")
 
     return result.success(msg="删除知识库成功")
 
