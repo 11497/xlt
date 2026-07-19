@@ -75,12 +75,12 @@ const handleBatchDelete = async () => {
 const addDialogVisible = ref(false);
 const searchKeyword = ref('');
 const searchResults = ref([]);
-const selectedUser = ref(null);
+const selectedUsers = ref([]);
 
 const handleAddRelation = () => {
   searchKeyword.value = '';
   searchResults.value = [];
-  selectedUser.value = null;
+  selectedUsers.value = [];
   addDialogVisible.value = true;
 }
 
@@ -98,25 +98,34 @@ const handleSearch = async () => {
   }
 }
 
+const handleSearchSelectionChange = (rows) => {
+  selectedUsers.value = rows;
+}
+
 const handleSelectUser = (user) => {
   selectedUser.value = user;
 }
 
 const handleCreateRelation = async () => {
-  if (!selectedUser.value) {
-    ElMessage.warning('请先搜索并选择一个用户');
+  if (selectedUsers.value.length === 0) {
+    ElMessage.warning('请先搜索并选择用户');
     return;
   }
-  const res = await batchAssignUsersToRole(props.roleId, [selectedUser.value.id]);
 
-  if (res.code === 1) {
-    ElMessage.success('关联成功');
-    addDialogVisible.value = false;
-    await getRoleUsers();
-  } else {
-    ElMessage.error(res.msg);
+  const userIds = selectedUsers.value.map(user => user.id);
+  let allSuccess = true;
+  for (const userId of userIds) {
+    const res = await batchAssignUsersToRole(props.roleId, [userId]);
+    if (res.code !== 1) {
+      ElMessage.error(`关联用户ID ${userId} 失败: ${res.msg}`);
+      allSuccess = false;
+    }
   }
-  ElMessage.success('关联成功');
+
+  if (allSuccess) {
+    ElMessage.success('全部关联成功');
+  }
+
   addDialogVisible.value = false;
   await getRoleUsers();
 }
@@ -195,17 +204,18 @@ const handleClose = () => {
         :data="searchResults"
         border
         style="width: 100%; margin-top: 10px;"
-        highlight-current-row
-        @current-change="handleSelectUser"
+        @selection-change="handleSearchSelectionChange"
         max-height="250"
     >
+      <el-table-column type="selection" width="55" align="center" />
       <el-table-column prop="id" label="用户ID" width="100" align="center" />
       <el-table-column prop="username" label="用户名" align="center" />
     </el-table>
 
     <!-- 已选用户提示 -->
-    <div v-if="selectedUser" style="margin-top: 10px; color: #67c23a;">
-      ✓ 已选择用户：{{ selectedUser.username }}（ID: {{ selectedUser.id }}）
+    <div v-if="selectedUsers.length > 0" style="margin-top: 10px; color: #67c23a;">
+      ✓ 已选择 {{ selectedUsers.length }} 个用户：
+      {{ selectedUsers.map(u => u.username).join('、') }}
     </div>
 
     <template #footer>
