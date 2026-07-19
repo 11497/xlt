@@ -1,14 +1,8 @@
 <script setup>
 import {onMounted, ref} from "vue";
-import {createAnnouncement, deleteAnnouncements, getAllAnnouncements, updateAnnouncement} from "@/api/announcement.js";
-import {
-  deleteAnnouncementAttachment,
-  downloadAnnouncementAttachment,
-  getAnnouncementAttachments, uploadAnnouncementAttachment
-} from "@/api/anouncement_attachment.js";
 import {ElMessage, ElMessageBox} from "element-plus";
-import {InfoFilled, Download, Delete, Plus} from "@element-plus/icons-vue";
-import {getAllKnowledgeBases} from "@/api/knowledge_base.js";
+import {InfoFilled, Delete, Plus, Document} from "@element-plus/icons-vue";
+import {createKnowledgeBase, deleteKnowledgeBase, getAllKnowledgeBases} from "@/api/knowledge_base.js";
 
 // 列表相关状态
 let knowledgeBaseList = ref([]);
@@ -18,11 +12,81 @@ let total = ref(0);
 const background = ref(true);
 const selectedRows = ref([]); // 存放表格选中的行
 
-// 获取公告列表
+// 创建知识库弹窗相关
+const createDialogVisible = ref(false);
+const createForm = ref({
+  name: ""
+});
+
+const openCreateDialog = () => {
+  createForm.value.name = "";
+  createDialogVisible.value = true;
+};
+
+const handleCreate = async () => {
+  if (!createForm.value.name.trim()) {
+    ElMessage.warning("请输入知识库名称");
+    return;
+  }
+  const res = await createKnowledgeBase({
+    name: createForm.value.name,
+    id: null
+  });
+
+  if (res.code === 1) {
+    ElMessage.success('创建成功');
+  } else {
+    ElMessage.error(res.msg);
+  }
+
+  createDialogVisible.value = false;
+  await getKnowledgeBase();
+};
+
+const handleCreateCancel = () => {
+  createDialogVisible.value = false;
+};
+
+// ========== 批量删除相关 ==========
+const handleBatchDelete = () => {
+  if (selectedRows.value.length === 0) {
+    ElMessage.warning("请先选择要删除的知识库");
+    return;
+  }
+
+  ElMessageBox.confirm(
+      `确定要删除选中的 ${selectedRows.value.length} 个知识库吗？此操作不可恢复。`,
+      "批量删除确认",
+      {
+        confirmButtonText: "删除",
+        cancelButtonText: "取消",
+        type: "warning",
+      }
+  ).then(async () => {
+    let successCount = 0;
+
+    for (const row of selectedRows.value) {
+      const res = await deleteKnowledgeBase(row.id);
+      if (res.code === 1) {
+        successCount ++;
+      } else {
+        ElMessage.error(res.msg);
+      }
+    }
+
+    if (successCount > 0) {
+      ElMessage.success(`成功删除${successCount}个知识库`);
+    }
+
+    await getKnowledgeBase();
+  }).catch(() => {
+  });
+};
+
+// 获取知识库列表
 const getKnowledgeBase = async () => {
   const res = await getAllKnowledgeBases(currentPage.value, pageSize.value);
   if (res.code === 1) {
-    // 将列表中的 is_top 字段从 int (1/0) 转换为 boolean (true/false)
     knowledgeBaseList.value = res.data.list;
     total.value = res.data.total;
     currentPage.value = res.data.page;
@@ -53,10 +117,10 @@ const handleSelectionChange = (rows) => {
 <template>
   <!-- 操作按钮区 -->
   <div class="container action-bar">
-    <el-button type="primary" @click="">
+    <el-button type="primary" @click="openCreateDialog">
       <el-icon><Plus /></el-icon> 创建知识库
     </el-button>
-    <el-button type="danger" @click="" :disabled="selectedRows.length === 0">
+    <el-button type="danger" @click="handleBatchDelete" :disabled="selectedRows.length === 0">
       <el-icon><Delete /></el-icon> 批量删除
     </el-button>
   </div>
@@ -74,7 +138,14 @@ const handleSelectionChange = (rows) => {
       <el-table-column label="操作" width="200" align="center">
         <template #default="scope">
           <el-button type="info" size="small" @click="">
-            <el-icon><InfoFilled /></el-icon> 知识库文档
+            <el-icon><InfoFilled /></el-icon> 详情
+          </el-button>
+        </template>
+      </el-table-column>
+      <el-table-column label="文档" width="200" align="center">
+        <template #default="scope">
+          <el-button type="info" size="small" @click="">
+            <el-icon><Document /></el-icon> 查看文档
           </el-button>
         </template>
       </el-table-column>
@@ -94,6 +165,19 @@ const handleSelectionChange = (rows) => {
         @current-change="handleCurrentChange"
     />
   </div>
+
+  <!-- 创建知识库弹窗 -->
+  <el-dialog v-model="createDialogVisible" title="创建知识库" width="420" :close-on-click-modal="false">
+    <el-form>
+      <el-form-item label="知识库名称">
+        <el-input v-model="createForm.name" placeholder="请输入知识库名称" clearable />
+      </el-form-item>
+    </el-form>
+    <template #footer>
+      <el-button @click="handleCreateCancel">取消</el-button>
+      <el-button type="primary" @click="handleCreate">确认</el-button>
+    </template>
+  </el-dialog>
 </template>
 
 <style scoped>
