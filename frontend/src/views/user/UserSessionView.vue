@@ -113,8 +113,8 @@ const showMessage = (row) => {
         </template>
       </el-table-column>
       <el-table-column prop="name" label="会话名称" min-width="200" show-overflow-tooltip align="center"/>
-      <el-table-column prop="create_time" label="创建时间" width="180" align="center"/>
-      <el-table-column prop="update_time" label="修改时间" width="180" align="center"/>
+      <el-table-column prop="create_time" label="创建时间" width="250" align="center"/>
+      <el-table-column prop="update_time" label="修改时间" width="250" align="center"/>
       <el-table-column label="操作" width="200" align="center">
         <template #default="scope">
           <el-button type="info" size="small" @click="showMessage(scope.row)">
