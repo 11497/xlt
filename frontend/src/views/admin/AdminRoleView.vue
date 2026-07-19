@@ -2,7 +2,7 @@
 import {onMounted, ref} from "vue";
 import {ElMessage, ElMessageBox} from "element-plus";
 import {InfoFilled, Delete, Plus, RefreshRight} from "@element-plus/icons-vue";
-import {getAllRoles} from "@/api/role.js";
+import {createRole, deleteRole, getAllRoles} from "@/api/role.js";
 
 // 列表相关状态
 let userList = ref([]);
@@ -44,12 +44,46 @@ const handleSelectionChange = (rows) => {
 
 // 批量删除
 const handleBatchDelete = async () => {
-  // TODO 批量删除角色
+  try {
+    await ElMessageBox.confirm(
+        `确定要删除选中的 ${selectedRows.value.length} 个角色吗？`,
+        '提示',
+        {confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning'}
+    );
+    const ids = selectedRows.value.map(row => row.id);
+    for (const id of ids) {
+      const res = await deleteRole(id);
+      if (res.code !== 1) {
+        ElMessage.error(`删除角色ID ${id} 失败: ${res.msg}`);
+        return;
+      }
+    }
+    ElMessage.success('批量删除成功');
+    await getRole();
+  } catch {
+    // 用户取消操作
+  }
 }
 
 // 新增角色弹窗
-const handleAddRole = () => {
-  // TODO 新增角色弹窗
+const handleAddRole = async () => {
+  try {
+    const {value} = await ElMessageBox.prompt('请输入角色名称', '新增角色', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      inputPattern: /\S+/,
+      inputErrorMessage: '角色名称不能为空'
+    });
+    const res = await createRole({name: value});
+    if (res.code === 1) {
+      ElMessage.success('新增角色成功');
+      await getRole();
+    } else {
+      ElMessage.error(res.msg);
+    }
+  } catch {
+    // 用户取消操作
+  }
 }
 </script>
 
