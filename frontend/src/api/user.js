@@ -22,5 +22,8 @@ export const deleteUser = (id) => request.delete(`/user/${id}`);
 // 用户更新密码
 export const updatePassword = (data) => request.put("/user/password", data);
 
+// 管理员重置用户密码
+export const resetPassword = (id) => request.put(`/user/reset_password/${id}`);
+
 // 管理员设置用户权限
 export const setAdminStatus = (data) => request.put("/user/admin-status", data);
