@@ -173,6 +173,7 @@ const handleRelationUser = (row) => {
       </el-table-column>
       <el-table-column label="关联知识库" width="200" align="center">
         <template #default="scope">
+          <!--     TODO 关联知识库页面     -->
           <el-button type="info" size="small" @click="" class="action-buttons">
             <el-icon><Notebook /></el-icon> 关联知识库
           </el-button>
