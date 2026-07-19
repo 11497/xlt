@@ -111,11 +111,10 @@ class ChromaService:
         :param knowledge_base_id: 知识库ID
         """
         collection_name = self._get_collection_name(knowledge_base_id)
-        try:
+        # 先获取所有集合名称，判断目标集合是否存在
+        existing_collections = [col.name for col in self.client.list_collections()]
+        if collection_name in existing_collections:
             self.client.delete_collection(collection_name)
-        except ValueError:
-            # 集合不存在时忽略
-            pass
 
     def get_document_chunk_count(self, knowledge_base_id: int, document_id: int) -> int:
         """
