@@ -2,7 +2,7 @@
 import {ref, watch} from "vue";
 import {ElMessage, ElMessageBox} from "element-plus";
 import {Delete, Plus} from "@element-plus/icons-vue";
-import {batchAssignUsersToRole, getUsersByRole} from "@/api/role_user.js";
+import {batchAssignUsersToRole, batchRemoveUsersFromRole, getUsersByRole} from "@/api/role_user.js";
 import {searchUsers} from "@/api/user.js";
 
 const props = defineProps({
@@ -57,15 +57,14 @@ const handleBatchDelete = async () => {
         {confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning'}
     );
     const userIds = selectedRows.value.map(row => row.id);
-    // TODO 调用后端接口批量删除关联，例如：
-    // for (const userId of userIds) {
-    //   const res = await deleteRoleUserApi(props.roleId, userId);
-    //   if (res.code !== 1) {
-    //     ElMessage.error(`取消关联用户ID ${userId} 失败: ${res.msg}`);
-    //     return;
-    //   }
-    // }
-    ElMessage.success('批量取消关联成功');
+
+    const res = await batchRemoveUsersFromRole(props.roleId, userIds);
+    if (res.code === 1) {
+      ElMessage.success('批量取消关联成功');
+    } else {
+      ElMessage.error(res.msg);
+    }
+
     await getRoleUsers();
   } catch {
     // 用户取消操作
