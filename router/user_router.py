@@ -177,8 +177,6 @@ async def update_password(
     """
     result = Result()
 
-    if user is None:
-        return result.error(msg="用户不存在")
     password_result = valid_password(new_password, old_password, user)
     if password_result is not None:
         return result.error(msg=password_result)
@@ -187,6 +185,31 @@ async def update_password(
     if not res:
         return result.error(msg="更新密码失败")
     return result.success(msg="更新成功")
+
+@router.put("/reset_password/{id}")
+async def reset_password(
+        id: int,
+        _admin: User = Depends(require_admin)
+):
+    """
+    管理员重置用户密码
+    :param id: 用户ID
+    :param _admin: 管理员用户对象
+    :return: 更新结果
+    """
+    result = Result()
+
+    # 重置密码为默认值（"123456"）
+    default_password = "123456"
+    res = UserCRUD.update_password(id, default_password)
+    if not res:
+        user = UserCRUD.get_by_id(id)
+        if user.password == default_password:
+            return result.error(msg="重置密码失败，用户密码已是默认值")
+
+        return result.error(msg="重置密码失败")
+    return result.success(msg="重置密码成功")
+
 
 
 @router.put("/admin-status")
