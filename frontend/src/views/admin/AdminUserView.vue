@@ -2,7 +2,7 @@
 import {onMounted, ref} from "vue";
 import {ElMessage, ElMessageBox} from "element-plus";
 import {InfoFilled, Delete, Plus, RefreshRight} from "@element-plus/icons-vue";
-import {getAllUsers, userRegister} from "@/api/user.js";
+import {deleteUser, getAllUsers, userRegister} from "@/api/user.js";
 
 // ==================== 列表相关状态 ====================
 let userList = ref([]);
@@ -57,18 +57,43 @@ const handleSelectionChange = (rows) => {
 }
 
 // 批量删除
-const handleBatchDelete = () => {
-  if (selectedRows.value.length === 0) return;
-  ElMessageBox.confirm(
-      `确定要删除选中的 ${selectedRows.value.length} 条记录吗？`,
+const handleBatchDelete = async () => {
+  if (selectedRows.value.length === 0) {
+    ElMessage.warning('请至少选择一个用户');
+    return;
+  }
+  try {
+    await ElMessageBox.confirm(
+      `确定要删除选中的 ${selectedRows.value.length} 个用户吗？此操作不可恢复。`,
       '批量删除确认',
-      {confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning'}
-  ).then(() => {
-    // TODO: 在此处调用批量删除接口，方法留空
-    console.log('批量删除，选中行:', selectedRows.value);
-  }).catch(() => {
-    // 用户取消
-  });
+      { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' }
+    );
+
+    const ids = selectedRows.value.map(row => row.id);
+    let successCount = 0;
+    for (let id of ids) {
+      const res = await deleteUser(id);
+
+      if (res.code === 1) {
+        successCount++;
+      } else {
+        ElMessage.error(res.msg || '删除失败');
+        break;
+      }
+    }
+
+    if (successCount === ids.length) {
+      ElMessage.success('删除成功');
+    }
+
+    selectedRows.value = [];
+    await getUser();
+  } catch (e) {
+    if (e !== 'cancel') {
+      console.error(e);
+      ElMessage.error('删除请求发生异常');
+    }
+  }
 }
 
 // 用户详情弹窗
@@ -96,6 +121,7 @@ const handleAddUser = () => {
   dialogVisible.value = true;
 }
 
+// 新增用户提交
 const handleAddSubmit = async () => {
   if (!dialogForm.value.username?.trim()) {
     ElMessage.warning('用户名不能为空');
