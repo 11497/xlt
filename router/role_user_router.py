@@ -37,10 +37,10 @@ async def batch_assign_users_to_role(
     return result.success(msg="分配用户成功")
 
 
-@router.delete("/remove")
+@router.delete("/remove", include_in_schema=False)
 async def batch_remove_users_from_role(
-        role_id: int,
-        user_ids: List[int],
+        role_id: int = Body(..., alias="role_id"),
+        user_ids: List[int] = Body(..., alias="user_ids"),
         _admin: User = Depends(require_admin)):
     """
     批量从指定角色中移除用户
