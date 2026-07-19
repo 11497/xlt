@@ -2,7 +2,7 @@
 import {onMounted, ref} from "vue";
 import {ElMessage, ElMessageBox} from "element-plus";
 import {InfoFilled, Delete, Plus, User, Notebook} from "@element-plus/icons-vue";
-import {createRole, deleteRole, getAllRoles} from "@/api/role.js";
+import {createRole, deleteRole, getAllRoles, updateRole} from "@/api/role.js";
 
 // 列表相关状态
 let userList = ref([]);
@@ -85,6 +85,39 @@ const handleAddRole = async () => {
     // 用户取消操作
   }
 }
+
+// 角色详情弹窗
+const roleDetailVisible = ref(false);
+const roleDetailForm = ref({id: null, name: ''});
+const originalRoleName = ref('');
+
+const handleRoleDetail = (row) => {
+  roleDetailForm.value = {id: row.id, name: row.name};
+  originalRoleName.value = row.name;
+  roleDetailVisible.value = true;
+}
+
+const handleRoleDetailSave = async () => {
+  if (roleDetailForm.value.name === originalRoleName.value) {
+    ElMessage.info('角色名未变更');
+    roleDetailVisible.value = false;
+    return;
+  }
+
+  const res = await updateRole({
+    id: roleDetailForm.value.id,
+    name: roleDetailForm.value.name
+  })
+
+  if (res.code === 1) {
+    ElMessage.success('角色名修改成功');
+  } else {
+    ElMessage.error(res.msg);
+  }
+
+  roleDetailVisible.value = false;
+  await getRole();
+}
 </script>
 
 <template>
@@ -113,7 +146,7 @@ const handleAddRole = async () => {
       <!-- 操作列 -->
       <el-table-column label="操作" width="200" align="center">
         <template #default="scope">
-          <el-button type="info" size="small" @click="" class="action-buttons">
+          <el-button type="info" size="small" @click="handleRoleDetail(scope.row)" class="action-buttons">
             <el-icon><InfoFilled /></el-icon> 角色详情
           </el-button>
         </template>
@@ -149,6 +182,19 @@ const handleAddRole = async () => {
         @current-change="handleCurrentChange"
     />
   </div>
+
+  <!-- 角色详情弹窗 -->
+  <el-dialog v-model="roleDetailVisible" title="角色详情" width="400px">
+    <el-form label-width="80px">
+      <el-form-item label="角色名称">
+        <el-input v-model="roleDetailForm.name" placeholder="请输入角色名称" />
+      </el-form-item>
+    </el-form>
+    <template #footer>
+      <el-button @click="roleDetailVisible = false">取消</el-button>
+      <el-button type="primary" @click="handleRoleDetailSave">保存</el-button>
+    </template>
+  </el-dialog>
 </template>
 
 <style scoped>
