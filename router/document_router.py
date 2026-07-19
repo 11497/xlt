@@ -186,7 +186,7 @@ async def delete_document(
     chroma_service = ChromaService()
     chroma_service.delete_document_embeddings(
         knowledge_base_id=document.knowledge_base_id,
-
+        document_id=document_id
     )
 
     # 从数据库删除记录
