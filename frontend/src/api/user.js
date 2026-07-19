@@ -27,3 +27,6 @@ export const resetPassword = (id) => request.put(`/user/reset_password/${id}`);
 
 // 管理员设置用户权限
 export const setAdminStatus = (data) => request.put("/user/admin-status", data);
+
+// 管理员根据用户名或ID查询用户
+export const searchUsers = (content) => request.get(`/user/search/${content}`);
