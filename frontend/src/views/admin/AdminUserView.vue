@@ -1,8 +1,9 @@
 <script setup>
 import {onMounted, ref} from "vue";
 import {ElMessage, ElMessageBox} from "element-plus";
-import {InfoFilled, Delete, Plus, RefreshRight} from "@element-plus/icons-vue";
+import {InfoFilled, Delete, Plus, RefreshRight, Service} from "@element-plus/icons-vue";
 import {deleteUser, getAllUsers, resetPassword, setAdminStatus, updateUsername, userRegister} from "@/api/user.js";
+import UserRoleDialog from "@/views/admin/UserRoleDialog.vue";
 
 // 列表相关状态
 let userList = ref([]);
@@ -227,6 +228,15 @@ const handleResetPassword =  (row) => {
     // 用户取消
   });
 }
+
+// 控制用户角色关联弹窗
+const userRoleDialogVisible = ref(false);
+const currentUser = ref({ id: null, username: '' });
+
+const handleManageRoles = (row) => {
+  currentUser.value = { id: row.id, username: row.username };
+  userRoleDialogVisible.value = true;
+};
 </script>
 
 <template>
@@ -272,6 +282,14 @@ const handleResetPassword =  (row) => {
         </template>
       </el-table-column>
       <!-- TODO 关联角色列 -->
+      <!-- 关联角色列 -->
+      <el-table-column label="关联角色" width="150" align="center" fixed="right">
+        <template #default="scope">
+          <el-button type="info" size="small" @click="handleManageRoles(scope.row)">
+            <el-icon><Service /></el-icon> 管理角色
+          </el-button>
+        </template>
+      </el-table-column>
     </el-table>
   </div>
 
@@ -311,6 +329,13 @@ const handleResetPassword =  (row) => {
       <el-button v-else type="primary" @click="handleAddSubmit">新增</el-button>
     </template>
   </el-dialog>
+
+  <!-- 新增：用户角色关联弹窗 -->
+  <UserRoleDialog
+    v-model:visible="userRoleDialogVisible"
+    :user-id="currentUser.id"
+    :username="currentUser.username"
+  />
 </template>
 
 <style scoped>
