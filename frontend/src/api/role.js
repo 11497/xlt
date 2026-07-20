@@ -17,3 +17,6 @@ export const updateRole = (role) => request.put("/role", role);
 
 // 删除角色
 export const deleteRole = (id) => request.delete(`/role?id=${id}`);
+
+// 搜索角色
+export const searchRole = (content) => request.get(`/role/search/${content}`);
