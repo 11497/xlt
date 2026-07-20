@@ -177,14 +177,14 @@ const handleRelationKb = (row) => {
       <el-table-column label="关联用户" width="200" align="center">
         <template #default="scope">
           <el-button type="info" size="small" @click="handleRelationUser(scope.row)" class="action-buttons">
-            <el-icon><User /></el-icon> 关联用户
+            <el-icon><User /></el-icon> 管理用户
           </el-button>
         </template>
       </el-table-column>
       <el-table-column label="关联知识库" width="200" align="center">
         <template #default="scope">
           <el-button type="info" size="small" @click="handleRelationKb(scope.row)" class="action-buttons">
-            <el-icon><Notebook /></el-icon> 关联知识库
+            <el-icon><Notebook /></el-icon> 管理知识库
           </el-button>
         </template>
       </el-table-column>
