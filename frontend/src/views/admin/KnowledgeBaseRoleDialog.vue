@@ -2,6 +2,7 @@
 import { ref, watch } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { Delete, Plus } from "@element-plus/icons-vue";
+import {getRolesByKnowledgeBase} from "@/api/role_knowledge_base.js";
 
 const props = defineProps({
   visible: { type: Boolean, default: false },
@@ -21,16 +22,15 @@ const selectedRows = ref([]);
 
 // 获取知识库已关联的角色列表
 const getKnowledgeBaseRoles = async () => {
-  // TODO: 调用获取知识库关联角色的API
-  // const res = await getRolesByKnowledgeBase(props.knowledgeBaseId, currentPage.value, pageSize.value);
-  // if (res.code === 1) {
-  //   roleList.value = res.data.list;
-  //   total.value = res.data.total;
-  //   currentPage.value = res.data.page;
-  //   pageSize.value = res.data.page_size;
-  // } else {
-  //   ElMessage.error(res.msg);
-  // }
+  const res = await getRolesByKnowledgeBase(props.knowledgeBaseId, currentPage.value, pageSize.value);
+  if (res.code === 1) {
+    roleList.value = res.data.list;
+    total.value = res.data.total;
+    currentPage.value = res.data.page;
+    pageSize.value = res.data.page_size;
+  } else {
+    ElMessage.error(res.msg);
+  }
 };
 
 watch(() => props.visible, (val) => {
@@ -196,7 +196,7 @@ const handleClose = () => { emit('update:visible', false); };
 
     <template #footer>
       <el-button @click="addDialogVisible = false">取消</el-button>
-      <el-button type="primary" @click="handleCreateRelation">创建关联</el-button>
+      <el-button type="info" @click="handleCreateRelation">创建关联</el-button>
     </template>
   </el-dialog>
 </template>
