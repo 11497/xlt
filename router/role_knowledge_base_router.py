@@ -1,6 +1,6 @@
 from typing import List
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Path, Body
 
 from authentication.user_auth import require_admin
 from crud.role_knowledge_base_crud import RoleKnowledgeBaseCRUD
@@ -11,8 +11,8 @@ router = APIRouter(prefix="/api/role_knowledge_base", tags=["role_knowledge_base
 
 @router.post("/assign")
 async def batch_assign_role_to_knowledge_base(
-        knowledge_base_id: int,
-        role_ids: List[int],
+        knowledge_base_id: int = Path(..., alias="knowledge_base_id"),
+        role_ids: List[int] = Body(..., alias="role_ids"),
         _admin: User = Depends(require_admin)):
     """
     批量为知识库分配角色
@@ -38,8 +38,8 @@ async def batch_assign_role_to_knowledge_base(
 
 @router.delete("/remove")
 async def batch_remove_roles_from_knowledge_base(
-        knowledge_base_id: int,
-        role_ids: List[int],
+        knowledge_base_id: int = Path(..., alias="knowledge_base_id"),
+        role_ids: List[int] = Body(..., alias="role_ids"),
         _admin: User = Depends(require_admin)):
     """
     批量从指定知识库中删除角色
