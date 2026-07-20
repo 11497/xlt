@@ -1,5 +1,6 @@
 from typing import List
 
+import numpy as np
 from openai import OpenAI
 
 from config.ai_config import BASE_URL, EMBEDDING_MODEL, EMBEDDING_DIM, EMBEDDING_BATCH_SIZE
@@ -47,6 +48,16 @@ class EmbeddingService:
             # 按索引排序确保顺序与输入一致
             sorted_data = sorted(response.data, key=lambda x: x.index)
             batch_embeddings = [item.embedding for item in sorted_data]
+
+            # 新增：向量L2归一化
+            normalized_embeddings = []
+            for emb in batch_embeddings:
+                norm = np.linalg.norm(emb)
+                if norm > 0:
+                    normalized_embeddings.append((np.array(emb) / norm).tolist())
+                else:
+                    normalized_embeddings.append(emb)
+            batch_embeddings = normalized_embeddings
 
             # 补全被过滤的空文本对应的零向量
             valid_idx = 0
