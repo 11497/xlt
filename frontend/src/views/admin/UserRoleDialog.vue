@@ -84,13 +84,12 @@ const handleSearch = async () => {
     ElMessage.warning('请输入角色ID或角色名进行搜索');
     return;
   }
-  // TODO: 调用搜索角色的API
-  // const res = await searchRoles(searchKeyword.value);
-  // if (res.code === 1) {
-  //   searchResults.value = res.data;
-  // } else {
-  //   ElMessage.error(res.msg);
-  // }
+  const res = await searchRole(searchKeyword.value);
+  if (res.code === 1) {
+    searchResults.value = res.data;
+  } else {
+    ElMessage.error(res.msg);
+  }
 };
 
 const handleSearchSelectionChange = (rows) => { selectedRoles.value = rows; };
