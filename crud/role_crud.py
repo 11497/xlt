@@ -110,3 +110,26 @@ class RoleCRUD:
         with get_cursor() as cursor:
             affected = cursor.execute(sql, (role_id,))
             return affected > 0
+
+    @staticmethod
+    def search(content: str) -> List[Role]:
+        """
+        搜索角色
+        :param content: 搜索内容（角色名或ID）
+        :return: 角色对象列表
+        """
+        roles = []
+
+        sql1 = "SELECT * FROM role WHERE id = %s"
+        with get_cursor() as cursor:
+            cursor.execute(sql1, (content,))
+            rows = cursor.fetchall()
+            roles.extend([Role.from_row(r) for r in rows])
+
+        sql2 = "SELECT * FROM role WHERE name LIKE %s"
+        with get_cursor() as cursor:
+            cursor.execute(sql2, (f"%{content}%",))
+            rows = cursor.fetchall()
+            roles.extend([Role.from_row(r) for r in rows])
+
+        return roles

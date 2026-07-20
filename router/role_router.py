@@ -87,6 +87,19 @@ async def get_by_id(role_id: int, user: User = Depends(require_current_user)):
     role = RoleCRUD.get_by_id(role_id)
     return result.success(msg="查询角色成功", data=role)
 
+@router.get("/search/{content}")
+async def search_role(content: str, _admin: User = Depends(require_admin)):
+    """
+    搜索角色
+    :param content: 搜索内容（角色名或ID）
+    :param _admin: 管理员用户对象
+    :return: 角色对象列表
+    """
+    result = Result()
+
+    roles = RoleCRUD.search(content)
+    return result.success(msg="查询成功", data=roles)
+
 @router.put("")
 async def update(role: Role, _admin: User = Depends(require_admin)):
     """
