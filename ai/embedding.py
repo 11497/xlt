@@ -1,7 +1,7 @@
 from typing import List
 
 import numpy as np
-from openai import OpenAI
+from langchain_openai import OpenAIEmbeddings
 
 from config.ai_config import BASE_URL, EMBEDDING_MODEL, EMBEDDING_DIM, EMBEDDING_BATCH_SIZE
 
@@ -18,7 +18,11 @@ class EmbeddingService:
         :param model: Embedding模型名称
         :param base_url: API基础地址
         """
-        self.client = OpenAI(base_url=base_url)
+        # 使用 langchain_openai 替代原生 openai.OpenAI
+        self.embeddings = OpenAIEmbeddings(
+            model=model,
+            base_url=base_url
+        )
         self.model = model
 
     def embed_texts(self, texts: List[str],
@@ -41,15 +45,11 @@ class EmbeddingService:
                 all_embeddings.extend([[0.0] * EMBEDDING_DIM] * len(batch))
                 continue
 
-            response = self.client.embeddings.create(
-                model=self.model,
-                input=valid_batch
-            )
-            # 按索引排序确保顺序与输入一致
-            sorted_data = sorted(response.data, key=lambda x: x.index)
-            batch_embeddings = [item.embedding for item in sorted_data]
+            # 使用 langchain_openai 进行批量embedding
+            # embed_documents 返回的顺序与输入一致，无需手动按index排序
+            batch_embeddings = self.embeddings.embed_documents(valid_batch)
 
-            # 新增：向量L2归一化
+            # 向量L2归一化
             normalized_embeddings = []
             for emb in batch_embeddings:
                 norm = np.linalg.norm(emb)
@@ -67,7 +67,7 @@ class EmbeddingService:
                     final_batch_embeddings.append(batch_embeddings[valid_idx])
                     valid_idx += 1
                 else:
-                    final_batch_embeddings.append([0.0] * 1024)
+                    final_batch_embeddings.append([0.0] * EMBEDDING_DIM)
 
             all_embeddings.extend(final_batch_embeddings)
 
