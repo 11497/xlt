@@ -159,18 +159,29 @@ class ChatService:
             messages: List[Dict[str, str]]
     ) -> str:
         """
-        总结对话历史
+        总结对话历史作为会话标题
         :param messages: 消息历史列表
         :return: 总结内容
         注: temperature, max_tokens, top_p, frequency_penalty, presence_penalty 均使用初始化时设定的 CHAT_CONFIG 配置值
         """
         summary_prompt = """
-请总结以下对话内容，保持简洁明了，总结后需要在2-20个字符之间：
----
-{conversation}
----
-总结：
-"""
+        请根据以下对话内容生成一个简短的对话标题。
+
+        【核心要求】
+        1. 必须基于"用户的提问意图"或"核心话题"进行概括，严禁总结AI的拒绝、道歉或无结果回复（如"未找到"、"不知道"等）。
+        2. 若AI回复无相关内容，请直接提炼用户问题中的关键词作为标题。
+        3. 输出必须是2-20个字符的名词性短语或短句，不带标点，不加"总结"、"标题"等前缀。
+
+        【对话内容】
+        {conversation}
+
+        【输出示例】
+        - 用户问知识库无结果的问题 -> 提取用户问题关键词（如：量子计算原理）
+        - 正常问答 -> 核心话题概括（如：Python列表去重方法）
+        - 闲聊/问候 -> 互动类型概括（如：日常问候）
+
+        标题：
+        """
         conversation_text = "\n".join([f"{m['role']}: {m['content']}" for m in messages])
         summary_messages = [
             {"role": "user", "content": summary_prompt.format(conversation=conversation_text)}
