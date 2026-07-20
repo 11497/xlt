@@ -1,14 +1,13 @@
-from openai import OpenAI
-from typing import List, Dict, Any, Optional, Generator
+from typing import List
 
-from config.ai_config import BASE_URL, CHAT_CONFIG
+from langchain_core.messages import BaseMessage, HumanMessage
+from langchain_openai import ChatOpenAI
+
+from config.ai_config import BASE_URL, CHAT_CONFIG, SUMMARY_PROMPT
 
 
 class ChatService:
-    """聊天服务封装"""
-    # TODO 敏感词过滤
-    # TODO 拒绝回答配置
-    # TODO 问题重写
+    """聊天服务封装（基于 ChatOpenAI）"""
 
     def __init__(
             self,
@@ -22,168 +21,50 @@ class ChatService:
     ):
         """
         初始化聊天服务
-        :param chat_model: 聊天模型名称，默认取自 CHAT_CONFIG["CHAT_MODEL"]
+        :param chat_model: 聊天模型名称
         :param base_url: API基础URL
-        :param temperature: 采样温度，控制生成随机性，默认取自 CHAT_CONFIG["TEMPERATURE"]
-        :param max_tokens: 最大生成token数，默认取自 CHAT_CONFIG["MAX_TOKENS"]
-        :param top_p: 核采样概率阈值，默认取自 CHAT_CONFIG["TOP_P"]
-        :param frequency_penalty: 频率惩罚系数，降低重复词出现概率，默认取自 CHAT_CONFIG["FREQUENCY_PENALTY"]
-        :param presence_penalty: 存在惩罚系数，鼓励模型讨论新话题，默认取自 CHAT_CONFIG["PRESENCE_PENALTY"]
+        :param temperature: 采样温度
+        :param max_tokens: 最大生成token数
+        :param top_p: 核采样概率阈值
+        :param frequency_penalty: 频率惩罚系数
+        :param presence_penalty: 存在惩罚系数
         """
-        self.client = OpenAI(base_url=base_url)
-        self.chat_model = chat_model
-        self.temperature = temperature
-        self.max_tokens = max_tokens
-        self.top_p = top_p
-        self.frequency_penalty = frequency_penalty
-        self.presence_penalty = presence_penalty
-
-    def _get_chat_params(self) -> Dict[str, Any]:
-        """
-        获取统一的聊天请求参数字典
-        :return: 包含 temperature, max_tokens, top_p, frequency_penalty, presence_penalty 的参数字典
-        """
-        return {
-            "temperature": self.temperature,
-            "max_tokens": self.max_tokens,
-            "top_p": self.top_p,
-            "frequency_penalty": self.frequency_penalty,
-            "presence_penalty": self.presence_penalty
-        }
-
-    def chat_completion(
-            self,
-            messages: List[Dict[str, str]],
-            stream: bool = False
-    ) -> Any:
-        """
-        发送聊天请求并获取响应
-        :param messages: 消息历史列表，格式: [{"role": "user/assistant/system", "content": "..."}]
-        :param stream: 是否流式返回
-        :return: 响应内容或流式生成器
-        注: temperature, max_tokens, top_p, frequency_penalty, presence_penalty 均使用初始化时设定的 CHAT_CONFIG 配置值
-        """
-        response = self.client.chat.completions.create(
-            model=self.chat_model,
-            messages=messages,
-            stream=stream,
-            **self._get_chat_params()
+        self.llm = ChatOpenAI(
+            model=chat_model,
+            base_url=base_url,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            top_p=top_p,
+            frequency_penalty=frequency_penalty,
+            presence_penalty=presence_penalty
         )
 
-        if stream:
-            return response
-        return response.choices[0].message.content
-
-    def stream_chat(
-            self,
-            messages: List[Dict[str, str]]
-    ) -> Generator[str, None, None]:
+    def send_message(self, messages: List[BaseMessage]) -> str:
         """
-        流式聊天，逐块返回响应
-        :param messages: 消息历史列表
-        :return: 生成器，逐块返回文本
-        注: temperature, max_tokens, top_p, frequency_penalty, presence_penalty 均使用初始化时设定的 CHAT_CONFIG 配置值
+        向AI发送消息并获取完整回复
+        :param messages: LangChain消息对象列表，如 [SystemMessage(...), HumanMessage(...)]
+        :return: AI回复内容字符串
         """
-        response = self.chat_completion(messages, stream=True)
-        for chunk in response:
-            # 安全检查API响应数据结构
-            if hasattr(chunk, 'choices') and chunk.choices:
-                choice = chunk.choices[0]
-                if hasattr(choice, 'delta') and hasattr(choice.delta, 'content') and choice.delta.content:
-                    yield choice.delta.content
+        response = self.llm.invoke(messages)
+        print("messages:")
+        for msg in messages:
+            print(msg)
+        return response.content.strip()
 
-    def build_prompt_with_context(
-            self,
-            user_query: str,
-            context: Optional[str] = None,
-            system_prompt: Optional[str] = None
-    ) -> List[Dict[str, str]]:
-        """
-        构建带有上下文的消息列表
-        :param user_query: 用户查询
-        :param context: 知识库上下文（可选）
-        :param system_prompt: 系统提示词（可选）
-        :return: 格式化的消息列表
-        """
-        messages = []
-
-        if system_prompt:
-            messages.append({"role": "system", "content": system_prompt})
-
-        if context:
-            context_prompt = f"参考以下上下文信息回答问题：\n{context}\n\n"
-            messages.append({"role": "user", "content": context_prompt + user_query})
-        else:
-            messages.append({"role": "user", "content": user_query})
-
-        return messages
-
-    def chat_with_context(
-            self,
-            user_query: str,
-            context: Optional[str] = None,
-            system_prompt: Optional[str] = None,
-            stream: bool = False
-    ) -> Any:
-        """
-        基于上下文的聊天
-        :param user_query: 用户查询
-        :param context: 知识库上下文
-        :param system_prompt: 系统提示词
-        :param stream: 是否流式返回
-        :return: 响应内容或流式生成器
-        注: temperature, max_tokens, top_p, frequency_penalty, presence_penalty 均使用初始化时设定的 CHAT_CONFIG 配置值
-        """
-        messages = self.build_prompt_with_context(user_query, context, system_prompt)
-        return self.chat_completion(messages, stream=stream)
-
-    def stream_chat_with_context(
-            self,
-            user_query: str,
-            context: Optional[str] = None,
-            system_prompt: Optional[str] = None
-    ) -> Generator[str, None, None]:
-        """
-        流式聊天（带上下文）
-        :param user_query: 用户查询
-        :param context: 知识库上下文
-        :param system_prompt: 系统提示词
-        :return: 生成器，逐块返回文本
-        注: temperature, max_tokens, top_p, frequency_penalty, presence_penalty 均使用初始化时设定的 CHAT_CONFIG 配置值
-        """
-        messages = self.build_prompt_with_context(user_query, context, system_prompt)
-        return self.stream_chat(messages)
-
-    def summarize_conversation(
-            self,
-            messages: List[Dict[str, str]]
-    ) -> str:
+    def summarize_conversation(self, messages: List[BaseMessage]) -> str:
         """
         总结对话历史作为会话标题
-        :param messages: 消息历史列表
-        :return: 总结内容
-        注: temperature, max_tokens, top_p, frequency_penalty, presence_penalty 均使用初始化时设定的 CHAT_CONFIG 配置值
+        :param messages: 消息历史列表，格式: [{"role": "user/assistant/system", "content": "..."}]
+        :return: 总结内容字符串
         """
-        summary_prompt = """
-        请根据以下对话内容生成一个简短的对话标题。
+        # 将 BaseMessage 列表转换为 prompt 所需的对话文本格式
+        conversation_text = "\n".join(
+            [f"{m.type}: {m.content}" for m in messages]
+        )
 
-        【核心要求】
-        1. 必须基于"用户的提问意图"或"核心话题"进行概括，严禁总结AI的拒绝、道歉或无结果回复（如"未找到"、"不知道"等）。
-        2. 若AI回复无相关内容，请直接提炼用户问题中的关键词作为标题。
-        3. 输出必须是2-20个字符的名词性短语或短句，不带标点，不加"总结"、"标题"等前缀。
+        # 使用 ai_config 中预定义的 SUMMARY_PROMPT 填充对话内容
+        prompt = SUMMARY_PROMPT.format(conversation=conversation_text)
 
-        【对话内容】
-        {conversation}
+        response = self.llm.invoke([HumanMessage(content=prompt)])
 
-        【输出示例】
-        - 用户问知识库无结果的问题 -> 提取用户问题关键词（如：量子计算原理）
-        - 正常问答 -> 核心话题概括（如：Python列表去重方法）
-        - 闲聊/问候 -> 互动类型概括（如：日常问候）
-
-        标题：
-        """
-        conversation_text = "\n".join([f"{m['role']}: {m['content']}" for m in messages])
-        summary_messages = [
-            {"role": "user", "content": summary_prompt.format(conversation=conversation_text)}
-        ]
-        return self.chat_completion(summary_messages)
+        return response.content.strip()

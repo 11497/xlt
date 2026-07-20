@@ -115,23 +115,34 @@ const switchToMyPage = async () => {
 }
 
 const handleSend = async (content) => {
+  // 1. 确保会话存在
   if (currentSessionId.value === 0) {
     await createSessionBtn()
   }
 
-  messages.value.push({ content, role: 'user' })
-  await nextTick(() => scrollToBottom())
-  await chat({
+  // 2. 先追加用户消息到界面
+  const userMsg = {
     id: null,
     role: 'user',
     content,
     session_id: currentSessionId.value,
     create_time: new Date().toISOString()
-  })
-  await handleSessionClick(currentSessionId.value)
-  const res = await sessionByUserId(user.value.id)
-  sessions.value = res.data
-  scrollToBottom()
+  }
+  messages.value.push(userMsg)
+  await nextTick(() => scrollToBottom())
+
+  // 3. 发送消息并获取AI回复
+  // 注意：chat API 现在应返回 AI 的回复内容，而非仅确认收到
+  const res = await chat(userMsg)
+
+  // 4. 刷新消息列表
+  if (res.code) {
+    await handleSessionClick(currentSessionId.value)
+  }
+
+  // 5. 仅在必要时刷新会话列表（如标题可能已更新）
+  const sessionRes = await sessionByUserId(user.value.id)
+  sessions.value = sessionRes.data
 }
 
 const handleDeleteMessage = async (msg) => {

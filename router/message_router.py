@@ -1,10 +1,11 @@
-from typing import Generator
+from datetime import datetime
+from typing import List
 
 from fastapi import APIRouter, Depends
-from fastapi.responses import StreamingResponse
+from langchain_core.messages import SystemMessage, HumanMessage, AIMessage, BaseMessage
 
-from ai.chroma_service import ChromaService
 from ai.chat import ChatService
+from ai.chroma_service import ChromaService
 from ai.embedding import EmbeddingService
 from authentication.user_auth import require_current_user
 from config.ai_config import SYSTEM_MESSAGE
@@ -14,7 +15,6 @@ from crud.user_knowledge_base_crud import UserKnowledgeBaseCRUD
 from model.message_model import Message
 from model.result import Result
 from model.user_model import User
-from datetime import datetime
 
 router = APIRouter(prefix="/api/message", tags=["message"])
 
@@ -56,35 +56,23 @@ def retrieve_context_from_knowledge_bases(user_id: int, query: str) -> str:
     return "\n\n".join(unique_docs)
 
 
-def stream_ai_response(user_query: str, context: str = "") -> Generator[str, None, None]:
-    """
-    流式获取AI响应
-    :param user_query: 用户查询
-    :param context: 知识库上下文
-    :return: 流式生成器
-    """
-    yield from chat_service.stream_chat_with_context(
-        user_query=user_query,
-        context=context,
-        system_prompt=SYSTEM_MESSAGE
-    )
-
-
 @router.post("/chat")
 async def chat(
         message: Message,
         user: User = Depends(require_current_user)
 ):
     """
-    对话接口（流式），第一轮对话后自动总结并修改会话名，非第一轮对话则合并历史对话
+    对话接口，第一轮对话后自动总结并修改会话名，非第一轮对话则合并历史对话
     :param message: 消息对象
     :param user: 当前用户对象
     :return: 流式响应
     """
+    result = Result()
+
     # 验证会话是否存在且属于当前用户
     session = SessionCRUD.get_by_id(message.session_id)
     if not session or (session.user_id != user.id and user.is_admin == 0):
-        return Result().error(msg="会话不存在或无权访问")
+        return result.error(msg="会话不存在或无权访问")
 
     # 获取当前会话的所有历史消息（判断是否是第一轮对话）
     existing_messages = MessageCRUD.get_by_session_id(message.session_id)
@@ -92,72 +80,50 @@ async def chat(
 
     # 保存用户消息
     MessageCRUD.create(message)
-
-    # 获取完整的历史对话记录
-    all_messages = MessageCRUD.get_by_session_id(message.session_id)
     
     # 构建完整对话历史
-    conversation_history = []
-    
     # 添加系统提示词
-    conversation_history.append({"role": "system", "content": SYSTEM_MESSAGE})
-    
-    # 添加历史消息
-    for msg in all_messages[:-1]:  # 排除刚刚添加的当前消息
-        conversation_history.append({
-            "role": msg.role,
-            "content": msg.content
-        })
-    
+    messages: List[BaseMessage] = [SystemMessage(content=SYSTEM_MESSAGE)]
+
+    # 添加历史对话
+    for msg in existing_messages:
+        if msg.role == "user":
+            messages.append(HumanMessage(content=msg.content))
+        elif msg.role == "assistant":
+            messages.append(AIMessage(content=msg.content))
+
     # RAG检索
     context = retrieve_context_from_knowledge_bases(user.id, message.content)
 
     # 添加当前用户消息（可能包含上下文）
     if context:
-        # 如果有RAG上下文，创建带上下文的消息
-        user_message_content = f"参考以下上下文信息回答问题：\n{context}\n\n{message.content}"
-        conversation_history.append({
-            "role": message.role,
-            "content": user_message_content
-        })
+        current_content = f"<knowledge_base>\n{context}\n</knowledge_base>\n\n<user_query>\n{message.content}\n</user_query>"
     else:
-        conversation_history.append({
-            "role": message.role,
-            "content": message.content
-        })
+        current_content = message.content
+    messages.append(HumanMessage(content=current_content))
 
-    # 定义流式响应生成器
-    async def generate_response():
-        full_response = ""
+    # 调用AI模型获取响应
+    response = chat_service.send_message(messages)
         
-        for chunk in chat_service.stream_chat(
-            messages=conversation_history
-        ):
-            full_response += chunk
-            yield chunk
+    # 流式响应结束后，保存AI回复到数据库
+    ai_message = Message(
+        session_id=message.session_id,
+        role="assistant",
+        content=response,
+        create_time=datetime.now()
+    )
+    MessageCRUD.create(ai_message)
         
-        # 流式响应结束后，保存AI回复到数据库
-        ai_message = Message(
-            session_id=message.session_id,
-            role="assistant",
-            content=full_response,
-            create_time=datetime.now()
-        )
-        MessageCRUD.create(ai_message)
-        
-        # 如果是第一轮对话，总结对话并更新会话名称
-        if is_first_round and session.name == "新建会话":
-            conversation_messages = [
-                {"role": "user", "content": message.content},
-                {"role": "assistant", "content": full_response}
-            ]
-            summary = chat_service.summarize_conversation(conversation_messages)
-            SessionCRUD.update_session_name(message.session_id, summary)
-        
-        # 更新会话更新时间
-        SessionCRUD.update_session_update_time(message.session_id)
+    # 如果是第一轮对话，总结对话并更新会话名称
+    if is_first_round and session.name == "新建会话":
+        messages = [HumanMessage(content=message.content), AIMessage(content=response)]
+        summary = chat_service.summarize_conversation(messages)
+        SessionCRUD.update_session_name(message.session_id, summary)
 
-    return StreamingResponse(generate_response(), media_type="text/plain")
+    # 更新会话更新时间
+    SessionCRUD.update_session_update_time(message.session_id)
+
+    return result.success(msg="对话成功", data=response)
 
 
 @router.get("/session/{session_id}")
