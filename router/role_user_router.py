@@ -132,8 +132,8 @@ async def get_my_roles(current_user: User = Depends(require_current_user)):
 
 @router.post("/assign_single")
 async def assign_user_to_role(
-        role_id: int,
-        user_id: int,
+        role_id: int = Body(..., alias="role_id"),
+        user_id: int = Body(..., alias="user_id"),
         _admin: User = Depends(require_admin)):
     """
     分配单个用户到指定角色
@@ -151,8 +151,8 @@ async def assign_user_to_role(
 
 @router.delete("/remove_single")
 async def remove_user_from_role(
-        role_id: int,
-        user_id: int,
+        role_id: int = Body(..., alias="role_id"),
+        user_id: int = Body(..., alias="user_id"),
         _admin: User = Depends(require_admin)):
     """
     从指定角色中移除单个用户
