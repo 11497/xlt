@@ -74,6 +74,24 @@ def clean_text_escapes(text: str) -> str:
 
     return cleaned.strip()
 
+def deduplicate_chunks(chunks: list[str]) -> list[str]:
+    """
+    对切片列表进行精确去重，保留首次出现的顺序
+    - 去除首尾空白后完全相同的文本视为重复
+    - 空字符串/纯空白切片直接过滤
+    :param chunks: 原始切片列表
+    :return: 去重后的切片列表（保持原始顺序）
+    """
+    seen = set()
+    unique_chunks = []
+    for chunk in chunks:
+        normalized = chunk.strip()
+        if not normalized:
+            continue
+        if normalized not in seen:
+            seen.add(normalized)
+            unique_chunks.append(chunk)  # 保留原始格式，仅用normalized做判重
+    return unique_chunks
 
 def chunk_text_by_sentence(
         text: str,
@@ -125,4 +143,5 @@ def chunk_text_by_sentence(
     if current_chunk.strip():
         chunks.append(current_chunk.strip())
 
-    return chunks
+    # 去重
+    return deduplicate_chunks(chunks)

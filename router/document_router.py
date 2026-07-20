@@ -19,8 +19,6 @@ from config.file_config import ALLOWED_FILE_TYPES, MAX_FILE_SIZE, EXPIRES
 router = APIRouter(prefix="/api/document", tags=["document"])
 
 
-# TODO 向量归一化、去重
-
 async def validate_file(file: UploadFile) -> Optional[str]:
     """
     验证文件类型和大小
