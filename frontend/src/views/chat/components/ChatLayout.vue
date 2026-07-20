@@ -115,6 +115,10 @@ const switchToMyPage = async () => {
 }
 
 const handleSend = async (content) => {
+  if (currentSessionId.value === 0) {
+    await createSessionBtn()
+  }
+
   messages.value.push({ content, role: 'user' })
   await nextTick(() => scrollToBottom())
   await chat({
