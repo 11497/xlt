@@ -1,7 +1,7 @@
 <script setup>
 import {onMounted, ref} from "vue";
 import {ElMessage, ElMessageBox} from "element-plus";
-import {InfoFilled, Delete, Plus, Document} from "@element-plus/icons-vue";
+import {InfoFilled, Delete, Plus, Document, Service} from "@element-plus/icons-vue";
 import {
   createKnowledgeBase,
   deleteKnowledgeBase,
@@ -9,6 +9,7 @@ import {
   updateKnowledgeBase
 } from "@/api/knowledge_base.js";
 import DocumentDialog from "@/views/admin/DocumentDialog.vue";
+import KnowledgeBaseRoleDialog from "@/views/admin/KnowledgeBaseRoleDialog.vue";
 
 // 列表相关状态
 let knowledgeBaseList = ref([]);
@@ -170,6 +171,15 @@ const documentDialogRef = ref(null);
 const openDocumentDialog = (row) => {
   documentDialogRef.value.open(row.id, row.name);
 };
+
+// 新增状态
+const kbRoleDialogVisible = ref(false);
+const currentKnowledgeBase = ref({ id: null, name: '' });
+
+const handleManageRoles = (row) => {
+  currentKnowledgeBase.value = { id: row.id, name: row.name };
+  kbRoleDialogVisible.value = true;
+};
 </script>
 
 <template>
@@ -207,7 +217,14 @@ const openDocumentDialog = (row) => {
           </el-button>
         </template>
       </el-table-column>
-      <!-- TODO 关联角色列 -->
+      <!-- 关联角色列 -->
+      <el-table-column label="关联角色" width="150" align="center" fixed="right">
+        <template #default="scope">
+          <el-button type="info" size="small" @click="handleManageRoles(scope.row)">
+            <el-icon><Service /></el-icon> 管理角色
+          </el-button>
+        </template>
+      </el-table-column>
     </el-table>
   </div>
 
@@ -256,6 +273,13 @@ const openDocumentDialog = (row) => {
 
   <!-- 文档列表弹窗 -->
   <DocumentDialog ref="documentDialogRef" />
+
+  <!-- 关联角色弹窗 -->
+  <KnowledgeBaseRoleDialog
+    v-model:visible="kbRoleDialogVisible"
+    :knowledge-base-id="currentKnowledgeBase.id"
+    :knowledge-base-name="currentKnowledgeBase.name"
+  />
 </template>
 
 <style scoped>
