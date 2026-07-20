@@ -2,7 +2,7 @@
 import { ref, watch } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { Delete, Plus } from "@element-plus/icons-vue";
-import {getRolesByKnowledgeBase} from "@/api/role_knowledge_base.js";
+import {batchAssignRoleToKnowledgeBase, getRolesByKnowledgeBase} from "@/api/role_knowledge_base.js";
 import {searchRole} from "@/api/role.js";
 
 const props = defineProps({
@@ -101,19 +101,22 @@ const handleCreateRelation = async () => {
     ElMessage.warning('请先搜索并选择角色');
     return;
   }
-  // TODO: 调用批量为知识库分配角色的API
-  // const roleIds = selectedRoles.value.map(role => role.id);
-  // let allSuccess = true;
-  // for (const roleId of roleIds) {
-  //   const res = await batchAssignRolesToKnowledgeBase(props.knowledgeBaseId, [roleId]);
-  //   if (res.code !== 1) {
-  //     ElMessage.error(`关联角色ID ${roleId} 失败: ${res.msg}`);
-  //     allSuccess = false;
-  //   }
-  // }
-  // if (allSuccess) {
-  //   ElMessage.success('全部关联成功');
-  // }
+
+  const roleIds = selectedRoles.value.map(role => role.id);
+  let successCount = 0;
+  for (const roleId of roleIds) {
+    const res = await batchAssignRoleToKnowledgeBase(props.knowledgeBaseId, [roleId]);
+    if (res.code === 1) {
+      successCount ++;
+    } else {
+      ElMessage.error(res.msg || `关联角色ID ${roleId} 失败`);
+    }
+  }
+
+  if (successCount > 0) {
+    ElMessage.success(`成功关联 ${successCount} 个角色`);
+  }
+
   addDialogVisible.value = false;
   await getKnowledgeBaseRoles();
 };
@@ -197,7 +200,7 @@ const handleClose = () => { emit('update:visible', false); };
 
     <template #footer>
       <el-button @click="addDialogVisible = false">取消</el-button>
-      <el-button type="info" @click="handleCreateRelation">创建关联</el-button>
+      <el-button type="primary" @click="handleCreateRelation">创建关联</el-button>
     </template>
   </el-dialog>
 </template>
