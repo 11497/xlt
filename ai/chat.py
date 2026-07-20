@@ -6,6 +6,9 @@ from config.ai_config import BASE_URL, CHAT_CONFIG
 
 class ChatService:
     """聊天服务封装"""
+    # TODO 敏感词过滤
+    # TODO 拒绝回答配置
+    # TODO 问题重写
 
     def __init__(
             self,
