@@ -2,7 +2,8 @@
 import { ref, watch } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { Delete, Plus } from "@element-plus/icons-vue";
-import {getRolesByUser} from "@/api/role_user.js";
+import {assignUserToRole, getRolesByUser, removeUserFromRole} from "@/api/role_user.js";
+import {searchRole} from "@/api/role.js";
 
 const props = defineProps({
   visible: { type: Boolean, default: false },
@@ -52,15 +53,23 @@ const handleBatchDelete = async () => {
       '提示',
       { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' }
     );
-    // TODO: 调用批量取消用户角色关联的API
-    // const roleIds = selectedRows.value.map(row => row.id);
-    // const res = await batchRemoveRolesFromUser(props.userId, roleIds);
-    // if (res.code === 1) {
-    //   ElMessage.success('批量取消关联成功');
-    //   await getUserRoles();
-    // } else {
-    //   ElMessage.error(res.msg);
-    // }
+
+    const roleIds = selectedRows.value.map(row => row.id);
+
+    let successCount = 0;
+    for (let roleId of roleIds) {
+      const res = await removeUserFromRole(roleId, props.userId);
+      if (res.code === 1) {
+        successCount++;
+      } else {
+        ElMessage.error(res.msg || `取消角色ID ${roleId} 关联失败`);
+      }
+    }
+
+    if (successCount > 0) {
+      ElMessage.success(`成功取消 ${successCount} 个角色关联`);
+      await getUserRoles();
+    }
   } catch {
     // 用户取消操作
   }
@@ -99,19 +108,21 @@ const handleCreateRelation = async () => {
     ElMessage.warning('请先搜索并选择角色');
     return;
   }
-  // TODO: 调用批量为用户分配角色的API
-  // const roleIds = selectedRoles.value.map(role => role.id);
-  // let allSuccess = true;
-  // for (const roleId of roleIds) {
-  //   const res = await batchAssignRolesToUser(props.userId, [roleId]);
-  //   if (res.code !== 1) {
-  //     ElMessage.error(`关联角色ID ${roleId} 失败: ${res.msg}`);
-  //     allSuccess = false;
-  //   }
-  // }
-  // if (allSuccess) {
-  //   ElMessage.success('全部关联成功');
-  // }
+
+  const roleIds = selectedRoles.value.map(role => role.id);
+  let successCount = 0;
+  for (const roleId of roleIds) {
+    const res = await assignUserToRole(roleId, props.userId);
+    if (res.code === 1) {
+      successCount++;
+    } else {
+      ElMessage.error(res.msg || `关联角色ID ${roleId} 关联失败`);
+    }
+  }
+
+  if (successCount > 0) {
+    ElMessage.success(`成功关联 ${successCount} 个角色`);
+  }
   addDialogVisible.value = false;
   await getUserRoles();
 };
