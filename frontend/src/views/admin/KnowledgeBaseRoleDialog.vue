@@ -3,6 +3,7 @@ import { ref, watch } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { Delete, Plus } from "@element-plus/icons-vue";
 import {getRolesByKnowledgeBase} from "@/api/role_knowledge_base.js";
+import {searchRole} from "@/api/role.js";
 
 const props = defineProps({
   visible: { type: Boolean, default: false },
@@ -84,13 +85,13 @@ const handleSearch = async () => {
     ElMessage.warning('请输入角色ID或角色名进行搜索');
     return;
   }
-  // TODO: 调用搜索角色的API
-  // const res = await searchRoles(searchKeyword.value);
-  // if (res.code === 1) {
-  //   searchResults.value = res.data;
-  // } else {
-  //   ElMessage.error(res.msg);
-  // }
+
+  const res = await searchRole(searchKeyword.value);
+  if (res.code === 1) {
+    searchResults.value = res.data;
+  } else {
+    ElMessage.error(res.msg);
+  }
 };
 
 const handleSearchSelectionChange = (rows) => { selectedRoles.value = rows; };
