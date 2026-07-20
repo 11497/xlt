@@ -6,7 +6,7 @@ export const batchAssignRoleToKnowledgeBase = (knowledgeBaseId, roleIds) =>
 
 // 批量从指定知识库中删除角色
 export const batchRemoveRolesFromKnowledgeBase = (knowledgeBaseId, roleIds) =>
-    request.delete(`/role_knowledge_base/remove?knowledge_base_id=${knowledgeBaseId}`, { data: roleIds });
+    request.delete(`/role_knowledge_base/remove`, { data: { knowledge_base_id: knowledgeBaseId, role_ids: roleIds } });
 
 // 按角色分页查询关联的知识库
 export const getKnowledgeBaseByRole = (roleId, page = 1, pageSize = 10) =>
