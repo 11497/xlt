@@ -2,7 +2,11 @@
 import { ref, watch } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { Delete, Plus } from "@element-plus/icons-vue";
-import {batchAssignRoleToKnowledgeBase, getRolesByKnowledgeBase} from "@/api/role_knowledge_base.js";
+import {
+  batchAssignRoleToKnowledgeBase,
+  batchRemoveRolesFromKnowledgeBase,
+  getRolesByKnowledgeBase
+} from "@/api/role_knowledge_base.js";
 import {searchRole} from "@/api/role.js";
 
 const props = defineProps({
@@ -53,15 +57,15 @@ const handleBatchDelete = async () => {
       '提示',
       { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' }
     );
-    // TODO: 调用批量取消知识库角色关联的API
-    // const roleIds = selectedRows.value.map(row => row.id);
-    // const res = await batchRemoveRolesFromKnowledgeBase(props.knowledgeBaseId, roleIds);
-    // if (res.code === 1) {
-    //   ElMessage.success('批量取消关联成功');
-    //   await getKnowledgeBaseRoles();
-    // } else {
-    //   ElMessage.error(res.msg);
-    // }
+
+    const roleIds = selectedRows.value.map(row => row.id);
+    const res = await batchRemoveRolesFromKnowledgeBase(props.knowledgeBaseId, roleIds);
+    if (res.code === 1) {
+      ElMessage.success('批量取消关联成功');
+      await getKnowledgeBaseRoles();
+    } else {
+      ElMessage.error(res.msg);
+    }
   } catch {
     // 用户取消操作
   }
