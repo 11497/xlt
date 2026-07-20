@@ -36,7 +36,7 @@ async def batch_assign_role_to_knowledge_base(
     return result.success(msg="分配角色成功")
 
 
-@router.delete("/remove")
+@router.delete("/remove", include_in_schema=False)
 async def batch_remove_roles_from_knowledge_base(
         knowledge_base_id: int = Path(..., alias="knowledge_base_id"),
         role_ids: List[int] = Body(..., alias="role_ids"),
