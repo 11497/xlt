@@ -1,9 +1,9 @@
-from typing import List, Optional
+from typing import List
 
 import chromadb
 from chromadb.config import Settings
 
-from config.ai_config import TopK
+from config.ai_config import TOPK
 
 
 class ChromaService:
@@ -80,7 +80,7 @@ class ChromaService:
         self,
         knowledge_base_id: int,
         query_embedding: List[float],
-        n_results: int = TopK
+        n_results: int = TOPK
     ) -> dict:
         """
         在指定知识库中查询相似向量
