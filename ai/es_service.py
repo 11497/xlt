@@ -2,10 +2,12 @@ from typing import List, Dict, Any
 from elasticsearch import Elasticsearch
 from elasticsearch.helpers import bulk
 
+from config.ai_config import VIRTUAL_MACHINE_HOST, ES_PORT
+
 
 class ESService:
-    def __init__(self, host="localhost", port=9200):
-        self.client = Elasticsearch([{"host": host, "port": port}])
+    def __init__(self, host=VIRTUAL_MACHINE_HOST, port=ES_PORT):
+        self.client = Elasticsearch([{"host": host, "port": port, "scheme": "http"}])
 
     def create_index(self, kb_id: int):
         """创建支持中文BM25的索引"""
