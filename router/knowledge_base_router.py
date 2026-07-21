@@ -1,13 +1,13 @@
 from fastapi import APIRouter, Depends, Query
 
-from ai.chroma_service import ChromaService
+from ai.ingestion_service import IngestionService
 from authentication.user_auth import require_admin, require_current_user
 from crud.document_crud import DocumentCRUD
 from crud.knowledge_base_crud import KnowledgeBaseCRUD
 from crud.role_knowledge_base_crud import RoleKnowledgeBaseCRUD
 from crud.user_knowledge_base_crud import UserKnowledgeBaseCRUD
-from model.result import Result
 from model.knowledge_base_model import KnowledgeBase
+from model.result import Result
 from model.user_model import User
 
 router = APIRouter(prefix="/api/knowledge_base", tags=["knowledge_base"])
@@ -104,13 +104,17 @@ async def delete_knowledge_base(id: int, _admin: User = Depends(require_admin)):
     if roles:
         return result.error(msg="知识库下有绑定的角色，不能删除")
 
-    # 从chroma删除向量
-    chroma_service = ChromaService()
-    chroma_service.delete_knowledge_base(id)
+    # 1. 删除向量索引（Chroma + ES）
+    try:
+        ingestion_service = IngestionService()
+        ingestion_service.delete_knowledge_base(id)
+    except Exception as e:
+        return result.error(msg=f"删除向量索引失败：{str(e)}")
 
-    # 删除知识库中的文档
+    # 2. 删除知识库下的所有文档记录（MySQL）
     DocumentCRUD.delete_by_knowledge_base_id(id)
 
+    # 3. 删除知识库记录
     delete_result = KnowledgeBaseCRUD.delete(id)
     if not delete_result:
         return result.error(msg="删除知识库失败")
