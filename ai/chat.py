@@ -46,9 +46,6 @@ class ChatService:
         :return: AI回复内容字符串
         """
         response = self.llm.invoke(messages)
-        print("messages:")
-        for msg in messages:
-            print(msg)
         return response.content.strip()
 
     def summarize_conversation(self, messages: List[BaseMessage]) -> str:

@@ -47,8 +47,6 @@ class HybridSearchService:
             query_embedding=query_embedding,
             n_results=recall_top_k
         )
-        if vector_results:
-            print("向量检索结果:", vector_results)
 
         # 1.2 BM25检索
         bm25_results = self.es_service.search_bm25(
@@ -56,8 +54,6 @@ class HybridSearchService:
             query=query,
             top_k=recall_top_k
         )
-        if bm25_results:
-            print("BM25检索结果:", bm25_results)
 
         # === Step 2: 结果融合与去重 ===
         merged_docs = self._merge_results(vector_results, bm25_results)
@@ -72,8 +68,6 @@ class HybridSearchService:
             documents=doc_contents,
             top_n=top_n
         )
-        if reranked_results:
-            print("Rerank 精排结果:", reranked_results)
 
         # === Step 4: 映射回原始文档信息 ===
         # 构建 content -> doc 的映射（注意：如果有完全重复的内容可能会丢失，建议用id映射）
