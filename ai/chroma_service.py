@@ -3,7 +3,7 @@ from typing import List, Optional
 import chromadb
 from chromadb.config import Settings
 
-from config.ai_config import CHROMA_N_RESULTS
+from config.ai_config import TopK
 
 
 class ChromaService:
@@ -80,7 +80,7 @@ class ChromaService:
         self,
         knowledge_base_id: int,
         query_embedding: List[float],
-        n_results: int = CHROMA_N_RESULTS
+        n_results: int = TopK
     ) -> dict:
         """
         在指定知识库中查询相似向量
