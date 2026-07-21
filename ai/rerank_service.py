@@ -1,25 +1,26 @@
-from typing import List, Tuple
-from openai import OpenAI
-from config.ai_config import BASE_URL, RERANK_MODEL
 import os
+import requests
+from typing import List, Tuple
+
+from config.ai_config import RERANK_MODEL, BASE_URL
 
 
 class RerankService:
-    """重排序服务封装"""
+    """SiliconFlow 重排序服务封装"""
 
     def __init__(
             self,
             model: str = RERANK_MODEL,
-            base_url: str = BASE_URL
+            api_key: str = os.getenv("OPENAI_API_KEY"),
+            base_url: str = BASE_URL + "/rerank"
     ):
         """
         :param model: 重排序模型名称
-        :param base_url: API基础地址
+        :param api_key: SiliconFlow API Key
+        :param base_url: API 地址
         """
-        self.client = OpenAI(
-            base_url=base_url,
-            api_key=os.getenv("OPENAI_API_KEY")
-        )
+        self.api_key = api_key
+        self.base_url = base_url
         self.model = model
 
     def rerank(
@@ -38,15 +39,37 @@ class RerankService:
         if not documents:
             return []
 
-        response = self.client.rerank.create(
-            model=self.model,
-            query=query,
-            documents=documents,
-            top_n=top_n
-        )
+        # 构建请求 payload[reference:2]
+        payload = {
+            "model": self.model,
+            "query": query,
+            "documents": documents,
+            "top_n": top_n,
+            "return_documents": False  # 不返回文档内容，节省带宽
+        }
 
-        # 返回排序后的文档和得分
-        return [
-            (documents[result.index], result.relevance_score)
-            for result in response.results
-        ]
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json"
+        }
+
+        try:
+            response = requests.post(
+                self.base_url,
+                json=payload,
+                headers=headers,
+                timeout=30
+            )
+            response.raise_for_status()
+            result = response.json()
+
+            # 解析返回结果[reference:3][reference:4]
+            return [
+                (documents[item["index"]], item["relevance_score"])
+                for item in result.get("results", [])
+            ]
+
+        except requests.exceptions.RequestException as e:
+            print(f"[ERROR] Rerank API 调用失败: {e}")
+            # 出错时返回原始文档，得分设为0（降级处理）
+            return [(doc, 0.0) for doc in documents[:top_n]]
