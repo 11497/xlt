@@ -1,8 +1,8 @@
 from typing import List, Dict, Any
 
-from embedding import EmbeddingService
-from chroma_service import ChromaService
-from es_service import ESService
+from ai.embedding import EmbeddingService
+from ai.chroma_service import ChromaService
+from ai.es_service import ESService
 
 
 class IngestionService:
@@ -103,3 +103,21 @@ class IngestionService:
                 body={"query": {"term": {"doc_id": str(document_id)}}}
             )
         print(f"[Delete] doc={document_id} removed from both stores")
+
+
+    def delete_knowledge_base(self, knowledge_base_id: int) -> None:
+        """
+        同步删除双端（Chroma + ES）中整个知识库的数据
+        """
+        # 删除 Chroma 集合
+        self.chroma_service.delete_knowledge_base(knowledge_base_id)
+
+        # 删除 Elasticsearch 索引
+        index_name = f"kb_{knowledge_base_id}"
+        if self.es_service.client.indices.exists(index=index_name):
+            self.es_service.client.indices.delete(index=index_name)
+            print(f"[Delete] ES index {index_name} removed")
+        else:
+            print(f"[Delete] ES index {index_name} does not exist, skip")
+
+        print(f"[Delete] Knowledge base {knowledge_base_id} removed from both stores")
