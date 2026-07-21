@@ -3,7 +3,9 @@ EMBEDDING_MODEL = "Qwen/Qwen3-Embedding-8B"
 EMBEDDING_DIM = 4096
 EMBEDDING_BATCH_SIZE = 10
 
-CHROMA_N_RESULTS = 5
+TopK = 20
+
+RERANK_MODEL = "Qwen/Qwen3-Reranker-8B"
 
 CHAT_CONFIG = {
     "CHAT_MODEL": "deepseek-ai/DeepSeek-V3.2",
