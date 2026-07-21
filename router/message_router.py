@@ -5,10 +5,9 @@ from fastapi import APIRouter, Depends
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage, BaseMessage
 
 from ai.chat import ChatService
-from ai.chroma_service import ChromaService
-from ai.embedding import EmbeddingService
+from ai.hybrid_search_service import HybridSearchService
 from authentication.user_auth import require_current_user
-from config.ai_config import SYSTEM_MESSAGE
+from config.ai_config import SYSTEM_MESSAGE, TOPK, TOPN
 from crud.message_crud import MessageCRUD
 from crud.session_crud import SessionCRUD
 from crud.user_knowledge_base_crud import UserKnowledgeBaseCRUD
@@ -19,39 +18,45 @@ from model.user_model import User
 router = APIRouter(prefix="/api/message", tags=["message"])
 
 # 初始化服务
-embedding_service = EmbeddingService()
-chroma_service = ChromaService()
+hybrid_search_service = HybridSearchService()
 chat_service = ChatService()
 
 
 def retrieve_context_from_knowledge_bases(user_id: int, query: str) -> str:
     """
-    从用户可访问的知识库中检索相关上下文
+    从用户可访问的知识库中检索相关上下文（使用混合检索 + Rerank）
     :param user_id: 用户ID
     :param query: 用户查询
     :return: 合并后的上下文文本
     """
     # 获取用户可访问的知识库列表
     knowledge_base_ids = UserKnowledgeBaseCRUD.get_knowledge_bases_by_user(user_id)
-    
+
     if not knowledge_base_ids:
         return ""
 
-    # 向量化查询
-    query_embedding = embedding_service.embed_query(query)
-
-    # 从所有知识库检索相似文档
     all_documents = []
+
+    # 在每个知识库中执行混合检索
     for kb_id in knowledge_base_ids:
         try:
-            results = chroma_service.query_similar(kb_id, query_embedding)
-            if results and "documents" in results and results["documents"]:
-                all_documents.extend(results["documents"][0])
+            # 调用混合检索，返回已重排序的文档列表
+            results = hybrid_search_service.search(
+                knowledge_base_id=kb_id,
+                query=query,
+                top_k=TOPK,      # 最终返回数量（重排后）
+                top_n=TOPN       # 精排数量（可根据需要调整）
+            )
+            if results:
+                # 提取文档内容
+                docs = [item["content"] for item in results if item.get("content")]
+                all_documents.extend(docs)
         except Exception as e:
-            # 跳过访问失败的知识库
+            # 跳过访问失败或检索失败的知识库，记录日志（可选）
+            print(f"检索知识库 {kb_id} 失败: {e}")
             continue
 
-    # 合并文档内容，去重
+    # 去重并合并
     unique_docs = list(set(all_documents))
     return "\n\n".join(unique_docs)
 
