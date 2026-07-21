@@ -3552,6 +3552,7 @@ dependencies = [
     { name = "pymysql" },
     { name = "python-docx" },
     { name = "python-multipart" },
+    { name = "requests" },
     { name = "uvicorn" },
 ]
 
@@ -3572,6 +3573,7 @@ requires-dist = [
     { name = "pymysql", specifier = ">=1.2.0" },
     { name = "python-docx", specifier = ">=1.2.0" },
     { name = "python-multipart", specifier = "==0.0.32" },
+    { name = "requests", specifier = ">=2.34.2" },
     { name = "uvicorn", specifier = "==0.51.0" },
 ]
 
