@@ -74,8 +74,6 @@ class ChromaService:
             metadatas=metadatas
         )
 
-        print("add_document_embeddings success")
-
     def query_similar(
         self,
         knowledge_base_id: int,
