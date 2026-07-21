@@ -1,10 +1,10 @@
 from typing import List, Dict, Any, Tuple
 
-from chroma_service import ChromaService
-from config.ai_config import TopK
-from embedding import EmbeddingService
-from es_service import ESService
-from rerank_service import RerankService
+from ai.chroma_service import ChromaService
+from config.ai_config import TOPK, TOPN
+from ai.embedding import EmbeddingService
+from ai.es_service import ESService
+from ai.rerank_service import RerankService
 
 
 class HybridSearchService:
@@ -20,7 +20,8 @@ class HybridSearchService:
             self,
             knowledge_base_id: int,
             query: str,
-            top_k: int = TopK,
+            top_k: int = TOPK,
+            top_n: int = TOPN,
             recall_multiplier: float = 2.0
     ) -> List[Dict[str, Any]]:
         """
@@ -29,6 +30,7 @@ class HybridSearchService:
         :param knowledge_base_id: 知识库ID
         :param query: 用户查询
         :param top_k: 最终返回数量
+        :param top_n: Rerank 精排数量
         :param recall_multiplier: 召回倍数，用于扩大粗排候选池
         :return: 重排后的文档列表
         """
@@ -45,6 +47,8 @@ class HybridSearchService:
             query_embedding=query_embedding,
             n_results=recall_top_k
         )
+        if vector_results:
+            print("向量检索结果:", vector_results)
 
         # 1.2 BM25检索
         bm25_results = self.es_service.search_bm25(
@@ -52,6 +56,8 @@ class HybridSearchService:
             query=query,
             top_k=recall_top_k
         )
+        if bm25_results:
+            print("BM25检索结果:", bm25_results)
 
         # === Step 2: 结果融合与去重 ===
         merged_docs = self._merge_results(vector_results, bm25_results)
@@ -64,8 +70,10 @@ class HybridSearchService:
         reranked_results: List[Tuple[str, float]] = self.rerank_service.rerank(
             query=query,
             documents=doc_contents,
-            top_n=top_k
+            top_n=top_n
         )
+        if reranked_results:
+            print("Rerank 精排结果:", reranked_results)
 
         # === Step 4: 映射回原始文档信息 ===
         # 构建 content -> doc 的映射（注意：如果有完全重复的内容可能会丢失，建议用id映射）
