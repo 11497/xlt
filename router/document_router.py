@@ -1,11 +1,11 @@
 from datetime import datetime
-from typing import Optional, List
+from typing import Optional
 
 from fastapi import APIRouter, Depends, UploadFile, File, Form, Query
 
-from ai.chroma_service import ChromaService
-from ai.embedding import EmbeddingService
+from ai.ingestion_service import IngestionService
 from authentication.user_auth import require_admin, require_current_user
+from config.file_config import ALLOWED_FILE_TYPES, MAX_FILE_SIZE, EXPIRES
 from crud.document_crud import DocumentCRUD
 from crud.knowledge_base_crud import KnowledgeBaseCRUD
 from crud.user_knowledge_base_crud import UserKnowledgeBaseCRUD
@@ -14,7 +14,6 @@ from model.result import Result
 from model.user_model import User
 from util.file_util import read_file_content, chunk_text_by_sentence
 from util.oss_util import OSSUtil
-from config.file_config import ALLOWED_FILE_TYPES, MAX_FILE_SIZE, EXPIRES
 
 router = APIRouter(prefix="/api/document", tags=["document"])
 
@@ -96,22 +95,38 @@ async def upload_document(
     )
     document_id = DocumentCRUD.create(document)
 
-    # 文档向量化
-    await file.seek(0)  # 重置文件指针
+    # 读取文件内容并分块
+    await file.seek(0)
     content = await read_file_content(file)
     chunks = chunk_text_by_sentence(content)
-    embeddings = EmbeddingService().embed_texts(chunks)
 
-    # 将向量存储到chroma
-    chroma_service = ChromaService()
-    chroma_service.add_document_embeddings(
+    # === 使用 IngestionService 统一入库（双写 Chroma + ES） ===
+    ingestion_service = IngestionService()
+    ingest_result = ingestion_service.ingest_document(
         knowledge_base_id=knowledge_base_id,
         document_id=document_id,
-        chunks=chunks,
-        embeddings = embeddings
+        chunks=chunks
     )
 
-    return result.success(msg="上传成功", data={"id": document_id, "filename": file.filename})
+    # 根据入库结果返回响应
+    if ingest_result["status"] == "failed":
+        # 注意：文档已存入数据库和OSS，但索引完全失败，建议记录错误并考虑后续补偿
+        return result.error(msg="文档索引入库失败，请检查系统日志")
+    elif ingest_result["status"] == "partial":
+        # 部分成功（例如Chroma成功但ES失败），仍可认为上传完成，但给出警告
+        return result.success(
+            msg="文件上传成功，但部分索引写入失败",
+            data={
+                "id": document_id,
+                "filename": file.filename,
+                "warning": "部分索引写入失败，请稍后重试或联系管理员"
+            }
+        )
+    else:  # success
+        return result.success(
+            msg="上传成功",
+            data={"id": document_id, "filename": file.filename}
+        )
 
 
 @router.get("/download/{document_id}")
@@ -173,21 +188,25 @@ async def delete_document(
     if not document:
         return result.error(msg="文档不存在")
 
-    # 从OSS删除文件
+    # 1. 从OSS删除文件
     try:
         async with OSSUtil() as oss_client:
             await oss_client.delete_file(document.storage_path)
     except Exception as e:
         return result.error(msg=f"文件删除失败：{str(e)}")
 
-    # 从chroma删除向量
-    chroma_service = ChromaService()
-    chroma_service.delete_document_embeddings(
-        knowledge_base_id=document.knowledge_base_id,
-        document_id=document_id
-    )
+    # 2. 从 Chroma 和 Elasticsearch 删除向量/索引（双端同步）
+    try:
+        ingestion_service = IngestionService()
+        ingestion_service.delete_document(
+            knowledge_base_id=document.knowledge_base_id,
+            document_id=document_id
+        )
+    except Exception as e:
+        # 索引删除失败，但 OSS 文件已删除；可记录日志并提示，也可决定是否回滚
+        return result.error(msg=f"文档索引删除失败：{str(e)}")
 
-    # 从数据库删除记录
+    # 3. 从数据库删除记录
     delete_result = DocumentCRUD.delete(document_id)
     if not delete_result:
         return result.error(msg="数据库记录删除失败")
