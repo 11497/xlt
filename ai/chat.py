@@ -3,7 +3,7 @@ from typing import List
 from langchain_core.messages import BaseMessage, HumanMessage
 from langchain_openai import ChatOpenAI
 
-from config.ai_config import BASE_URL, CHAT_CONFIG, SUMMARY_PROMPT
+from config.ai_config import BASE_URL, CHAT_CONFIG, SUMMARY_PROMPT, MALICIOUS_CHECK_PROMPT, REWRITE_PROMPT
 
 
 class ChatService:
@@ -59,27 +59,36 @@ class ChatService:
             [f"{m.type}: {m.content}" for m in messages]
         )
 
-        # 使用 ai_config 中预定义的 SUMMARY_PROMPT 填充对话内容
         prompt = SUMMARY_PROMPT.format(conversation=conversation_text)
 
         response = self.llm.invoke([HumanMessage(content=prompt)])
 
         return response.content.strip()
 
-    # TODO 判断对话是否为恶意或敏感内容
     def is_malicious(self, messages: List[BaseMessage]) -> bool:
         """
         判断对话是否为恶意或敏感内容
         :param messages: LangChain消息对象列表，如 [SystemMessage(...), HumanMessage(...)]
         :return: 是否为恶意或敏感内容
         """
-        pass
+        conversation_text = "\n".join(
+            [f"{m.type}: {m.content}" for m in messages]
+        )
 
-    # TODO 用户问题重写
+        prompt = MALICIOUS_CHECK_PROMPT.format(user_input=conversation_text)
+
+        response = self.llm.invoke([HumanMessage(content=prompt)])
+
+        return response.content.strip().upper() == "TRUE"
+
     def rewrite_question(self, query: str) -> str:
         """
         重写用户的问题
         :param query: 用户问题字符串
         :return: 重写后的问题字符串
         """
-        pass
+        prompt = REWRITE_PROMPT.format(user_question=query)
+
+        response = self.llm.invoke([HumanMessage(content=prompt)])
+
+        return response.content.strip()
