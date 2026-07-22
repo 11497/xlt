@@ -84,7 +84,15 @@ async def chat(
     is_first_round = len(existing_messages) == 0
 
     # 保存用户消息
-    MessageCRUD.create(message)
+    message.create_time = datetime.now()
+    message_id = MessageCRUD.create(message)
+    
+    # 重写用户问题（用于检索和推理）
+    rewritten_query = chat_service.rewrite_question(message.content)
+    
+    # 更新数据库中的重写后内容
+    if rewritten_query != message.content and rewritten_query != "" and rewritten_query is not None:
+        MessageCRUD.update_rewritten_content(message_id, rewritten_query)
     
     # 构建完整对话历史
     # 添加系统提示词
@@ -93,18 +101,20 @@ async def chat(
     # 添加历史对话
     for msg in existing_messages:
         if msg.role == "user":
-            messages.append(HumanMessage(content=msg.content))
+            # 如果有重写后的内容，使用重写后的；否则使用原始内容
+            query_content = msg.rewritten_content if msg.rewritten_content else msg.content
+            messages.append(HumanMessage(content=query_content))
         elif msg.role == "assistant":
             messages.append(AIMessage(content=msg.content))
 
-    # RAG检索
-    context = retrieve_context_from_knowledge_bases(user.id, message.content)
+    # RAG检索（使用重写后的问题）
+    context = retrieve_context_from_knowledge_bases(user.id, rewritten_query)
 
     # 添加当前用户消息（可能包含上下文）
     if context:
-        current_content = f"<knowledge_base>\n{context}\n</knowledge_base>\n\n<user_query>\n{message.content}\n</user_query>"
+        current_content = f"<knowledge_base>\n{context}\n</knowledge_base>\n\n<user_query>\n{rewritten_query}\n</user_query>"
     else:
-        current_content = message.content
+        current_content = rewritten_query
     messages.append(HumanMessage(content=current_content))
 
     # 调用AI模型获取响应
