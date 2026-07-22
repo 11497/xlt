@@ -67,3 +67,16 @@ class MessageCRUD:
             cursor.execute(sql, (message_id,))
             row = cursor.fetchone()
             return Message.from_row(row) if row else None
+
+    @staticmethod
+    def update_rewritten_content(message_id: int, rewritten_content: str) -> bool:
+        """
+        更新消息的重写后内容
+        :param message_id: 消息ID
+        :param rewritten_content: 重写后的内容
+        :return: 是否成功更新
+        """
+        sql = "UPDATE message SET rewritten_content = %s WHERE id = %s"
+        with get_cursor() as cursor:
+            affected = cursor.execute(sql, (rewritten_content, message_id))
+            return affected > 0
