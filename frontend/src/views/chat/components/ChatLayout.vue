@@ -138,6 +138,8 @@ const handleSend = async (content) => {
   // 4. 刷新消息列表
   if (res.code) {
     await handleSessionClick(currentSessionId.value)
+  } else {
+    ElMessage.error(res.msg)
   }
 
   // 5. 仅在必要时刷新会话列表（如标题可能已更新）
