@@ -4,7 +4,7 @@ import { messageBySessionId } from "@/api/message.js";
 import { ElMessage } from "element-plus";
 import MarkdownIt from "markdown-it";
 
-// ✅ 初始化 markdown-it，启用常用GFM特性
+// 初始化 markdown-it，启用常用GFM特性
 const md = new MarkdownIt({
   html: false,        // 禁用原始HTML标签，防止XSS
   breaks: true,       // 单个换行符转为 <br>（对标原 marked.breaks）
@@ -71,7 +71,7 @@ const formatTime = (timeStr) => {
 };
 
 /**
- * ✅ 使用 markdown-it 渲染AI消息
+ * 使用 markdown-it 渲染AI消息
  * html:false 已禁止原始HTML注入，用户消息仍走纯文本<pre>
  */
 const renderMarkdown = (content) => {
@@ -99,8 +99,8 @@ const renderMarkdown = (content) => {
         暂无对话记录
       </div>
 
-      <!-- ✅ 修改1: 名称和时间移到气泡外部上方 -->
-      <!-- ✅ 修改3: 使用明确类名 msg--user / msg--assistant 替代动态class，消除IDE未使用警告 -->
+      <!-- 名称和时间移到气泡外部上方 -->
+      <!-- 使用明确类名 msg--user / msg--assistant 替代动态class，消除IDE未使用警告 -->
       <div
         v-for="(msg, index) in messageList"
         :key="index"
@@ -143,7 +143,7 @@ const renderMarkdown = (content) => {
   color: #333;
 }
 
-/* ========== 消息行布局 ========== */
+/* 消息行布局 */
 .message-row {
   margin-bottom: 24px;
   width: fit-content;
@@ -174,7 +174,7 @@ const renderMarkdown = (content) => {
   color: #606266;
 }
 
-/* ========== 消息气泡 ========== */
+/* 消息气泡布局 */
 .message-bubble {
   padding: 12px 16px;
   border-radius: 8px;
@@ -202,7 +202,7 @@ const renderMarkdown = (content) => {
   color: #303133;
 }
 
-/* ✅ 修改2: AI Markdown 渲染样式（scoped下需用 :deep 穿透） */
+/* AI Markdown 渲染样式（scoped下需用 :deep 穿透） */
 .markdown-body :deep(p) {
   margin: 0 0 8px;
   font-size: 14px;
@@ -267,7 +267,7 @@ const renderMarkdown = (content) => {
   font-weight: bold;
 }
 
-/* ========== 底部 & 空状态 ========== */
+/* 底部 & 空状态布局 */
 .dialog-footer-attachments {
   padding-top: 15px;
   border-top: 1px solid #ebeef5;
