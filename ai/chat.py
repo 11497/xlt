@@ -51,7 +51,7 @@ class ChatService:
     def summarize_conversation(self, messages: List[BaseMessage]) -> str:
         """
         总结对话历史作为会话标题
-        :param messages: 消息历史列表，格式: [{"role": "user/assistant/system", "content": "..."}]
+        :param messages: LangChain消息对象列表，如 [SystemMessage(...), HumanMessage(...)]
         :return: 总结内容字符串
         """
         # 将 BaseMessage 列表转换为 prompt 所需的对话文本格式
@@ -65,3 +65,21 @@ class ChatService:
         response = self.llm.invoke([HumanMessage(content=prompt)])
 
         return response.content.strip()
+
+    # TODO 判断对话是否为恶意或敏感内容
+    def is_malicious(self, messages: List[BaseMessage]) -> bool:
+        """
+        判断对话是否为恶意或敏感内容
+        :param messages: LangChain消息对象列表，如 [SystemMessage(...), HumanMessage(...)]
+        :return: 是否为恶意或敏感内容
+        """
+        pass
+
+    # TODO 用户问题重写
+    def rewrite_question(self, query: str) -> str:
+        """
+        重写用户的问题
+        :param query: 用户问题字符串
+        :return: 重写后的问题字符串
+        """
+        pass
