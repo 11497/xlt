@@ -5,7 +5,7 @@ import { getAllAnnouncements } from "@/api/announcement.js";
 import { getAnnouncementAttachments, downloadAnnouncementAttachment } from "@/api/anouncement_attachment.js";
 import { ElMessage } from 'element-plus';
 import {updatePassword} from "@/api/user.js";
-import { Download } from "@element-plus/icons-vue";
+import { Download, Bell, ArrowRight } from "@element-plus/icons-vue";
 
 const { user } = useCurrentUser();
 
@@ -133,12 +133,19 @@ const submitPassword = async () => {
   <div class="container">
     <el-container>
       <!-- 顶部公告 -->
-      <el-header>
-        <p class="announcement-text">
+      <el-header class="announcement-header">
+        <div class="announcement-container">
+          <div class="announcement-badge">
+            <el-icon class="badge-icon"><Bell /></el-icon>
+            <span class="badge-text">置顶</span>
+          </div>
           <a href="javascript:0" class="announcement-link" @click="showTopAnnouncementDetail">
-            置顶公告: {{ topAnnouncements?.length > 0 ? topAnnouncements[0].title : '暂无置顶公告' }}
+            <span class="announcement-title">
+              {{ topAnnouncements?.length > 0 ? topAnnouncements[0].title : '暂无置顶公告' }}
+            </span>
+            <el-icon class="announcement-arrow"><ArrowRight /></el-icon>
           </a>
-        </p>
+        </div>
       </el-header>
 
       <el-main>
@@ -267,22 +274,75 @@ const submitPassword = async () => {
   margin: 15px 0;
 }
 
-.announcement-text {
-  text-align: center;
+.announcement-header {
+  background: linear-gradient(135deg, #40d2ff, #259feb);
+  padding: 0;
+  display: flex;
+  align-items: center;
+  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.3);
+}
+
+.announcement-container {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 20px;
+  gap: 12px;
+}
+
+.announcement-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background-color: rgba(255, 255, 255, 0.95);
+  padding: 4px 12px;
+  border-radius: 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  flex-shrink: 0;
+}
+
+.badge-icon {
+  font-size: 18px;
+  color: #3ac5c5;
+}
+
+.badge-text {
+  font-size: 13px;
+  font-weight: bold;
+  color: #3ac5c5;
 }
 
 .announcement-link {
-  margin: 10px;
-  font-size: 18px;
-  color: #000000;
-}
-
-.announcement-link:hover {
-  color: #00aaa0;
-}
-
-a {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   text-decoration: none;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.announcement-title {
+  font-size: 16px;
+  color: #ffffff;
+  font-weight: 500;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.announcement-arrow {
+  font-size: 18px;
+  color: #ffffff;
+  transition: transform 0.3s ease;
+}
+
+.announcement-link:hover .announcement-title {
+  color: #e0f7fa;
+  text-decoration: underline;
+}
+
+.announcement-link:hover .announcement-arrow {
+  transform: translateX(5px);
 }
 
 .account-card {
