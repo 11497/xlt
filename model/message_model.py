@@ -11,7 +11,7 @@ class Message:
     content: str
     create_time: datetime
     id: Optional[int] = field(default=None)  # 新建时 id 为 None，查询时自动填充
-    rewritten_content: str = field(default="")
+    rewritten_content: Optional[str] = field(default=None)
 
     def to_dict(self) -> dict:
         return asdict(self)
