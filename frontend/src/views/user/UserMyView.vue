@@ -5,7 +5,7 @@ import { getAllAnnouncements } from "@/api/announcement.js";
 import { getAnnouncementAttachments, downloadAnnouncementAttachment } from "@/api/anouncement_attachment.js";
 import { ElMessage } from 'element-plus';
 import {updatePassword} from "@/api/user.js";
-import { InfoFilled, Download } from "@element-plus/icons-vue";
+import { Download } from "@element-plus/icons-vue";
 
 const { user } = useCurrentUser();
 
