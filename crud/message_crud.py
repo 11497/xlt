@@ -12,9 +12,9 @@ class MessageCRUD:
         :param message: 消息对象
         :return: 新插入记录的 id
         """
-        sql = "INSERT INTO message (session_id, role, content) VALUES (%s, %s, %s)"
+        sql = "INSERT INTO message (session_id, role, content, rewritten_content) VALUES (%s, %s, %s, %s)"
         with get_cursor() as cursor:
-            cursor.execute(sql, (message.session_id, message.role, message.content))
+            cursor.execute(sql, (message.session_id, message.role, message.content, message.rewritten_content))
             return cursor.lastrowid
 
     @staticmethod
