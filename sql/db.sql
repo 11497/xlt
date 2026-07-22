@@ -26,6 +26,7 @@ create table message (
     session_id int not null comment '会话id',
     role varchar(255) not null comment '角色',
     content text comment '消息内容',
+    rewritten_content text comment '重写后的内容内容',
     create_time datetime default current_timestamp comment '创建时间',
     foreign key (session_id) references session(id)
 ) comment '消息';

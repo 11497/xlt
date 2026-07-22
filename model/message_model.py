@@ -11,6 +11,7 @@ class Message:
     content: str
     create_time: datetime
     id: Optional[int] = field(default=None)  # 新建时 id 为 None，查询时自动填充
+    rewritten_content: str = field(default="")
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -27,5 +28,6 @@ class Message:
             session_id=row["session_id"],
             role=row["role"],
             content=row["content"],
+            rewritten_content=row["rewritten_content"],
             create_time=row["create_time"],
         )
