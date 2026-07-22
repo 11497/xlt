@@ -100,7 +100,6 @@ const createSessionBtn = async () => {
     id: null
   })
   if (res.code) {
-    ElMessage.success('创建成功')
     const result = await sessionByUserId(user.value.id)
     sessions.value = result.data
     currentSessionId.value = res.data.id
