@@ -192,13 +192,14 @@ const submitPassword = async () => {
       <el-header class="announcement-header">
         <div class="announcement-wrapper">
           <div class="announcement-container">
-            <div class="announcement-badge">
-              <el-icon class="badge-icon"><Bell /></el-icon>
-              <span class="badge-text">置顶</span>
-            </div>
-            
             <div class="announcement-carousel">
-              <el-icon class="carousel-btn" @click="goToPrev"><ArrowLeft /></el-icon>
+              <div class="carousel-left-group">
+                <div class="announcement-badge">
+                  <el-icon class="badge-icon"><Bell /></el-icon>
+                  <span class="badge-text">置顶</span>
+                </div>
+                <el-icon class="carousel-btn" @click="goToPrev"><ArrowLeft /></el-icon>
+              </div>
               
               <a href="javascript:0" class="announcement-link" @click="showTopAnnouncementDetail">
                 <span class="announcement-title">
@@ -367,9 +368,22 @@ const submitPassword = async () => {
   width: 100%;
   display: flex;
   align-items: center;
+  justify-content: center;
   padding: 12px 20px 8px;
-  gap: 15px;
-  position: relative;
+}
+
+.announcement-carousel {
+  width: 50%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.carousel-left-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
 .announcement-badge {
@@ -380,8 +394,6 @@ const submitPassword = async () => {
   padding: 4px 12px;
   border-radius: 20px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  flex-shrink: 0;
-  z-index: 1;
 }
 
 .badge-icon {
@@ -393,17 +405,6 @@ const submitPassword = async () => {
   font-size: 13px;
   font-weight: bold;
   color: #409eff;
-}
-
-.announcement-carousel {
-  flex: 0 0 50%;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
 }
 
 .carousel-btn {
