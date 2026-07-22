@@ -190,22 +190,24 @@ const submitPassword = async () => {
     <el-container>
       <!-- 顶部公告 -->
       <el-header class="announcement-header">
-        <div class="announcement-container">
-          <div class="announcement-badge">
-            <el-icon class="badge-icon"><Bell /></el-icon>
-            <span class="badge-text">置顶</span>
-          </div>
-          
-          <div class="announcement-carousel">
-            <el-icon class="carousel-btn" @click="goToPrev"><ArrowLeft /></el-icon>
+        <div class="announcement-wrapper">
+          <div class="announcement-container">
+            <div class="announcement-badge">
+              <el-icon class="badge-icon"><Bell /></el-icon>
+              <span class="badge-text">置顶</span>
+            </div>
             
-            <a href="javascript:0" class="announcement-link" @click="showTopAnnouncementDetail">
-              <span class="announcement-title">
-                {{ currentAnnouncement?.title || '暂无置顶公告' }}
-              </span>
-            </a>
-            
-            <el-icon class="carousel-btn" @click="goToNext"><ArrowRight /></el-icon>
+            <div class="announcement-carousel">
+              <el-icon class="carousel-btn" @click="goToPrev"><ArrowLeft /></el-icon>
+              
+              <a href="javascript:0" class="announcement-link" @click="showTopAnnouncementDetail">
+                <span class="announcement-title">
+                  {{ currentAnnouncement?.title || '暂无置顶公告' }}
+                </span>
+              </a>
+              
+              <el-icon class="carousel-btn" @click="goToNext"><ArrowRight /></el-icon>
+            </div>
           </div>
 
           <div class="carousel-indicators" v-if="topAnnouncements.length > 1">
@@ -354,11 +356,19 @@ const submitPassword = async () => {
   box-shadow: 0 2px 8px rgba(64, 158, 255, 0.3);
 }
 
+.announcement-wrapper {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
 .announcement-container {
   width: 100%;
   display: flex;
   align-items: center;
-  padding: 12px 20px;
+  justify-content: center;
+  padding: 12px 20px 8px;
   gap: 15px;
 }
 
@@ -385,7 +395,7 @@ const submitPassword = async () => {
 }
 
 .announcement-carousel {
-  flex: 1;
+  flex: 0 0 50%;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -437,7 +447,8 @@ const submitPassword = async () => {
 .carousel-indicators {
   display: flex;
   gap: 6px;
-  flex-shrink: 0;
+  justify-content: center;
+  padding-bottom: 8px;
 }
 
 .indicator-dot {
