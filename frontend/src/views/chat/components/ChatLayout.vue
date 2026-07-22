@@ -125,6 +125,7 @@ const handleSend = async (content) => {
     id: null,
     role: 'user',
     content,
+    rewritten_content: null,
     session_id: currentSessionId.value,
     create_time: new Date().toISOString()
   }
