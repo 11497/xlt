@@ -88,8 +88,17 @@ async def chat(
     message_id = MessageCRUD.create(message)
 
     # 判断对话是否为恶意或敏感内容
-    if chat_service.is_malicious([HumanMessage(message.content)]):
-        return result.error(msg="对话包含恶意或敏感内容")
+    if chat_service.is_malicious([HumanMessage(content=message.content)]):
+        # AI回复：对话包含恶意或敏感内容
+        ai_message = Message(
+            session_id=message.session_id,
+            role="assistant",
+            content="对话包含恶意或敏感内容",
+            rewritten_content=None,
+            create_time=datetime.now()
+        )
+        MessageCRUD.create(ai_message)
+        return result.success(msg="对话包含恶意或敏感内容", data=ai_message.content)
     
     # 重写用户问题（用于检索和推理）
     rewritten_query = chat_service.rewrite_question(message.content)
@@ -124,7 +133,7 @@ async def chat(
     # 调用AI模型获取响应
     response = chat_service.send_message(messages)
         
-    # 流式响应结束后，保存AI回复到数据库
+    # 响应结束后，保存AI回复到数据库
     ai_message = Message(
         session_id=message.session_id,
         role="assistant",
