@@ -88,7 +88,7 @@ async def chat(
     message_id = MessageCRUD.create(message)
 
     # 判断对话是否为恶意或敏感内容
-    if chat_service.is_malicious(message.content):
+    if chat_service.is_malicious([HumanMessage(message.content)]):
         return result.error(msg="对话包含恶意或敏感内容")
     
     # 重写用户问题（用于检索和推理）
