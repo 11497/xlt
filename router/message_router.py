@@ -129,6 +129,7 @@ async def chat(
         session_id=message.session_id,
         role="assistant",
         content=response,
+        rewritten_content=None,
         create_time=datetime.now()
     )
     MessageCRUD.create(ai_message)
