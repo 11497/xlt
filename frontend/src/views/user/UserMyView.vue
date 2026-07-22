@@ -421,6 +421,7 @@ const submitPassword = async () => {
   flex: 1;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   text-decoration: none;
   transition: all 0.3s ease;
