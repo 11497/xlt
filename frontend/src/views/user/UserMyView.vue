@@ -1,31 +1,89 @@
 <script setup>
-import { onMounted, ref, reactive } from 'vue';
+import { onMounted, ref, reactive, onUnmounted, computed } from 'vue';
 import { useCurrentUser } from "@/hooks/useCurrentUser.js";
 import { getAllAnnouncements } from "@/api/announcement.js";
 import { getAnnouncementAttachments, downloadAnnouncementAttachment } from "@/api/anouncement_attachment.js";
 import { ElMessage } from 'element-plus';
 import {updatePassword} from "@/api/user.js";
-import { Download, Bell, ArrowRight } from "@element-plus/icons-vue";
+import { Download, Bell, ArrowRight, ArrowLeft } from "@element-plus/icons-vue";
 
 const { user } = useCurrentUser();
 
 const topAnnouncements = ref([]);
+const currentAnnouncementIndex = ref(0);
+const carouselTimer = ref(null);
+
+// 获取所有置顶公告
+const fetchTopAnnouncements = async () => {
+  try {
+    const res = await getAllAnnouncements(1, 100);
+    if (res.code === 1 && res.data?.list) {
+      topAnnouncements.value = res.data.list.filter(item => item.is_top);
+    }
+  } catch (e) {
+    console.error('获取置顶公告失败', e);
+  }
+};
+
+// 轮播控制
+const startCarousel = () => {
+  stopCarousel();
+  if (topAnnouncements.value.length > 1) {
+    carouselTimer.value = setInterval(() => {
+      currentAnnouncementIndex.value = (currentAnnouncementIndex.value + 1) % topAnnouncements.value.length;
+    }, 3000);
+  }
+};
+
+const stopCarousel = () => {
+  if (carouselTimer.value) {
+    clearInterval(carouselTimer.value);
+    carouselTimer.value = null;
+  }
+};
+
+const goToPrev = () => {
+  stopCarousel();
+  if (topAnnouncements.value.length > 0) {
+    currentAnnouncementIndex.value = (currentAnnouncementIndex.value - 1 + topAnnouncements.value.length) % topAnnouncements.value.length;
+  }
+  startCarousel();
+};
+
+const goToNext = () => {
+  stopCarousel();
+  if (topAnnouncements.value.length > 0) {
+    currentAnnouncementIndex.value = (currentAnnouncementIndex.value + 1) % topAnnouncements.value.length;
+  }
+  startCarousel();
+};
+
+const goToIndex = (index) => {
+  stopCarousel();
+  currentAnnouncementIndex.value = index;
+  startCarousel();
+};
+
+// 当前显示的公告
+const currentAnnouncement = computed(() => {
+  return topAnnouncements.value[currentAnnouncementIndex.value] || null;
+});
 
 // 详情弹窗相关状态
 const detailDialogVisible = ref(false);
-const currentAnnouncement = ref(null);
+const detailAnnouncement = ref(null);
 const attachmentList = ref([]);
 const attachmentLoading = ref(false);
 
 // 显示置顶公告详情
 const showTopAnnouncementDetail = async () => {
-  if (topAnnouncements.value.length === 0) {
+  const announcement = topAnnouncements.value[currentAnnouncementIndex.value];
+  if (!announcement) {
     ElMessage.info('暂无置顶公告');
     return;
   }
   
-  const announcement = topAnnouncements.value[0];
-  currentAnnouncement.value = announcement;
+  detailAnnouncement.value = announcement;
   detailDialogVisible.value = true;
   attachmentList.value = [];
   
@@ -50,14 +108,12 @@ const handleDownload = async (attachmentId) => {
 };
 
 onMounted(async () => {
-  try {
-    const res = await getAllAnnouncements(1, 1);
-    if (res.data?.list?.[0]?.is_top) {
-      topAnnouncements.value = res.data.list;
-    }
-  } catch (e) {
-    console.error('获取公告失败', e);
-  }
+  await fetchTopAnnouncements();
+  startCarousel();
+});
+
+onUnmounted(() => {
+  stopCarousel();
 });
 
 const pwdDialogVisible = ref(false);
@@ -139,12 +195,28 @@ const submitPassword = async () => {
             <el-icon class="badge-icon"><Bell /></el-icon>
             <span class="badge-text">置顶</span>
           </div>
-          <a href="javascript:0" class="announcement-link" @click="showTopAnnouncementDetail">
-            <span class="announcement-title">
-              {{ topAnnouncements?.length > 0 ? topAnnouncements[0].title : '暂无置顶公告' }}
-            </span>
-            <el-icon class="announcement-arrow"><ArrowRight /></el-icon>
-          </a>
+          
+          <div class="announcement-carousel">
+            <el-icon class="carousel-btn" @click="goToPrev"><ArrowLeft /></el-icon>
+            
+            <a href="javascript:0" class="announcement-link" @click="showTopAnnouncementDetail">
+              <span class="announcement-title">
+                {{ currentAnnouncement?.title || '暂无置顶公告' }}
+              </span>
+            </a>
+            
+            <el-icon class="carousel-btn" @click="goToNext"><ArrowRight /></el-icon>
+          </div>
+
+          <div class="carousel-indicators" v-if="topAnnouncements.length > 1">
+            <span
+              v-for="(_, index) in topAnnouncements"
+              :key="index"
+              class="indicator-dot"
+              :class="{ active: index === currentAnnouncementIndex }"
+              @click="goToIndex(index)"
+            ></span>
+          </div>
         </div>
       </el-header>
 
@@ -225,7 +297,7 @@ const submitPassword = async () => {
     <!-- 公告详情弹窗 -->
     <el-dialog
       v-model="detailDialogVisible"
-      :title="currentAnnouncement?.title"
+      :title="detailAnnouncement?.title"
       width="60%"
       top="5vh"
       destroy-on-close
@@ -233,12 +305,12 @@ const submitPassword = async () => {
     >
       <template #header>
         <div style="text-align: center; font-size: 18px; font-weight: bold;">
-          {{ currentAnnouncement?.title }}
+          {{ detailAnnouncement?.title }}
         </div>
       </template>
 
       <div class="dialog-content-scroll">
-        <div v-html="currentAnnouncement?.content || '暂无内容'" class="content-body"></div>
+        <div v-html="detailAnnouncement?.content || '暂无内容'" class="content-body"></div>
       </div>
 
       <div class="dialog-footer-attachments">
@@ -286,9 +358,8 @@ const submitPassword = async () => {
   width: 100%;
   display: flex;
   align-items: center;
-  justify-content: center;
   padding: 12px 20px;
-  gap: 12px;
+  gap: 15px;
 }
 
 .announcement-badge {
@@ -304,22 +375,47 @@ const submitPassword = async () => {
 
 .badge-icon {
   font-size: 18px;
-  color: #3ac5c5;
+  color: #409eff;
 }
 
 .badge-text {
   font-size: 13px;
   font-weight: bold;
-  color: #3ac5c5;
+  color: #409eff;
+}
+
+.announcement-carousel {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.carousel-btn {
+  font-size: 20px;
+  color: #ffffff;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  flex-shrink: 0;
+  padding: 4px;
+  border-radius: 50%;
+}
+
+.carousel-btn:hover {
+  color: #e0f7fa;
+  background-color: rgba(255, 255, 255, 0.2);
 }
 
 .announcement-link {
+  flex: 1;
   display: flex;
   align-items: center;
   gap: 8px;
   text-decoration: none;
   transition: all 0.3s ease;
   cursor: pointer;
+  min-width: 0;
 }
 
 .announcement-title {
@@ -328,12 +424,9 @@ const submitPassword = async () => {
   font-weight: 500;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
   transition: all 0.3s ease;
-}
-
-.announcement-arrow {
-  font-size: 18px;
-  color: #ffffff;
-  transition: transform 0.3s ease;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .announcement-link:hover .announcement-title {
@@ -341,8 +434,28 @@ const submitPassword = async () => {
   text-decoration: underline;
 }
 
-.announcement-link:hover .announcement-arrow {
-  transform: translateX(5px);
+.carousel-indicators {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.indicator-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.indicator-dot.active {
+  background-color: #ffffff;
+  transform: scale(1.2);
+}
+
+.indicator-dot:hover {
+  background-color: rgba(255, 255, 255, 0.8);
 }
 
 .account-card {
