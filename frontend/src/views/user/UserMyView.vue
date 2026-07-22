@@ -367,9 +367,9 @@ const submitPassword = async () => {
   width: 100%;
   display: flex;
   align-items: center;
-  justify-content: center;
   padding: 12px 20px 8px;
   gap: 15px;
+  position: relative;
 }
 
 .announcement-badge {
@@ -381,6 +381,7 @@ const submitPassword = async () => {
   border-radius: 20px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   flex-shrink: 0;
+  z-index: 1;
 }
 
 .badge-icon {
@@ -400,6 +401,9 @@ const submitPassword = async () => {
   align-items: center;
   gap: 10px;
   min-width: 0;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
 }
 
 .carousel-btn {
