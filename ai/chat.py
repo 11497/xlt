@@ -81,13 +81,25 @@ class ChatService:
 
         return response.content.strip().upper() == "TRUE"
 
-    def rewrite_question(self, query: str) -> str:
+    def rewrite_question(self, messages: List[BaseMessage], current_query: str) -> str:
         """
-        重写用户的问题
-        :param query: 用户问题字符串
+        重写用户的问题（结合对话历史）
+        :param messages: 历史对话消息列表（不包含当前问题）
+        :param current_query: 用户当前问题字符串
         :return: 重写后的问题字符串
         """
-        prompt = REWRITE_PROMPT.format(user_question=query)
+        # 将历史消息转换为对话文本
+        if messages:
+            conversation_history = "\n".join(
+                [f"{m.type}: {m.content}" for m in messages]
+            )
+        else:
+            conversation_history = "无历史对话"
+
+        prompt = REWRITE_PROMPT.format(
+            conversation_history=conversation_history,
+            user_question=current_query
+        )
 
         response = self.llm.invoke([HumanMessage(content=prompt)])
 
