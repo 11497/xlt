@@ -1,11 +1,11 @@
 <script setup>
-import { ref, nextTick } from 'vue'
+import { ref, nextTick, watch } from 'vue'
 import MarkdownIt from 'markdown-it'
 import { Delete, Position } from '@element-plus/icons-vue'
 
 const md = new MarkdownIt({ html: true, linkify: true, typographer: true })
 
-defineProps({
+const props = defineProps({
   messages: Array,
   currentSessionId: Number
 })
@@ -13,6 +13,21 @@ const emit = defineEmits(['send', 'delete-message'])
 
 const inputContent = ref('')
 const textareaRef = ref(null)
+const isSending = ref(false)
+
+// 监听消息列表，当收到新的 AI 回复时，结束 loading 状态
+watch(
+  () => props.messages,
+  (newMessages) => {
+    if (isSending.value && newMessages.length > 0) {
+      const lastMessage = newMessages[newMessages.length - 1]
+      if (lastMessage.role === 'assistant') {
+        isSending.value = false
+      }
+    }
+  },
+  { deep: true }
+)
 
 const autoResizeTextarea = () => {
   const el = textareaRef.value
@@ -31,7 +46,8 @@ const autoResizeTextarea = () => {
 
 const handleSend = () => {
   const content = inputContent.value.trim()
-  if (!content) return
+  if (!content || isSending.value) return
+  isSending.value = true
   emit('send', content)
   inputContent.value = ''
   nextTick(() => autoResizeTextarea())
@@ -63,8 +79,8 @@ const handleSend = () => {
         @input="autoResizeTextarea"
         ref="textareaRef"
       ></textarea>
-      <el-button type="primary" class="send-btn" @click="handleSend">
-        <el-icon><Position /></el-icon> 发送
+      <el-button type="primary" class="send-btn" @click="handleSend" :loading="isSending" :disabled="isSending">
+        <el-icon v-if="!isSending"><Position /></el-icon> {{ isSending ? '发送中' : '发送' }}
       </el-button>
     </div>
   </section>
