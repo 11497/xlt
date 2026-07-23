@@ -22,7 +22,7 @@ class HybridSearchService:
             query: str,
             top_k: int = TOPK,
             top_n: int = TOPN,
-            recall_multiplier: float = 2.0
+            recall_multiplier: float | int = 1
     ) -> List[Dict[str, Any]]:
         """
         执行混合检索
