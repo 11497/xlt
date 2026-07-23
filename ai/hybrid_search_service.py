@@ -7,6 +7,50 @@ from ai.es_service import ESService
 from ai.rerank_service import RerankService
 
 
+def _merge_results(
+        vector_results: dict,
+        bm25_results: List[Dict[str, Any]]
+) -> List[Dict[str, Any]]:
+    """
+    融合向量检索和BM25检索结果，按ID去重
+    优先保留先出现的记录（也可改为保留分数更高的）
+    :param vector_results: Chroma 向量检索结果
+    :param bm25_results: BM25 检索结果
+    :return: 融合后的结果
+    """
+    seen_ids = set()
+    merged = []
+
+    # 解析 Chroma 结果
+    if vector_results and vector_results.get("ids"):
+        ids = vector_results["ids"][0]
+        documents = vector_results["documents"][0] if vector_results.get("documents") else [""] * len(ids)
+        metadatas = vector_results["metadatas"][0] if vector_results.get("metadatas") else [{}] * len(ids)
+
+        for i, doc_id in enumerate(ids):
+            if doc_id not in seen_ids:
+                seen_ids.add(doc_id)
+                merged.append({
+                    "id": doc_id,
+                    "content": documents[i],
+                    "metadata": metadatas[i],
+                    "source": "vector"
+                })
+
+    # 合并 BM25 结果
+    for doc in bm25_results:
+        if doc["id"] not in seen_ids:
+            seen_ids.add(doc["id"])
+            merged.append({
+                "id": doc["id"],
+                "content": doc["content"],
+                "metadata": doc.get("metadata", {}),
+                "source": "bm25"
+            })
+
+    return merged
+
+
 class HybridSearchService:
     """混合检索服务：BM25 + Vector + Rerank"""
 
@@ -26,7 +70,6 @@ class HybridSearchService:
     ) -> List[Dict[str, Any]]:
         """
         执行混合检索
-
         :param knowledge_base_id: 知识库ID
         :param query: 用户查询
         :param top_k: 最终返回数量
@@ -58,7 +101,7 @@ class HybridSearchService:
         print("bm25_results:", bm25_results)
 
         # === Step 2: 结果融合与去重 ===
-        merged_docs = self._merge_results(vector_results, bm25_results)
+        merged_docs = _merge_results(vector_results, bm25_results)
 
         if not merged_docs:
             return []
@@ -96,43 +139,3 @@ class HybridSearchService:
 
         return final_results
 
-    def _merge_results(
-            self,
-            vector_results: dict,
-            bm25_results: List[Dict[str, Any]]
-    ) -> List[Dict[str, Any]]:
-        """
-        融合向量检索和BM25检索结果，按ID去重
-        优先保留先出现的记录（也可改为保留分数更高的）
-        """
-        seen_ids = set()
-        merged = []
-
-        # 解析 Chroma 结果
-        if vector_results and vector_results.get("ids"):
-            ids = vector_results["ids"][0]
-            documents = vector_results["documents"][0] if vector_results.get("documents") else [""] * len(ids)
-            metadatas = vector_results["metadatas"][0] if vector_results.get("metadatas") else [{}] * len(ids)
-
-            for i, doc_id in enumerate(ids):
-                if doc_id not in seen_ids:
-                    seen_ids.add(doc_id)
-                    merged.append({
-                        "id": doc_id,
-                        "content": documents[i],
-                        "metadata": metadatas[i],
-                        "source": "vector"
-                    })
-
-        # 合并 BM25 结果
-        for doc in bm25_results:
-            if doc["id"] not in seen_ids:
-                seen_ids.add(doc["id"])
-                merged.append({
-                    "id": doc["id"],
-                    "content": doc["content"],
-                    "metadata": doc.get("metadata", {}),
-                    "source": "bm25"
-                })
-
-        return merged
