@@ -116,4 +116,4 @@ values (1, 1),
 
 insert into announcement (title, content, is_top)
 values ('测试公告', '这是一条测试公告', 0),
-       ('测试公告', '这是一条置顶公告', 1);
+       ('测试置顶公告', '这是一条置顶公告', 1);
