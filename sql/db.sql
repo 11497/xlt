@@ -112,7 +112,7 @@ values ('图书馆'),
 
 insert into role_knowledge_base (role_id, knowledge_base_id)
 values (1, 1),
-       (3, 2);
+       (3, 3);
 
 insert into announcement (title, content, is_top)
 values ('测试公告', '这是一条测试公告', 0),
