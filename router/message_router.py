@@ -100,8 +100,18 @@ async def chat(
         MessageCRUD.create(ai_message)
         return result.success(msg="对话包含恶意或敏感内容", data=ai_message.content)
     
-    # 重写用户问题（用于检索和推理）
-    rewritten_query = chat_service.rewrite_question(message.content)
+    # 构建历史对话消息（用于重写问题）
+    history_messages: List[BaseMessage] = []
+    for msg in existing_messages:
+        if msg.role == "user":
+            # 如果有重写后的内容，使用重写后的；否则使用原始内容
+            query_content = msg.rewritten_content if msg.rewritten_content else msg.content
+            history_messages.append(HumanMessage(content=query_content))
+        elif msg.role == "assistant":
+            history_messages.append(AIMessage(content=msg.content))
+    
+    # 重写用户问题（结合历史对话）
+    rewritten_query = chat_service.rewrite_question(history_messages, message.content)
     
     # 更新数据库中的重写后内容
     if rewritten_query != message.content and rewritten_query != "" and rewritten_query is not None:
@@ -112,13 +122,7 @@ async def chat(
     messages: List[BaseMessage] = [SystemMessage(content=SYSTEM_MESSAGE)]
 
     # 添加历史对话
-    for msg in existing_messages:
-        if msg.role == "user":
-            # 如果有重写后的内容，使用重写后的；否则使用原始内容
-            query_content = msg.rewritten_content if msg.rewritten_content else msg.content
-            messages.append(HumanMessage(content=query_content))
-        elif msg.role == "assistant":
-            messages.append(AIMessage(content=msg.content))
+    messages.extend(history_messages)
 
     # RAG检索（使用重写后的问题）
     context = retrieve_context_from_knowledge_bases(user.id, rewritten_query)
