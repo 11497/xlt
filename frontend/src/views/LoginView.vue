@@ -1,11 +1,19 @@
 <script setup>
-import {ref} from 'vue';
+import {ref, onMounted} from 'vue';
 import {userLogin} from "@/api/user.js";
 import {ElMessage} from "element-plus";
 import {useRouter} from "vue-router";
 
 let userForm = ref({username: "", password: ""});
 const router = useRouter();
+
+// 页面加载时检查是否已登录
+onMounted(async () => {
+    const loginUser = localStorage.getItem('loginUser');
+    if (loginUser) {
+        await router.push({path: '/chat'});
+    }
+});
 
 // 登录
 const login = async () => {
