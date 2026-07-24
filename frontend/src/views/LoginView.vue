@@ -71,7 +71,7 @@ const clear = () => {
                 </el-form-item>
 
                 <el-form-item label="密码" prop="password">
-                    <el-input type="password" v-model="userForm.password" placeholder="请输入密码"></el-input>
+                    <el-input type="password" v-model="userForm.password" placeholder="请输入密码" @keyup.enter="login"></el-input>
                 </el-form-item>
 
                 <el-form-item>
