@@ -5,7 +5,20 @@ import {ElMessage} from "element-plus";
 import {useRouter} from "vue-router";
 
 let userForm = ref({username: "", password: ""});
+const loginFormRef = ref(null);
 const router = useRouter();
+
+// 表单校验规则
+const rules = {
+    username: [
+        { required: true, message: '请输入用户名', trigger: 'blur' },
+        { min: 4, max: 15, message: '用户名长度必须在4-15位之间', trigger: 'blur' }
+    ],
+    password: [
+        { required: true, message: '请输入密码', trigger: 'blur' },
+        { min: 6, max: 20, message: '密码长度必须在6-20位之间', trigger: 'blur' }
+    ]
+};
 
 // 页面加载时检查是否已登录
 onMounted(async () => {
@@ -17,6 +30,10 @@ onMounted(async () => {
 
 // 登录
 const login = async () => {
+    // 表单校验
+    const valid = await loginFormRef.value.validate().catch(() => false);
+    if (!valid) return;
+
     const result = await userLogin({
       username: userForm.value.username,
       password: userForm.value.password,
@@ -40,13 +57,14 @@ const login = async () => {
 // 重置
 const clear = () => {
     userForm.value = {username: '', password: ''};
+    loginFormRef.value.resetFields();
 }
 </script>
 
 <template>
     <div id="container">
         <div class="login-form">
-            <el-form label-width="80px">
+            <el-form ref="loginFormRef" :model="userForm" :rules="rules" label-width="80px">
                 <p class="title">校灵通</p>
                 <el-form-item label="用户名" prop="username">
                     <el-input v-model="userForm.username" placeholder="请输入用户名"></el-input>
