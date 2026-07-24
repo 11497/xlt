@@ -3,8 +3,8 @@ import {onMounted, ref} from "vue";
 import {ElMessage, ElMessageBox} from "element-plus";
 import {InfoFilled, Delete, Plus, User, Notebook} from "@element-plus/icons-vue";
 import {createRole, deleteRole, getAllRoles, updateRole} from "@/api/role.js";
-import RoleUserDialog from "@/views/admin/RoleUserDialog.vue";
-import RoleKnowledgeBaseDialog from "@/views/admin/RoleKnowledgeBaseDialog.vue";
+import RoleUserDialog from "@/views/admin/components/RoleUserDialog.vue";
+import RoleKnowledgeBaseDialog from "@/views/admin/components/RoleKnowledgeBaseDialog.vue";
 
 // 列表相关状态
 let userList = ref([]);

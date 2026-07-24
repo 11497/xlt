@@ -3,7 +3,7 @@ import {onMounted, ref} from "vue";
 import {ElMessage} from "element-plus";
 import {InfoFilled} from "@element-plus/icons-vue";
 import {getKnowledgeBases} from "@/api/user_knowledge_base.js";
-import DocumentDialog from "@/views/user/DocumentDialog.vue";
+import DocumentDialog from "@/views/user/components/DocumentDialog.vue";
 import {getKnowledgeBaseById} from "@/api/knowledge_base.js";
 
 let knowledgeBaseList = ref([]);

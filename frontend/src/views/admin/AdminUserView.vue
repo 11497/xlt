@@ -3,7 +3,7 @@ import {onMounted, ref} from "vue";
 import {ElMessage, ElMessageBox} from "element-plus";
 import {InfoFilled, Delete, Plus, RefreshRight, Service} from "@element-plus/icons-vue";
 import {deleteUser, getAllUsers, resetPassword, setAdminStatus, updateUsername, userRegister} from "@/api/user.js";
-import UserRoleDialog from "@/views/admin/UserRoleDialog.vue";
+import UserRoleDialog from "@/views/admin/components/UserRoleDialog.vue";
 
 // 列表相关状态
 let userList = ref([]);

@@ -8,8 +8,8 @@ import {
   getAllKnowledgeBases,
   updateKnowledgeBase
 } from "@/api/knowledge_base.js";
-import DocumentDialog from "@/views/admin/DocumentDialog.vue";
-import KnowledgeBaseRoleDialog from "@/views/admin/KnowledgeBaseRoleDialog.vue";
+import DocumentDialog from "@/views/admin/components/DocumentDialog.vue";
+import KnowledgeBaseRoleDialog from "@/views/admin/components/KnowledgeBaseRoleDialog.vue";
 
 // 列表相关状态
 let knowledgeBaseList = ref([]);

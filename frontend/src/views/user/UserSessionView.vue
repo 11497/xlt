@@ -3,7 +3,7 @@ import {onMounted, ref} from "vue";
 import {deleteSession, pageGetUserSessions} from "@/api/session.js";
 import {ElMessage, ElMessageBox} from "element-plus";
 import {InfoFilled} from "@element-plus/icons-vue";
-import SessionMessageDialog from "@/views/user/SessionMessageDialog.vue";
+import SessionMessageDialog from "@/views/user/components/SessionMessageDialog.vue";
 
 let sessionList = ref([]);
 
