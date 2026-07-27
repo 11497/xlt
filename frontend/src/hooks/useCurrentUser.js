@@ -12,7 +12,7 @@ export function useCurrentUser() {
         // 如果本地没有登录凭证，直接跳转登录页
         const loginUser = localStorage.getItem('loginUser');
         if (!loginUser) {
-            await router.push('/');
+            await router.push('/login');
             return;
         }
 
@@ -25,11 +25,12 @@ export function useCurrentUser() {
                 ElMessage.error(result.msg || '获取用户信息失败');
                 // Token 过期或无效时清除本地存储并跳转登录
                 localStorage.removeItem('loginUser');
-                await router.push('/');
+                await router.push('/login');
             }
         } catch (error) {
-            console.error('获取用户信息异常:', error);
-            ElMessage.error('网络异常，请检查服务是否正常');
+            ElMessage.error('获取用户信息异常:', error);
+            localStorage.removeItem('loginUser');
+            await router.push('/login');
         } finally {
             loading.value = false;
         }

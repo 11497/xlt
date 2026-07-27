@@ -11,10 +11,16 @@ const request = axios.create({
 // axios的请求 request 拦截器 - 获取localStorage中的token, 在请求头中增加Authorization请求头
 request.interceptors.request.use(
     (config) => {
-        const loginUser = JSON.parse(localStorage.getItem('loginUser'))
-        if (loginUser) {
-            // 修改此处：使用标准的 Authorization 头，并添加 Bearer 前缀
-            config.headers.Authorization = `Bearer ${loginUser}`
+        try {
+            const loginUserStr = localStorage.getItem('loginUser')
+            if (loginUserStr) {
+                const loginUser = JSON.parse(loginUserStr)
+                if (loginUser) {
+                    config.headers.Authorization = `Bearer ${loginUser}`
+                }
+            }
+        } catch (e) {
+            localStorage.removeItem('loginUser')
         }
         return config
     },
@@ -29,9 +35,10 @@ request.interceptors.response.use(
         return response.data
     },
     (error) => { //失败回调
-        if (error.response.status === 401) {
+        if (error.response && error.response.status === 401) {
             ElMessage.error('登录超时，请重新登录')
-            router.push('/user/login')
+            localStorage.removeItem('loginUser')
+            router.push('/login')
         } else {
             ElMessage.error('接口访问异常')
         }
