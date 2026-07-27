@@ -1,7 +1,7 @@
 <script setup>
 import {onMounted, ref} from "vue";
 import {getAllAnnouncements} from "@/api/announcement.js";
-import {getAnnouncementAttachments, downloadAnnouncementAttachment} from "@/api/anouncement_attachment.js";
+import {getAnnouncementAttachments, downloadAnnouncementAttachment} from "@/api/announcement_attachment.js";
 import {ElMessage} from "element-plus";
 import {InfoFilled, Download} from "@element-plus/icons-vue";
 

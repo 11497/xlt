@@ -5,7 +5,7 @@ import {
   deleteAnnouncementAttachment,
   downloadAnnouncementAttachment,
   getAnnouncementAttachments, uploadAnnouncementAttachment
-} from "@/api/anouncement_attachment.js";
+} from "@/api/announcement_attachment.js";
 import {ElMessage, ElMessageBox} from "element-plus";
 import {InfoFilled, Download, Delete, Plus} from "@element-plus/icons-vue";
 

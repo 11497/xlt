@@ -2,7 +2,7 @@
 import { onMounted, ref, reactive, onUnmounted, computed } from 'vue';
 import { useCurrentUser } from "@/hooks/useCurrentUser.js";
 import { getAllAnnouncements } from "@/api/announcement.js";
-import { getAnnouncementAttachments, downloadAnnouncementAttachment } from "@/api/anouncement_attachment.js";
+import { getAnnouncementAttachments, downloadAnnouncementAttachment } from "@/api/announcement_attachment.js";
 import { ElMessage } from 'element-plus';
 import {updatePassword} from "@/api/user.js";
 import { Download, Bell, ArrowRight, ArrowLeft } from "@element-plus/icons-vue";
