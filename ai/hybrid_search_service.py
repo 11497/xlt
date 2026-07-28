@@ -1,6 +1,7 @@
 from typing import List, Dict, Any, Tuple
 
 from ai.chroma_service import ChromaService
+from chromadb.api.types import QueryResult
 from config.ai_config import TOPK, TOPN
 from ai.embedding import EmbeddingService
 from ai.es_service import ESService
@@ -8,7 +9,7 @@ from ai.rerank_service import RerankService
 
 
 def _merge_results(
-        vector_results: dict,
+        vector_results: QueryResult,
         bm25_results: List[Dict[str, Any]]
 ) -> List[Dict[str, Any]]:
     """
@@ -140,4 +141,3 @@ class HybridSearchService:
         print("=" * 50)
 
         return final_results
-

@@ -2,6 +2,7 @@ from typing import List
 
 import chromadb
 from chromadb.config import Settings
+from chromadb.api.types import QueryResult
 
 from config.ai_config import TOPK
 
@@ -79,7 +80,7 @@ class ChromaService:
         knowledge_base_id: int,
         query_embedding: List[float],
         n_results: int = TOPK
-    ) -> dict:
+    ) -> QueryResult:
         """
         在指定知识库中查询相似向量
         :param knowledge_base_id: 知识库ID
