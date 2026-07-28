@@ -79,8 +79,7 @@ class HybridSearchService:
         """
         recall_top_k = int(top_k * recall_multiplier)
 
-        # === Step 1: 并行双路召回 ===
-        # 在实际生产环境中，建议使用 asyncio.gather 或 ThreadPoolExecutor 并行执行
+        # Step 1: 并行双路召回
         # 这里为了代码清晰使用串行
 
         # 1.1 向量检索
@@ -100,13 +99,13 @@ class HybridSearchService:
         )
         print("bm25_results:", bm25_results)
 
-        # === Step 2: 结果融合与去重 ===
+        # Step 2: 结果融合与去重
         merged_docs = _merge_results(vector_results, bm25_results)
 
         if not merged_docs:
             return []
 
-        # === Step 3: Rerank 精排 ===
+        # Step 3: Rerank 精排
         doc_contents = [doc["content"] for doc in merged_docs]
         reranked_results: List[Tuple[str, float]] = self.rerank_service.rerank(
             query=query,
@@ -115,7 +114,7 @@ class HybridSearchService:
         )
         print("reranked_results:", reranked_results)
 
-        # === Step 4: 映射回原始文档信息 ===
+        # Step 4: 映射回原始文档信息
         # 构建 content -> doc 的映射（注意：如果有完全重复的内容可能会丢失，建议用id映射）
         content_to_doc = {doc["content"]: doc for doc in merged_docs}
 

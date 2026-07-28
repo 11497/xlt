@@ -100,7 +100,7 @@ class IngestionService:
         if self.es_service.client.indices.exists(index=index_name):
             self.es_service.client.delete_by_query(
                 index=index_name,
-                body={"query": {"term": {"doc_id": str(document_id)}}}
+                query={"term": {"doc_id": str(document_id)}}
             )
         print(f"[Delete] doc={document_id} removed from both stores")
 

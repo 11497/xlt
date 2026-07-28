@@ -12,26 +12,24 @@ class ESService:
     def create_index(self, kb_id: int):
         """创建支持中文BM25的索引"""
         index_name = f"kb_{kb_id}"
-        body = {
-            "settings": {
-                "analysis": {
-                    "analyzer": {
-                        "ik_analyzer": {"type": "custom", "tokenizer": "ik_max_word"}
-                    }
-                }
-            },
-            "mappings": {
-                "properties": {
-                    "content": {"type": "text", "analyzer": "ik_analyzer"},
-                    "doc_id": {"type": "keyword"},
-                    "chunk_index": {"type": "integer"},
-                    # 新增：冗余存储knowledge_base_id方便过滤
-                    "knowledge_base_id": {"type": "keyword"} 
+        settings = {
+            "analysis": {
+                "analyzer": {
+                    "ik_analyzer": {"type": "custom", "tokenizer": "ik_max_word"}
                 }
             }
         }
+        mappings = {
+            "properties": {
+                "content": {"type": "text", "analyzer": "ik_analyzer"},
+                "doc_id": {"type": "keyword"},
+                "chunk_index": {"type": "integer"},
+                # 新增：冗余存储knowledge_base_id方便过滤
+                "knowledge_base_id": {"type": "keyword"} 
+            }
+        }
         if not self.client.indices.exists(index=index_name):
-            self.client.indices.create(index=index_name, body=body)
+            self.client.indices.create(index=index_name, settings=settings, mappings=mappings)
 
     def add_documents(self, kb_id: int, chunks: List[Dict[str, Any]]):
         """批量写入文档切片"""
@@ -48,10 +46,8 @@ class ESService:
         """
         resp = self.client.search(
             index=f"kb_{kb_id}",
-            body={
-                "query": {"match": {"content": query}}, 
-                "size": top_k
-            },
+            query={"match": {"content": query}},
+            size=top_k,
         )
         results = []
         for h in resp["hits"]["hits"]:
