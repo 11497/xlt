@@ -1,8 +1,35 @@
-.venv
-.idea
-chroma_db
-__pycache__
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# IDE
+.idea/
+.vscode/
+
+# Local/generated data
+chroma_db/
+
+# Logs
+*.log
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Frontend dependency manifests are kept ignored here for compatibility;
+# frontend/.gitignore explicitly re-includes the real project files.
 node_modules
 package-lock.json
 package.json
-.env
+
+# OS
+.DS_Store
+Thumbs.db

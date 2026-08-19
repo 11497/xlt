@@ -12,8 +12,17 @@ node_modules
 .DS_Store
 dist
 dist-ssr
+.vite/
 coverage
 *.local
+
+# Environment files
+.env*
+!.env.example
+
+# Keep dependency manifests tracked despite the root compatibility rules.
+!package.json
+!package-lock.json
 
 # Editor directories and files
 .vscode/*
