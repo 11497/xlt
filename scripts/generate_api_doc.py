@@ -192,7 +192,7 @@ def build_markdown(openapi_schema: dict[str, Any]) -> str:
         "",
         f"OpenAPI 版本：`{openapi_schema.get('openapi', '')}`",
         "",
-        "本文档由 `doc/generate_api_doc.py` 自动生成，请勿手动编辑。",
+        "本文档由 `scripts/generate_api_doc.py` 自动生成，请勿手动编辑。",
         "",
         "## 接口列表",
         "",
