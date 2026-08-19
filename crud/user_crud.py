@@ -12,9 +12,9 @@ class UserCRUD:
         :param user: 用户对象
         :return: 新插入记录的 id
         """
-        sql = "INSERT INTO user (username, password) VALUES (%s, %s)"
+        sql = "INSERT INTO user (username, password, is_admin) VALUES (%s, %s, %s)"
         with get_cursor() as cursor:
-            cursor.execute(sql, (user.username, user.password))
+            cursor.execute(sql, (user.username, user.password, user.is_admin))
             return cursor.lastrowid
 
     @staticmethod
