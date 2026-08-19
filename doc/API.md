@@ -1,0 +1,2410 @@
+# FastAPI
+
+OpenAPI 版本：`3.1.0`
+
+本文档由 `doc/generate_api_doc.py` 自动生成，请勿手动编辑。
+
+## 接口列表
+
+### 1. 未分类
+
+#### 1.1 `GET` /
+
+Root
+
+##### 响应
+
+| 状态码 | 说明 | 数据模型 |
+| --- | --- | --- |
+| 200 | Successful Response | object |
+
+### 2. authentication
+
+#### 2.1 `POST` /api/auth
+
+Auth
+
+Swagger 认证接口
+
+##### 请求体
+
+| 内容类型 | 请求体必填 | 字段 | 字段必填 | 类型 | 约束 / 说明 |
+| --- | --- | --- | --- | --- | --- |
+| `application/x-www-form-urlencoded` | 是 | `grant_type` | 否 | string \| null |  |
+| `application/x-www-form-urlencoded` | 是 | `username` | 是 | string |  |
+| `application/x-www-form-urlencoded` | 是 | `password` | 是 | string |  |
+| `application/x-www-form-urlencoded` | 是 | `scope` | 否 | string | default= |
+| `application/x-www-form-urlencoded` | 是 | `client_id` | 否 | string \| null |  |
+| `application/x-www-form-urlencoded` | 是 | `client_secret` | 否 | string \| null |  |
+
+##### 响应
+
+| 状态码 | 说明 | 数据模型 |
+| --- | --- | --- |
+| 200 | Successful Response | object |
+| 422 | Validation Error | HTTPValidationError |
+
+### 3. user
+
+#### 3.1 `POST` /api/user/register
+
+Register
+
+用户注册
+
+##### 参数说明
+
+| 参数 | 说明 |
+| --- | --- |
+| `user` | 用户对象 |
+
+##### 返回说明
+
+| 返回值 | 说明 |
+| --- | --- |
+| `data` | 注册结果 |
+
+##### 请求体
+
+| 内容类型 | 请求体必填 | 字段 | 字段必填 | 类型 | 约束 / 说明 |
+| --- | --- | --- | --- | --- | --- |
+| `application/json` | 是 | `username` | 是 | string | minLength=4, maxLength=15 |
+| `application/json` | 是 | `password` | 是 | string | minLength=6, maxLength=20 |
+| `application/json` | 是 | `is_admin` | 否 | integer | minimum=0.0, maximum=1.0, default=0 |
+| `application/json` | 是 | `id` | 否 | integer \| null |  |
+
+##### 响应
+
+| 状态码 | 说明 | 数据模型 |
+| --- | --- | --- |
+| 200 | Successful Response | object |
+| 422 | Validation Error | HTTPValidationError |
+
+#### 3.2 `POST` /api/user/login
+
+Login
+
+用户登录
+
+##### 参数说明
+
+| 参数 | 说明 |
+| --- | --- |
+| `user` | 用户对象 |
+
+##### 返回说明
+
+| 返回值 | 说明 |
+| --- | --- |
+| `data` | 登录成功后的 JWT 令牌 |
+
+##### 请求体
+
+| 内容类型 | 请求体必填 | 字段 | 字段必填 | 类型 | 约束 / 说明 |
+| --- | --- | --- | --- | --- | --- |
+| `application/json` | 是 | `username` | 是 | string | minLength=4, maxLength=15 |
+| `application/json` | 是 | `password` | 是 | string | minLength=6, maxLength=20 |
+| `application/json` | 是 | `is_admin` | 否 | integer | minimum=0.0, maximum=1.0, default=0 |
+| `application/json` | 是 | `id` | 否 | integer \| null |  |
+
+##### 响应
+
+| 状态码 | 说明 | 数据模型 |
+| --- | --- | --- |
+| 200 | Successful Response | object |
+| 422 | Validation Error | HTTPValidationError |
+
+#### 3.3 `GET` /api/user/all
+
+Get All User
+
+分页查询所有用户信息（管理员）
+
+##### 参数说明
+
+| 参数 | 说明 |
+| --- | --- |
+| `page` | 页码，默认1 |
+| `page_size` | 每页条数，默认10，最大100 |
+| `_admin` | 管理员用户对象 |
+
+##### 返回说明
+
+| 返回值 | 说明 |
+| --- | --- |
+| `data` | 分页用户列表及总数 |
+
+##### 参数
+
+| 名称 | 位置 | 必填 | 类型 | 说明 |
+| --- | --- | --- | --- | --- |
+| `page` | query | 否 | integer | 页码 |
+| `page_size` | query | 否 | integer | 每页条数 |
+
+##### 响应
+
+| 状态码 | 说明 | 数据模型 |
+| --- | --- | --- |
+| 200 | Successful Response | object |
+| 422 | Validation Error | HTTPValidationError |
+
+#### 3.4 `GET` /api/user
+
+Get User
+
+查询当前用户信息
+
+##### 参数说明
+
+| 参数 | 说明 |
+| --- | --- |
+| `user` | 当前用户对象 |
+
+##### 返回说明
+
+| 返回值 | 说明 |
+| --- | --- |
+| `data` | 用户信息 |
+
+##### 响应
+
+| 状态码 | 说明 | 数据模型 |
+| --- | --- | --- |
+| 200 | Successful Response | object |
+
+#### 3.5 `PUT` /api/user/username
+
+Update Username
+
+管理员更新用户名
+
+##### 参数说明
+
+| 参数 | 说明 |
+| --- | --- |
+| `id` | 用户ID |
+| `username` | 新用户名 |
+| `_admin` | 管理员用户对象 |
+
+##### 返回说明
+
+| 返回值 | 说明 |
+| --- | --- |
+| `data` | 更新结果 |
+
+##### 请求体
+
+| 内容类型 | 请求体必填 | 字段 | 字段必填 | 类型 | 约束 / 说明 |
+| --- | --- | --- | --- | --- | --- |
+| `application/json` | 是 | `id` | 是 | integer |  |
+| `application/json` | 是 | `username` | 是 | string | minLength=4, maxLength=15 |
+
+##### 响应
+
+| 状态码 | 说明 | 数据模型 |
+| --- | --- | --- |
+| 200 | Successful Response | object |
+| 422 | Validation Error | HTTPValidationError |
+
+#### 3.6 `DELETE` /api/user/{id}
+
+Delete User
+
+管理员删除用户
+
+##### 参数说明
+
+| 参数 | 说明 |
+| --- | --- |
+| `id` | 用户ID |
+| `_admin` | 管理员用户对象 |
+
+##### 返回说明
+
+| 返回值 | 说明 |
+| --- | --- |
+| `data` | 删除结果 |
+
+##### 参数
+
+| 名称 | 位置 | 必填 | 类型 | 说明 |
+| --- | --- | --- | --- | --- |
+| `id` | path | 是 | integer |  |
+
+##### 响应
+
+| 状态码 | 说明 | 数据模型 |
+| --- | --- | --- |
+| 200 | Successful Response | object |
+| 422 | Validation Error | HTTPValidationError |
+
+#### 3.7 `PUT` /api/user/password
+
+Update Password
+
+用户更新密码
+
+##### 参数说明
+
+| 参数 | 说明 |
+| --- | --- |
+| `old_password` | 旧密码 |
+| `new_password` | 新密码 |
+| `user` | 当前用户对象 |
+
+##### 返回说明
+
+| 返回值 | 说明 |
+| --- | --- |
+| `data` | 更新结果 |
+
+##### 请求体
+
+| 内容类型 | 请求体必填 | 字段 | 字段必填 | 类型 | 约束 / 说明 |
+| --- | --- | --- | --- | --- | --- |
+| `application/json` | 是 | `oldPassword` | 是 | string |  |
+| `application/json` | 是 | `newPassword` | 是 | string | minLength=6, maxLength=20 |
+
+##### 响应
+
+| 状态码 | 说明 | 数据模型 |
+| --- | --- | --- |
+| 200 | Successful Response | object |
+| 422 | Validation Error | HTTPValidationError |
+
+#### 3.8 `PUT` /api/user/reset_password/{id}
+
+Reset Password
+
+管理员重置用户密码
+
+##### 参数说明
+
+| 参数 | 说明 |
+| --- | --- |
+| `id` | 用户ID |
+| `_admin` | 管理员用户对象 |
+
+##### 返回说明
+
+| 返回值 | 说明 |
+| --- | --- |
+| `data` | 更新结果 |
+
+##### 参数
+
+| 名称 | 位置 | 必填 | 类型 | 说明 |
+| --- | --- | --- | --- | --- |
+| `id` | path | 是 | integer |  |
+
+##### 响应
+
+| 状态码 | 说明 | 数据模型 |
+| --- | --- | --- |
+| 200 | Successful Response | object |
+| 422 | Validation Error | HTTPValidationError |
+
+#### 3.9 `PUT` /api/user/admin-status
+
+Set User Admin Status
+
+管理员设置用户权限
+
+##### 参数说明
+
+| 参数 | 说明 |
+| --- | --- |
+| `id` | 用户ID |
+| `is_admin` | 管理员状态值（0：普通用户，1：管理员） |
+| `admin` | 管理员用户对象 |
+
+##### 返回说明
+
+| 返回值 | 说明 |
+| --- | --- |
+| `data` | 更新结果 |
+
+##### 请求体
+
+| 内容类型 | 请求体必填 | 字段 | 字段必填 | 类型 | 约束 / 说明 |
+| --- | --- | --- | --- | --- | --- |
+| `application/json` | 是 | `id` | 是 | integer |  |
+| `application/json` | 是 | `isAdmin` | 是 | integer |  |
+
+##### 响应
+
+| 状态码 | 说明 | 数据模型 |
+| --- | --- | --- |
+| 200 | Successful Response | object |
+| 422 | Validation Error | HTTPValidationError |
+
+#### 3.10 `GET` /api/user/search/{content}
+
+Search User
+
+管理员根据用户名或ID查询用户
+
+##### 参数说明
+
+| 参数 | 说明 |
+| --- | --- |
+| `content` | 搜索内容 |
+| `_admin` | 管理员用户对象 |
+
+##### 返回说明
+
+| 返回值 | 说明 |
+| --- | --- |
+| `data` | 用户列表 |
+
+##### 参数
+
+| 名称 | 位置 | 必填 | 类型 | 说明 |
+| --- | --- | --- | --- | --- |
+| `content` | path | 是 | string |  |
+
+##### 响应
+
+| 状态码 | 说明 | 数据模型 |
+| --- | --- | --- |
+| 200 | Successful Response | object |
+| 422 | Validation Error | HTTPValidationError |
+
+### 4. role
+
+#### 4.1 `POST` /api/role
+
+Create Role
+
+创建角色
+
+##### 参数说明
+
+| 参数 | 说明 |
+| --- | --- |
+| `role` | 角色对象 |
+| `_admin` | 管理员用户对象 |
+
+##### 返回说明
+
+| 返回值 | 说明 |
+| --- | --- |
+| `data` | 创建结果 |
+
+##### 请求体
+
+| 内容类型 | 请求体必填 | 字段 | 字段必填 | 类型 | 约束 / 说明 |
+| --- | --- | --- | --- | --- | --- |
+| `application/json` | 是 | `name` | 是 | string |  |
+| `application/json` | 是 | `id` | 否 | integer \| null |  |
+
+##### 响应
+
+| 状态码 | 说明 | 数据模型 |
+| --- | --- | --- |
+| 200 | Successful Response | object |
+| 422 | Validation Error | HTTPValidationError |
+
+#### 4.2 `PUT` /api/role
+
+Update
+
+更新角色名
+
+##### 参数说明
+
+| 参数 | 说明 |
+| --- | --- |
+| `role` | 角色对象 |
+| `_admin` | 管理员用户对象 |
+
+##### 返回说明
+
+| 返回值 | 说明 |
+| --- | --- |
+| `data` | 更新结果 |
+
+##### 请求体
+
+| 内容类型 | 请求体必填 | 字段 | 字段必填 | 类型 | 约束 / 说明 |
+| --- | --- | --- | --- | --- | --- |
+| `application/json` | 是 | `name` | 是 | string |  |
+| `application/json` | 是 | `id` | 否 | integer \| null |  |
+
+##### 响应
+
+| 状态码 | 说明 | 数据模型 |
+| --- | --- | --- |
+| 200 | Successful Response | object |
+| 422 | Validation Error | HTTPValidationError |
+
+#### 4.3 `DELETE` /api/role
+
+Delete
+
+删除角色
+
+##### 参数说明
+
+| 参数 | 说明 |
+| --- | --- |
+| `id` | 角色ID |
+| `_admin` | 管理员用户对象 |
+
+##### 返回说明
+
+| 返回值 | 说明 |
+| --- | --- |
+| `data` | 删除结果 |
+
+##### 参数
+
+| 名称 | 位置 | 必填 | 类型 | 说明 |
+| --- | --- | --- | --- | --- |
+| `id` | query | 是 | integer |  |
+
+##### 响应
+
+| 状态码 | 说明 | 数据模型 |
+| --- | --- | --- |
+| 200 | Successful Response | object |
+| 422 | Validation Error | HTTPValidationError |
+
+#### 4.4 `GET` /api/role/all
+
+Get All Role
+
+分页查询所有角色
+
+##### 参数说明
+
+| 参数 | 说明 |
+| --- | --- |
+| `_admin` | 管理员用户对象 |
+| `page` | 页码，默认1 |
+| `page_size` | 每页条数，默认10，最大100 |
+
+##### 返回说明
+
+| 返回值 | 说明 |
+| --- | --- |
+| `data` | 分页角色列表及总数 |
+
+##### 参数
+
+| 名称 | 位置 | 必填 | 类型 | 说明 |
+| --- | --- | --- | --- | --- |
+| `page` | query | 否 | integer | 页码 |
+| `page_size` | query | 否 | integer | 每页条数 |
+
+##### 响应
+
+| 状态码 | 说明 | 数据模型 |
+| --- | --- | --- |
+| 200 | Successful Response | object |
+| 422 | Validation Error | HTTPValidationError |
+
+#### 4.5 `GET` /api/role/name/{role_name}
+
+Get By Name
+
+根据角色名查询角色
+
+##### 参数说明
+
+| 参数 | 说明 |
+| --- | --- |
+| `role_name` | 角色名 |
+| `_admin` | 管理员用户对象 |
+
+##### 返回说明
+
+| 返回值 | 说明 |
+| --- | --- |
+| `data` | 角色对象 |
+
+##### 参数
+
+| 名称 | 位置 | 必填 | 类型 | 说明 |
+| --- | --- | --- | --- | --- |
+| `role_name` | path | 是 | string |  |
+
+##### 响应
+
+| 状态码 | 说明 | 数据模型 |
+| --- | --- | --- |
+| 200 | Successful Response | object |
+| 422 | Validation Error | HTTPValidationError |
+
+#### 4.6 `GET` /api/role/id/{role_id}
+
+Get By Id
+
+根据角色ID查询角色
+
+##### 参数说明
+
+| 参数 | 说明 |
+| --- | --- |
+| `role_id` | 角色ID |
+| `user` | 用户对象 |
+
+##### 返回说明
+
+| 返回值 | 说明 |
+| --- | --- |
+| `data` | 角色对象 |
+
+##### 参数
+
+| 名称 | 位置 | 必填 | 类型 | 说明 |
+| --- | --- | --- | --- | --- |
+| `role_id` | path | 是 | integer |  |
+
+##### 响应
+
+| 状态码 | 说明 | 数据模型 |
+| --- | --- | --- |
+| 200 | Successful Response | object |
+| 422 | Validation Error | HTTPValidationError |
+
+#### 4.7 `GET` /api/role/search/{content}
+
+Search Role
+
+搜索角色
+
+##### 参数说明
+
+| 参数 | 说明 |
+| --- | --- |
+| `content` | 搜索内容（角色名或ID） |
+| `_admin` | 管理员用户对象 |
+
+##### 返回说明
+
+| 返回值 | 说明 |
+| --- | --- |
+| `data` | 角色对象列表 |
+
+##### 参数
+
+| 名称 | 位置 | 必填 | 类型 | 说明 |
+| --- | --- | --- | --- | --- |
+| `content` | path | 是 | string |  |
+
+##### 响应
+
+| 状态码 | 说明 | 数据模型 |
+| --- | --- | --- |
+| 200 | Successful Response | object |
+| 422 | Validation Error | HTTPValidationError |
+
+### 5. role_user
+
+#### 5.1 `POST` /api/role_user/assign
+
+Batch Assign Users To Role
+
+批量为角色分配用户
+
+##### 参数说明
+
+| 参数 | 说明 |
+| --- | --- |
+| `role_id` | 角色ID |
+| `user_ids` | 用户ID列表 |
+| `_admin` | 管理员用户对象 |
+
+##### 返回说明
+
+| 返回值 | 说明 |
+| --- | --- |
+| `data` | 分配结果 |
+
+##### 请求体
+
+| 内容类型 | 请求体必填 | 字段 | 字段必填 | 类型 | 约束 / 说明 |
+| --- | --- | --- | --- | --- | --- |
+| `application/json` | 是 | `role_id` | 是 | integer |  |
+| `application/json` | 是 | `user_ids` | 是 | 数组<integer> |  |
+
+##### 响应
+
+| 状态码 | 说明 | 数据模型 |
+| --- | --- | --- |
+| 200 | Successful Response | object |
+| 422 | Validation Error | HTTPValidationError |
+
+#### 5.2 `GET` /api/role_user/role/{role_id}/users
+
+Get Users By Role
+
+按角色分页查询关联的用户
+
+##### 参数说明
+
+| 参数 | 说明 |
+| --- | --- |
+| `role_id` | 角色ID |
+| `page` | 页码，默认1 |
+| `page_size` | 每页条数，默认10，最大100 |
+| `_admin` | 管理员用户对象 |
+
+##### 参数
+
+| 名称 | 位置 | 必填 | 类型 | 说明 |
+| --- | --- | --- | --- | --- |
+| `role_id` | path | 是 | integer |  |
+| `page` | query | 否 | integer | 页码 |
+| `page_size` | query | 否 | integer | 每页条数 |
+
+##### 响应
+
+| 状态码 | 说明 | 数据模型 |
+| --- | --- | --- |
+| 200 | Successful Response | object |
+| 422 | Validation Error | HTTPValidationError |
+
+#### 5.3 `GET` /api/role_user/user/{user_id}/roles
+
+Get Roles By User
+
+按用户分页查询关联的角色
+
+##### 参数说明
+
+| 参数 | 说明 |
+| --- | --- |
+| `user_id` | 用户ID |
+| `page` | 页码，默认1 |
+| `page_size` | 每页条数，默认10，最大100 |
+| `user` | 当前用户对象 |
+
+##### 参数
+
+| 名称 | 位置 | 必填 | 类型 | 说明 |
+| --- | --- | --- | --- | --- |
+| `user_id` | path | 是 | integer |  |
+| `page` | query | 否 | integer | 页码 |
+| `page_size` | query | 否 | integer | 每页条数 |
+
+##### 响应
+
+| 状态码 | 说明 | 数据模型 |
+| --- | --- | --- |
+| 200 | Successful Response | object |
+| 422 | Validation Error | HTTPValidationError |
+
+#### 5.4 `GET` /api/role_user/my_roles
+
+Get My Roles
+
+获取当前用户的所有角色ID（普通用户）
+
+##### 参数说明
+
+| 参数 | 说明 |
+| --- | --- |
+| `current_user` | 当前用户对象 |
+
+##### 返回说明
+
+| 返回值 | 说明 |
+| --- | --- |
+| `data` | 角色ID列表 |
+
+##### 响应
+
+| 状态码 | 说明 | 数据模型 |
+| --- | --- | --- |
+| 200 | Successful Response | object |
+
+#### 5.5 `POST` /api/role_user/assign_single
+
+Assign User To Role
+
+分配单个用户到指定角色
+
+##### 参数说明
+
+| 参数 | 说明 |
+| --- | --- |
+| `role_id` | 角色ID |
+| `user_id` | 用户ID |
+| `_admin` | 管理员用户对象 |
+
+##### 返回说明
+
+| 返回值 | 说明 |
+| --- | --- |
+| `data` | 分配结果 |
+
+##### 请求体
+
+| 内容类型 | 请求体必填 | 字段 | 字段必填 | 类型 | 约束 / 说明 |
+| --- | --- | --- | --- | --- | --- |
+| `application/json` | 是 | `role_id` | 是 | integer |  |
+| `application/json` | 是 | `user_id` | 是 | integer |  |
+
+##### 响应
+
+| 状态码 | 说明 | 数据模型 |
+| --- | --- | --- |
+| 200 | Successful Response | object |
+| 422 | Validation Error | HTTPValidationError |
+
+#### 5.6 `DELETE` /api/role_user/remove_single
+
+Remove User From Role
+
+从指定角色中移除单个用户
+
+##### 参数说明
+
+| 参数 | 说明 |
+| --- | --- |
+| `role_id` | 角色ID |
+| `user_id` | 用户ID |
+| `_admin` | 管理员用户对象 |
+
+##### 返回说明
+
+| 返回值 | 说明 |
+| --- | --- |
+| `data` | 移除结果 |
+
+##### 请求体
+
+| 内容类型 | 请求体必填 | 字段 | 字段必填 | 类型 | 约束 / 说明 |
+| --- | --- | --- | --- | --- | --- |
+| `application/json` | 是 | `role_id` | 是 | integer |  |
+| `application/json` | 是 | `user_id` | 是 | integer |  |
+
+##### 响应
+
+| 状态码 | 说明 | 数据模型 |
+| --- | --- | --- |
+| 200 | Successful Response | object |
+| 422 | Validation Error | HTTPValidationError |
+
+#### 5.7 `DELETE` /api/role_user/by_role/{role_id}
+
+Delete By Role
+
+删除指定角色的所有用户关联关系
+
+##### 参数说明
+
+| 参数 | 说明 |
+| --- | --- |
+| `role_id` | 角色ID |
+| `_admin` | 管理员用户对象 |
+
+##### 返回说明
+
+| 返回值 | 说明 |
+| --- | --- |
+| `data` | 删除结果 |
+
+##### 参数
+
+| 名称 | 位置 | 必填 | 类型 | 说明 |
+| --- | --- | --- | --- | --- |
+| `role_id` | path | 是 | integer |  |
+
+##### 响应
+
+| 状态码 | 说明 | 数据模型 |
+| --- | --- | --- |
+| 200 | Successful Response | object |
+| 422 | Validation Error | HTTPValidationError |
+
+#### 5.8 `DELETE` /api/role_user/by_user/{user_id}
+
+Delete By User
+
+删除指定用户的所有角色关联关系
+
+##### 参数说明
+
+| 参数 | 说明 |
+| --- | --- |
+| `user_id` | 用户ID |
+| `_admin` | 管理员用户对象 |
+
+##### 返回说明
+
+| 返回值 | 说明 |
+| --- | --- |
+| `data` | 删除结果 |
+
+##### 参数
+
+| 名称 | 位置 | 必填 | 类型 | 说明 |
+| --- | --- | --- | --- | --- |
+| `user_id` | path | 是 | integer |  |
+
+##### 响应
+
+| 状态码 | 说明 | 数据模型 |
+| --- | --- | --- |
+| 200 | Successful Response | object |
+| 422 | Validation Error | HTTPValidationError |
+
+### 6. knowledge_base
+
+#### 6.1 `POST` /api/knowledge_base
+
+Create Knowledge Base
+
+创建知识库
+
+##### 参数说明
+
+| 参数 | 说明 |
+| --- | --- |
+| `knowledge_base` | 知识库对象 |
+| `_admin` | 管理员用户对象 |
+
+##### 返回说明
+
+| 返回值 | 说明 |
+| --- | --- |
+| `data` | 创建结果和新知识库对象 |
+
+##### 请求体
+
+| 内容类型 | 请求体必填 | 字段 | 字段必填 | 类型 | 约束 / 说明 |
+| --- | --- | --- | --- | --- | --- |
+| `application/json` | 是 | `name` | 是 | string |  |
+| `application/json` | 是 | `id` | 否 | integer \| null |  |
+
+##### 响应
+
+| 状态码 | 说明 | 数据模型 |
+| --- | --- | --- |
+| 200 | Successful Response | object |
+| 422 | Validation Error | HTTPValidationError |
+
+#### 6.2 `PUT` /api/knowledge_base
+
+Update Knowledge Base
+
+更新知识库
+
+##### 参数说明
+
+| 参数 | 说明 |
+| --- | --- |
+| `knowledge_base` | 知识库对象 |
+| `_admin` | 管理员用户对象 |
+
+##### 返回说明
+
+| 返回值 | 说明 |
+| --- | --- |
+| `data` | 更新结果 |
+
+##### 请求体
+
+| 内容类型 | 请求体必填 | 字段 | 字段必填 | 类型 | 约束 / 说明 |
+| --- | --- | --- | --- | --- | --- |
+| `application/json` | 是 | `name` | 是 | string |  |
+| `application/json` | 是 | `id` | 否 | integer \| null |  |
+
+##### 响应
+
+| 状态码 | 说明 | 数据模型 |
+| --- | --- | --- |
+| 200 | Successful Response | object |
+| 422 | Validation Error | HTTPValidationError |
+
+#### 6.3 `DELETE` /api/knowledge_base
+
+Delete Knowledge Base
+
+删除知识库
+
+##### 参数说明
+
+| 参数 | 说明 |
+| --- | --- |
+| `id` | 知识库ID |
+| `_admin` | 管理员用户对象 |
+
+##### 返回说明
+
+| 返回值 | 说明 |
+| --- | --- |
+| `data` | 删除结果 |
+
+##### 参数
+
+| 名称 | 位置 | 必填 | 类型 | 说明 |
+| --- | --- | --- | --- | --- |
+| `id` | query | 是 | integer |  |
+
+##### 响应
+
+| 状态码 | 说明 | 数据模型 |
+| --- | --- | --- |
+| 200 | Successful Response | object |
+| 422 | Validation Error | HTTPValidationError |
+
+#### 6.4 `GET` /api/knowledge_base/all
+
+Get All Knowledge Bases
+
+分页查询所有知识库
+
+##### 参数说明
+
+| 参数 | 说明 |
+| --- | --- |
+| `page` | 页码，默认1 |
+| `page_size` | 每页条数，默认10，最大100 |
+| `_admin` | 管理员用户对象 |
+
+##### 返回说明
+
+| 返回值 | 说明 |
+| --- | --- |
+| `data` | 分页知识库列表及总数 |
+
+##### 参数
+
+| 名称 | 位置 | 必填 | 类型 | 说明 |
+| --- | --- | --- | --- | --- |
+| `page` | query | 否 | integer | 页码 |
+| `page_size` | query | 否 | integer | 每页条数 |
+
+##### 响应
+
+| 状态码 | 说明 | 数据模型 |
+| --- | --- | --- |
+| 200 | Successful Response | object |
+| 422 | Validation Error | HTTPValidationError |
+
+#### 6.5 `GET` /api/knowledge_base/search/{content}
+
+Search Knowledge Base
+
+管理员根据ID或名字查询知识库
+
+##### 参数说明
+
+| 参数 | 说明 |
+| --- | --- |
+| `content` | 查询内容 |
+| `_admin` | 管理员用户对象 |
+
+##### 返回说明
+
+| 返回值 | 说明 |
+| --- | --- |
+| `data` | 查询结果 |
+
+##### 参数
+
+| 名称 | 位置 | 必填 | 类型 | 说明 |
+| --- | --- | --- | --- | --- |
+| `content` | path | 是 | string |  |
+
+##### 响应
+
+| 状态码 | 说明 | 数据模型 |
+| --- | --- | --- |
+| 200 | Successful Response | object |
+| 422 | Validation Error | HTTPValidationError |
+
+#### 6.6 `GET` /api/knowledge_base/{id}
+
+Get By Id
+
+根据ID查询知识库
+
+##### 参数说明
+
+| 参数 | 说明 |
+| --- | --- |
+| `id` | 知识库ID |
+| `user` | 当前用户对象 |
+
+##### 返回说明
+
+| 返回值 | 说明 |
+| --- | --- |
+| `data` | 知识库对象 |
+
+##### 参数
+
+| 名称 | 位置 | 必填 | 类型 | 说明 |
+| --- | --- | --- | --- | --- |
+| `id` | path | 是 | integer |  |
+
+##### 响应
+
+| 状态码 | 说明 | 数据模型 |
+| --- | --- | --- |
+| 200 | Successful Response | object |
+| 422 | Validation Error | HTTPValidationError |
+
+### 7. role_knowledge_base
+
+#### 7.1 `POST` /api/role_knowledge_base/assign
+
+Batch Assign Role To Knowledge Base
+
+批量为知识库分配角色
+
+##### 参数说明
+
+| 参数 | 说明 |
+| --- | --- |
+| `knowledge_base_id` | 知识库ID |
+| `role_ids` | 角色ID列表 |
+| `_admin` | 管理员用户对象 |
+
+##### 返回说明
+
+| 返回值 | 说明 |
+| --- | --- |
+| `data` | 分配结果 |
+
+##### 参数
+
+| 名称 | 位置 | 必填 | 类型 | 说明 |
+| --- | --- | --- | --- | --- |
+| `knowledge_base_id` | path | 是 | integer |  |
+
+##### 请求体
+
+| 内容类型 | 请求体必填 | 字段 | 字段必填 | 类型 | 约束 / 说明 |
+| --- | --- | --- | --- | --- | --- |
+| `application/json` | 是 | - | - | 数组<integer> | - |
+
+##### 响应
+
+| 状态码 | 说明 | 数据模型 |
+| --- | --- | --- |
+| 200 | Successful Response | object |
+| 422 | Validation Error | HTTPValidationError |
+
+#### 7.2 `GET` /api/role_knowledge_base/role/{role_id}/knowledge_bases
+
+Get Knowledge Base By Role
+
+按角色分页查询关联的知识库
+
+##### 参数说明
+
+| 参数 | 说明 |
+| --- | --- |
+| `role_id` | 角色ID |
+| `page` | 页码，默认1 |
+| `page_size` | 每页条数，默认10，最大100 |
+| `_admin` | 管理员用户对象 |
+
+##### 返回说明
+
+| 返回值 | 说明 |
+| --- | --- |
+| `data` | 分页知识库列表及总数 |
+
+##### 参数
+
+| 名称 | 位置 | 必填 | 类型 | 说明 |
+| --- | --- | --- | --- | --- |
+| `role_id` | path | 是 | integer |  |
+| `page` | query | 否 | integer | 页码 |
+| `page_size` | query | 否 | integer | 每页条数 |
+
+##### 响应
+
+| 状态码 | 说明 | 数据模型 |
+| --- | --- | --- |
+| 200 | Successful Response | object |
+| 422 | Validation Error | HTTPValidationError |
+
+#### 7.3 `GET` /api/role_knowledge_base/knowledge_base/{knowledge_base_id}/roles
+
+Get Roles By Knowledge Base
+
+按知识库分页查询关联的角色
+
+##### 参数说明
+
+| 参数 | 说明 |
+| --- | --- |
+| `knowledge_base_id` | 知识库ID |
+| `page` | 页码，默认1 |
+| `page_size` | 每页条数，默认10，最大100 |
+| `_admin` | 管理员用户对象 |
+
+##### 返回说明
+
+| 返回值 | 说明 |
+| --- | --- |
+| `data` | 分页角色列表及总数 |
+
+##### 参数
+
+| 名称 | 位置 | 必填 | 类型 | 说明 |
+| --- | --- | --- | --- | --- |
+| `knowledge_base_id` | path | 是 | integer |  |
+| `page` | query | 否 | integer | 页码 |
+| `page_size` | query | 否 | integer | 每页条数 |
+
+##### 响应
+
+| 状态码 | 说明 | 数据模型 |
+| --- | --- | --- |
+| 200 | Successful Response | object |
+| 422 | Validation Error | HTTPValidationError |
+
+#### 7.4 `POST` /api/role_knowledge_base/assign_single
+
+Assign Knowledge Base To Role
+
+为指定角色分配知识库
+
+##### 参数说明
+
+| 参数 | 说明 |
+| --- | --- |
+| `role_id` | 角色ID |
+| `knowledge_base_id` | 知识库ID |
+| `_admin` | 管理员用户对象 |
+
+##### 返回说明
+
+| 返回值 | 说明 |
+| --- | --- |
+| `data` | 分配结果 |
+
+##### 参数
+
+| 名称 | 位置 | 必填 | 类型 | 说明 |
+| --- | --- | --- | --- | --- |
+| `role_id` | query | 是 | integer |  |
+| `knowledge_base_id` | query | 是 | integer |  |
+
+##### 响应
+
+| 状态码 | 说明 | 数据模型 |
+| --- | --- | --- |
+| 200 | Successful Response | object |
+| 422 | Validation Error | HTTPValidationError |
+
+#### 7.5 `DELETE` /api/role_knowledge_base/remove_single
+
+Remove Knowledge Base From Role
+
+从指定角色中移除单个知识库
+
+##### 参数说明
+
+| 参数 | 说明 |
+| --- | --- |
+| `role_id` | 角色ID |
+| `knowledge_base_id` | 知识库ID |
+| `_admin` | 管理员用户对象 |
+
+##### 返回说明
+
+| 返回值 | 说明 |
+| --- | --- |
+| `data` | 移除结果 |
+
+##### 参数
+
+| 名称 | 位置 | 必填 | 类型 | 说明 |
+| --- | --- | --- | --- | --- |
+| `role_id` | query | 是 | integer |  |
+| `knowledge_base_id` | query | 是 | integer |  |
+
+##### 响应
+
+| 状态码 | 说明 | 数据模型 |
+| --- | --- | --- |
+| 200 | Successful Response | object |
+| 422 | Validation Error | HTTPValidationError |
+
+#### 7.6 `DELETE` /api/role_knowledge_base/by_role/{role_id}
+
+Delete By Role
+
+删除指定角色的所有知识库关联关系
+
+##### 参数说明
+
+| 参数 | 说明 |
+| --- | --- |
+| `role_id` | 角色ID |
+| `_admin` | 管理员用户对象 |
+
+##### 返回说明
+
+| 返回值 | 说明 |
+| --- | --- |
+| `data` | 删除结果 |
+
+##### 参数
+
+| 名称 | 位置 | 必填 | 类型 | 说明 |
+| --- | --- | --- | --- | --- |
+| `role_id` | path | 是 | integer |  |
+
+##### 响应
+
+| 状态码 | 说明 | 数据模型 |
+| --- | --- | --- |
+| 200 | Successful Response | object |
+| 422 | Validation Error | HTTPValidationError |
+
+#### 7.7 `DELETE` /api/role_knowledge_base/by_knowledge_base/{knowledge_base_id}
+
+Delete By Knowledge Base
+
+删除指定知识库的所有角色关联关系
+
+##### 参数说明
+
+| 参数 | 说明 |
+| --- | --- |
+| `knowledge_base_id` | 知识库ID |
+| `_admin` | 管理员用户对象 |
+
+##### 返回说明
+
+| 返回值 | 说明 |
+| --- | --- |
+| `data` | 删除结果 |
+
+##### 参数
+
+| 名称 | 位置 | 必填 | 类型 | 说明 |
+| --- | --- | --- | --- | --- |
+| `knowledge_base_id` | path | 是 | integer |  |
+
+##### 响应
+
+| 状态码 | 说明 | 数据模型 |
+| --- | --- | --- |
+| 200 | Successful Response | object |
+| 422 | Validation Error | HTTPValidationError |
+
+### 8. session
+
+#### 8.1 `POST` /api/session
+
+Create Session
+
+创建会话，需要获取当前用户id作为session_id
+
+##### 参数说明
+
+| 参数 | 说明 |
+| --- | --- |
+| `session` | 会话对象 |
+| `user` | 当前用户对象 |
+
+##### 返回说明
+
+| 返回值 | 说明 |
+| --- | --- |
+| `data` | 会话对象 |
+
+##### 请求体
+
+| 内容类型 | 请求体必填 | 字段 | 字段必填 | 类型 | 约束 / 说明 |
+| --- | --- | --- | --- | --- | --- |
+| `application/json` | 是 | `user_id` | 是 | integer |  |
+| `application/json` | 是 | `name` | 是 | string |  |
+| `application/json` | 是 | `create_time` | 否 | string \| null |  |
+| `application/json` | 是 | `update_time` | 否 | string \| null |  |
+| `application/json` | 是 | `id` | 否 | integer \| null |  |
+
+##### 响应
+
+| 状态码 | 说明 | 数据模型 |
+| --- | --- | --- |
+| 200 | Successful Response | object |
+| 422 | Validation Error | HTTPValidationError |
+
+#### 8.2 `GET` /api/session/all
+
+Get All Session
+
+分页查询所有会话
+
+##### 参数说明
+
+| 参数 | 说明 |
+| --- | --- |
+| `page` | 页码，默认1 |
+| `page_size` | 每页条数，默认10，最大100 |
+| `_admin` | 管理员用户对象 |
+
+##### 返回说明
+
+| 返回值 | 说明 |
+| --- | --- |
+| `data` | 分页会话列表及总数 |
+
+##### 参数
+
+| 名称 | 位置 | 必填 | 类型 | 说明 |
+| --- | --- | --- | --- | --- |
+| `page` | query | 否 | integer | 页码 |
+| `page_size` | query | 否 | integer | 每页条数 |
+
+##### 响应
+
+| 状态码 | 说明 | 数据模型 |
+| --- | --- | --- |
+| 200 | Successful Response | object |
+| 422 | Validation Error | HTTPValidationError |
+
+#### 8.3 `GET` /api/session/user
+
+Get Sessions By User Id
+
+根据用户id获取会话列表
+
+##### 参数
+
+| 名称 | 位置 | 必填 | 类型 | 说明 |
+| --- | --- | --- | --- | --- |
+| `user_id` | query | 是 | integer |  |
+
+##### 响应
+
+| 状态码 | 说明 | 数据模型 |
+| --- | --- | --- |
+| 200 | Successful Response | object |
+| 422 | Validation Error | HTTPValidationError |
+
+#### 8.4 `GET` /api/session/user/page
+
+Get User Session Page
+
+分页查询当前用户的会话
+
+##### 参数说明
+
+| 参数 | 说明 |
+| --- | --- |
+| `page` | 页码，默认1 |
+| `page_size` | 每页条数，默认10，最大100 |
+| `user` | 当前用户对象 |
+
+##### 返回说明
+
+| 返回值 | 说明 |
+| --- | --- |
+| `data` | 分页会话列表及总数 |
+
+##### 参数
+
+| 名称 | 位置 | 必填 | 类型 | 说明 |
+| --- | --- | --- | --- | --- |
+| `page` | query | 否 | integer | 页码 |
+| `page_size` | query | 否 | integer | 每页条数 |
+
+##### 响应
+
+| 状态码 | 说明 | 数据模型 |
+| --- | --- | --- |
+| 200 | Successful Response | object |
+| 422 | Validation Error | HTTPValidationError |
+
+#### 8.5 `GET` /api/session/{session_id}
+
+Get Session
+
+根据id查询单个会话
+
+##### 参数说明
+
+| 参数 | 说明 |
+| --- | --- |
+| `session_id` | 会话ID |
+| `user` | 当前用户对象 |
+
+##### 返回说明
+
+| 返回值 | 说明 |
+| --- | --- |
+| `data` | 会话对象 |
+
+##### 参数
+
+| 名称 | 位置 | 必填 | 类型 | 说明 |
+| --- | --- | --- | --- | --- |
+| `session_id` | path | 是 | integer |  |
+
+##### 响应
+
+| 状态码 | 说明 | 数据模型 |
+| --- | --- | --- |
+| 200 | Successful Response | object |
+| 422 | Validation Error | HTTPValidationError |
+
+#### 8.6 `DELETE` /api/session/{session_id}
+
+Delete Session
+
+根据id删除会话
+
+##### 参数说明
+
+| 参数 | 说明 |
+| --- | --- |
+| `session_id` | 会话ID |
+| `user` | 当前用户对象 |
+
+##### 返回说明
+
+| 返回值 | 说明 |
+| --- | --- |
+| `data` | 删除结果 |
+
+##### 参数
+
+| 名称 | 位置 | 必填 | 类型 | 说明 |
+| --- | --- | --- | --- | --- |
+| `session_id` | path | 是 | integer |  |
+
+##### 响应
+
+| 状态码 | 说明 | 数据模型 |
+| --- | --- | --- |
+| 200 | Successful Response | object |
+| 422 | Validation Error | HTTPValidationError |
+
+#### 8.7 `PUT` /api/session/name
+
+Update Session Name
+
+更新会话名称
+
+##### 参数说明
+
+| 参数 | 说明 |
+| --- | --- |
+| `session_id` | 会话ID |
+| `name` | 会话名称 |
+| `user` | 当前用户对象 |
+
+##### 返回说明
+
+| 返回值 | 说明 |
+| --- | --- |
+| `data` | 更新结果 |
+
+##### 参数
+
+| 名称 | 位置 | 必填 | 类型 | 说明 |
+| --- | --- | --- | --- | --- |
+| `session_id` | query | 是 | integer |  |
+| `name` | query | 是 | string |  |
+
+##### 响应
+
+| 状态码 | 说明 | 数据模型 |
+| --- | --- | --- |
+| 200 | Successful Response | object |
+| 422 | Validation Error | HTTPValidationError |
+
+### 9. announcement
+
+#### 9.1 `POST` /api/announcement
+
+Create Announcement
+
+新增公告
+
+##### 参数说明
+
+| 参数 | 说明 |
+| --- | --- |
+| `announcement` | 新公告对象 |
+| `_admin` | 管理员用户对象 |
+
+##### 返回说明
+
+| 返回值 | 说明 |
+| --- | --- |
+| `data` | 新增结果 |
+
+##### 请求体
+
+| 内容类型 | 请求体必填 | 字段 | 字段必填 | 类型 | 约束 / 说明 |
+| --- | --- | --- | --- | --- | --- |
+| `application/json` | 是 | `title` | 是 | string |  |
+| `application/json` | 是 | `content` | 是 | string |  |
+| `application/json` | 是 | `is_top` | 否 | integer | default=0 |
+| `application/json` | 是 | `create_time` | 否 | string |  |
+| `application/json` | 是 | `update_time` | 否 | string |  |
+| `application/json` | 是 | `id` | 否 | integer \| null |  |
+
+##### 响应
+
+| 状态码 | 说明 | 数据模型 |
+| --- | --- | --- |
+| 200 | Successful Response | object |
+| 422 | Validation Error | HTTPValidationError |
+
+#### 9.2 `PUT` /api/announcement
+
+Update Announcement
+
+修改公告
+
+##### 参数说明
+
+| 参数 | 说明 |
+| --- | --- |
+| `announcement` | 修改公告对象 |
+| `_admin` | 管理员用户对象 |
+
+##### 返回说明
+
+| 返回值 | 说明 |
+| --- | --- |
+| `data` | 修改结果 |
+
+##### 请求体
+
+| 内容类型 | 请求体必填 | 字段 | 字段必填 | 类型 | 约束 / 说明 |
+| --- | --- | --- | --- | --- | --- |
+| `application/json` | 是 | `title` | 是 | string |  |
+| `application/json` | 是 | `content` | 是 | string |  |
+| `application/json` | 是 | `is_top` | 否 | integer | default=0 |
+| `application/json` | 是 | `create_time` | 否 | string |  |
+| `application/json` | 是 | `update_time` | 否 | string |  |
+| `application/json` | 是 | `id` | 否 | integer \| null |  |
+
+##### 响应
+
+| 状态码 | 说明 | 数据模型 |
+| --- | --- | --- |
+| 200 | Successful Response | object |
+| 422 | Validation Error | HTTPValidationError |
+
+#### 9.3 `DELETE` /api/announcement
+
+Delete Announcements
+
+批量删除公告
+
+##### 参数说明
+
+| 参数 | 说明 |
+| --- | --- |
+| `ids` | 公告ID列表 |
+| `_admin` | 管理员用户对象 |
+
+##### 返回说明
+
+| 返回值 | 说明 |
+| --- | --- |
+| `data` | 删除结果 |
+
+##### 请求体
+
+| 内容类型 | 请求体必填 | 字段 | 字段必填 | 类型 | 约束 / 说明 |
+| --- | --- | --- | --- | --- | --- |
+| `application/json` | 是 | - | - | 数组<integer> | - |
+
+##### 响应
+
+| 状态码 | 说明 | 数据模型 |
+| --- | --- | --- |
+| 200 | Successful Response | object |
+| 422 | Validation Error | HTTPValidationError |
+
+#### 9.4 `GET` /api/announcement/all
+
+Get All Announcements
+
+分页查询所有公告
+
+##### 参数说明
+
+| 参数 | 说明 |
+| --- | --- |
+| `page` | 页码，默认1 |
+| `page_size` | 每页条数，默认10，最大100 |
+| `_user` | 当前用户对象 |
+
+##### 返回说明
+
+| 返回值 | 说明 |
+| --- | --- |
+| `data` | 分页公告列表及总数 |
+
+##### 参数
+
+| 名称 | 位置 | 必填 | 类型 | 说明 |
+| --- | --- | --- | --- | --- |
+| `page` | query | 否 | integer | 页码 |
+| `page_size` | query | 否 | integer | 每页条数 |
+
+##### 响应
+
+| 状态码 | 说明 | 数据模型 |
+| --- | --- | --- |
+| 200 | Successful Response | object |
+| 422 | Validation Error | HTTPValidationError |
+
+#### 9.5 `GET` /api/announcement/{id}
+
+Get Announcement By Id
+
+根据id查询单个公告
+
+##### 参数说明
+
+| 参数 | 说明 |
+| --- | --- |
+| `id` | 公告ID |
+| `_user` | 当前用户对象 |
+
+##### 返回说明
+
+| 返回值 | 说明 |
+| --- | --- |
+| `data` | 公告对象 |
+
+##### 参数
+
+| 名称 | 位置 | 必填 | 类型 | 说明 |
+| --- | --- | --- | --- | --- |
+| `id` | path | 是 | integer |  |
+
+##### 响应
+
+| 状态码 | 说明 | 数据模型 |
+| --- | --- | --- |
+| 200 | Successful Response | object |
+| 422 | Validation Error | HTTPValidationError |
+
+### 10. announcement_attachment
+
+#### 10.1 `POST` /api/announcement_attachment/upload
+
+Upload Attachment
+
+上传公告附件
+
+##### 参数说明
+
+| 参数 | 说明 |
+| --- | --- |
+| `announcement_id` | 公告ID |
+| `file` | 上传的文件对象 |
+| `_admin` | 管理员用户对象 |
+
+##### 返回说明
+
+| 返回值 | 说明 |
+| --- | --- |
+| `data` | 上传结果 |
+
+##### 请求体
+
+| 内容类型 | 请求体必填 | 字段 | 字段必填 | 类型 | 约束 / 说明 |
+| --- | --- | --- | --- | --- | --- |
+| `multipart/form-data` | 是 | `announcement_id` | 是 | integer |  |
+| `multipart/form-data` | 是 | `file` | 是 | string |  |
+
+##### 响应
+
+| 状态码 | 说明 | 数据模型 |
+| --- | --- | --- |
+| 200 | Successful Response | object |
+| 422 | Validation Error | HTTPValidationError |
+
+#### 10.2 `GET` /api/announcement_attachment/download/{attachment_id}
+
+Download Attachment
+
+下载公告附件（生成预签名URL）
+
+##### 参数说明
+
+| 参数 | 说明 |
+| --- | --- |
+| `attachment_id` | 附件ID |
+| `_user` | 当前用户对象 |
+
+##### 返回说明
+
+| 返回值 | 说明 |
+| --- | --- |
+| `data` | 下载链接 |
+
+##### 参数
+
+| 名称 | 位置 | 必填 | 类型 | 说明 |
+| --- | --- | --- | --- | --- |
+| `attachment_id` | path | 是 | integer |  |
+
+##### 响应
+
+| 状态码 | 说明 | 数据模型 |
+| --- | --- | --- |
+| 200 | Successful Response | object |
+| 422 | Validation Error | HTTPValidationError |
+
+#### 10.3 `DELETE` /api/announcement_attachment/{attachment_id}
+
+Delete Attachment
+
+删除公告附件
+
+##### 参数说明
+
+| 参数 | 说明 |
+| --- | --- |
+| `attachment_id` | 附件ID |
+| `_admin` | 管理员用户对象 |
+
+##### 返回说明
+
+| 返回值 | 说明 |
+| --- | --- |
+| `data` | 删除结果 |
+
+##### 参数
+
+| 名称 | 位置 | 必填 | 类型 | 说明 |
+| --- | --- | --- | --- | --- |
+| `attachment_id` | path | 是 | integer |  |
+
+##### 响应
+
+| 状态码 | 说明 | 数据模型 |
+| --- | --- | --- |
+| 200 | Successful Response | object |
+| 422 | Validation Error | HTTPValidationError |
+
+#### 10.4 `GET` /api/announcement_attachment/announcement/{announcement_id}
+
+Get Attachments By Announcement
+
+根据公告ID查询所有附件
+
+##### 参数说明
+
+| 参数 | 说明 |
+| --- | --- |
+| `announcement_id` | 公告ID |
+| `_user` | 当前用户对象 |
+
+##### 返回说明
+
+| 返回值 | 说明 |
+| --- | --- |
+| `data` | 附件列表 |
+
+##### 参数
+
+| 名称 | 位置 | 必填 | 类型 | 说明 |
+| --- | --- | --- | --- | --- |
+| `announcement_id` | path | 是 | integer |  |
+
+##### 响应
+
+| 状态码 | 说明 | 数据模型 |
+| --- | --- | --- |
+| 200 | Successful Response | object |
+| 422 | Validation Error | HTTPValidationError |
+
+### 11. document
+
+#### 11.1 `POST` /api/document/upload
+
+Upload Document
+
+上传文档到知识库
+
+##### 参数说明
+
+| 参数 | 说明 |
+| --- | --- |
+| `knowledge_base_id` | 知识库ID |
+| `file` | 上传的文件对象 |
+| `_admin` | 管理员用户对象 |
+
+##### 返回说明
+
+| 返回值 | 说明 |
+| --- | --- |
+| `data` | 上传结果 |
+
+##### 请求体
+
+| 内容类型 | 请求体必填 | 字段 | 字段必填 | 类型 | 约束 / 说明 |
+| --- | --- | --- | --- | --- | --- |
+| `multipart/form-data` | 是 | `knowledge_base_id` | 是 | integer |  |
+| `multipart/form-data` | 是 | `file` | 是 | string |  |
+
+##### 响应
+
+| 状态码 | 说明 | 数据模型 |
+| --- | --- | --- |
+| 200 | Successful Response | object |
+| 422 | Validation Error | HTTPValidationError |
+
+#### 11.2 `GET` /api/document/download/{document_id}
+
+Download Document
+
+下载文档（生成预签名URL）
+
+##### 参数说明
+
+| 参数 | 说明 |
+| --- | --- |
+| `document_id` | 文档ID |
+| `user` | 当前用户对象 |
+
+##### 返回说明
+
+| 返回值 | 说明 |
+| --- | --- |
+| `data` | 下载链接文档对象 |
+
+##### 参数
+
+| 名称 | 位置 | 必填 | 类型 | 说明 |
+| --- | --- | --- | --- | --- |
+| `document_id` | path | 是 | integer |  |
+
+##### 响应
+
+| 状态码 | 说明 | 数据模型 |
+| --- | --- | --- |
+| 200 | Successful Response | object |
+| 422 | Validation Error | HTTPValidationError |
+
+#### 11.3 `GET` /api/document/{document_id}
+
+Get Document By Id
+
+根据ID查询单个文档
+
+##### 参数说明
+
+| 参数 | 说明 |
+| --- | --- |
+| `document_id` | 文档ID |
+| `user` | 当前用户对象 |
+
+##### 返回说明
+
+| 返回值 | 说明 |
+| --- | --- |
+| `data` | 文档对象 |
+
+##### 参数
+
+| 名称 | 位置 | 必填 | 类型 | 说明 |
+| --- | --- | --- | --- | --- |
+| `document_id` | path | 是 | integer |  |
+
+##### 响应
+
+| 状态码 | 说明 | 数据模型 |
+| --- | --- | --- |
+| 200 | Successful Response | object |
+| 422 | Validation Error | HTTPValidationError |
+
+#### 11.4 `DELETE` /api/document/{document_id}
+
+Delete Document
+
+删除文档
+
+##### 参数说明
+
+| 参数 | 说明 |
+| --- | --- |
+| `document_id` | 文档ID |
+| `_admin` | 管理员用户对象 |
+
+##### 返回说明
+
+| 返回值 | 说明 |
+| --- | --- |
+| `data` | 删除结果 |
+
+##### 参数
+
+| 名称 | 位置 | 必填 | 类型 | 说明 |
+| --- | --- | --- | --- | --- |
+| `document_id` | path | 是 | integer |  |
+
+##### 响应
+
+| 状态码 | 说明 | 数据模型 |
+| --- | --- | --- |
+| 200 | Successful Response | object |
+| 422 | Validation Error | HTTPValidationError |
+
+#### 11.5 `GET` /api/document/knowledge_base/{knowledge_base_id}
+
+Get Documents By Knowledge Base
+
+按知识库分页查询文档
+
+##### 参数说明
+
+| 参数 | 说明 |
+| --- | --- |
+| `knowledge_base_id` | 知识库ID |
+| `page` | 页码，默认1 |
+| `page_size` | 每页条数，默认10，最大100 |
+| `user` | 当前用户对象 |
+
+##### 返回说明
+
+| 返回值 | 说明 |
+| --- | --- |
+| `data` | 分页文档列表及总数 |
+
+##### 参数
+
+| 名称 | 位置 | 必填 | 类型 | 说明 |
+| --- | --- | --- | --- | --- |
+| `knowledge_base_id` | path | 是 | integer |  |
+| `page` | query | 否 | integer | 页码 |
+| `page_size` | query | 否 | integer | 每页条数 |
+
+##### 响应
+
+| 状态码 | 说明 | 数据模型 |
+| --- | --- | --- |
+| 200 | Successful Response | object |
+| 422 | Validation Error | HTTPValidationError |
+
+### 12. user_knowledge_base
+
+#### 12.1 `GET` /api/user_knowledge_base/knowledge_bases
+
+Get Knowledge Bases
+
+分页查询当前用户所有可访问的知识库ID
+
+##### 参数说明
+
+| 参数 | 说明 |
+| --- | --- |
+| `page` | 页码 |
+| `page_size` | 每页条数 |
+| `user` | 当前用户对象 |
+
+##### 返回说明
+
+| 返回值 | 说明 |
+| --- | --- |
+| `data` | 分页结果 |
+
+##### 参数
+
+| 名称 | 位置 | 必填 | 类型 | 说明 |
+| --- | --- | --- | --- | --- |
+| `page` | query | 否 | integer | 页码 |
+| `page_size` | query | 否 | integer | 每页条数 |
+
+##### 响应
+
+| 状态码 | 说明 | 数据模型 |
+| --- | --- | --- |
+| 200 | Successful Response | object |
+| 422 | Validation Error | HTTPValidationError |
+
+#### 12.2 `GET` /api/user_knowledge_base/user/{user_id}
+
+Get Knowledge Bases By User
+
+根据用户ID分页查询其所有可访问的知识库ID
+
+##### 参数说明
+
+| 参数 | 说明 |
+| --- | --- |
+| `user_id` | 用户ID |
+| `page` | 页码 |
+| `page_size` | 每页条数 |
+| `_admin` | 管理员用户对象 |
+
+##### 返回说明
+
+| 返回值 | 说明 |
+| --- | --- |
+| `data` | 分页结果 |
+
+##### 参数
+
+| 名称 | 位置 | 必填 | 类型 | 说明 |
+| --- | --- | --- | --- | --- |
+| `user_id` | path | 是 | integer |  |
+| `page` | query | 否 | integer | 页码 |
+| `page_size` | query | 否 | integer | 每页条数 |
+
+##### 响应
+
+| 状态码 | 说明 | 数据模型 |
+| --- | --- | --- |
+| 200 | Successful Response | object |
+| 422 | Validation Error | HTTPValidationError |
+
+#### 12.3 `GET` /api/user_knowledge_base/knowledge_bases/{knowledge_base_id}
+
+Get Users By Knowledge Base
+
+根据知识库ID分页查询所有可访问该知识库的用户ID
+
+##### 参数说明
+
+| 参数 | 说明 |
+| --- | --- |
+| `knowledge_base_id` | 知识库ID |
+| `page` | 页码 |
+| `page_size` | 每页条数 |
+| `_admin` | 管理员用户对象 |
+
+##### 返回说明
+
+| 返回值 | 说明 |
+| --- | --- |
+| `data` | 分页结果 |
+
+##### 参数
+
+| 名称 | 位置 | 必填 | 类型 | 说明 |
+| --- | --- | --- | --- | --- |
+| `knowledge_base_id` | path | 是 | integer |  |
+| `page` | query | 否 | integer | 页码 |
+| `page_size` | query | 否 | integer | 每页条数 |
+
+##### 响应
+
+| 状态码 | 说明 | 数据模型 |
+| --- | --- | --- |
+| 200 | Successful Response | object |
+| 422 | Validation Error | HTTPValidationError |
+
+### 13. message
+
+#### 13.1 `POST` /api/message/chat
+
+Chat
+
+对话接口，第一轮对话后自动总结并修改会话名，非第一轮对话则合并历史对话
+
+##### 参数说明
+
+| 参数 | 说明 |
+| --- | --- |
+| `message` | 消息对象 |
+| `user` | 当前用户对象 |
+
+##### 返回说明
+
+| 返回值 | 说明 |
+| --- | --- |
+| `data` | 流式响应 |
+
+##### 请求体
+
+| 内容类型 | 请求体必填 | 字段 | 字段必填 | 类型 | 约束 / 说明 |
+| --- | --- | --- | --- | --- | --- |
+| `application/json` | 是 | `session_id` | 是 | integer |  |
+| `application/json` | 是 | `role` | 是 | string |  |
+| `application/json` | 是 | `content` | 是 | string |  |
+| `application/json` | 是 | `create_time` | 是 | string |  |
+| `application/json` | 是 | `id` | 否 | integer \| null |  |
+| `application/json` | 是 | `rewritten_content` | 否 | string \| null |  |
+
+##### 响应
+
+| 状态码 | 说明 | 数据模型 |
+| --- | --- | --- |
+| 200 | Successful Response | object |
+| 422 | Validation Error | HTTPValidationError |
+
+#### 13.2 `GET` /api/message/session/{session_id}
+
+Get Messages By Session Id
+
+根据会话ID查询消息列表
+
+##### 参数说明
+
+| 参数 | 说明 |
+| --- | --- |
+| `session_id` | 会话ID |
+| `user` | 当前用户对象 |
+
+##### 返回说明
+
+| 返回值 | 说明 |
+| --- | --- |
+| `data` | 消息列表 |
+
+##### 参数
+
+| 名称 | 位置 | 必填 | 类型 | 说明 |
+| --- | --- | --- | --- | --- |
+| `session_id` | path | 是 | integer |  |
+
+##### 响应
+
+| 状态码 | 说明 | 数据模型 |
+| --- | --- | --- |
+| 200 | Successful Response | object |
+| 422 | Validation Error | HTTPValidationError |
+
+#### 13.3 `DELETE` /api/message/session/{session_id}
+
+Delete Messages By Session Id
+
+根据会话ID删除该会话下的所有消息
+
+##### 参数说明
+
+| 参数 | 说明 |
+| --- | --- |
+| `session_id` | 会话ID |
+| `user` | 当前用户对象 |
+
+##### 返回说明
+
+| 返回值 | 说明 |
+| --- | --- |
+| `data` | 删除结果 |
+
+##### 参数
+
+| 名称 | 位置 | 必填 | 类型 | 说明 |
+| --- | --- | --- | --- | --- |
+| `session_id` | path | 是 | integer |  |
+
+##### 响应
+
+| 状态码 | 说明 | 数据模型 |
+| --- | --- | --- |
+| 200 | Successful Response | object |
+| 422 | Validation Error | HTTPValidationError |
+
+#### 13.4 `GET` /api/message/{message_id}
+
+Get Message
+
+根据消息ID查询单个消息
+
+##### 参数说明
+
+| 参数 | 说明 |
+| --- | --- |
+| `message_id` | 消息ID |
+| `user` | 当前用户对象 |
+
+##### 返回说明
+
+| 返回值 | 说明 |
+| --- | --- |
+| `data` | 消息对象 |
+
+##### 参数
+
+| 名称 | 位置 | 必填 | 类型 | 说明 |
+| --- | --- | --- | --- | --- |
+| `message_id` | path | 是 | integer |  |
+
+##### 响应
+
+| 状态码 | 说明 | 数据模型 |
+| --- | --- | --- |
+| 200 | Successful Response | object |
+| 422 | Validation Error | HTTPValidationError |
+
+#### 13.5 `DELETE` /api/message/after
+
+Delete Messages After
+
+删除会话内指定消息ID之后的所有消息
+
+##### 参数说明
+
+| 参数 | 说明 |
+| --- | --- |
+| `session_id` | 会话ID |
+| `message_id` | 消息ID |
+| `user` | 当前用户对象 |
+
+##### 返回说明
+
+| 返回值 | 说明 |
+| --- | --- |
+| `data` | 删除结果 |
+
+##### 参数
+
+| 名称 | 位置 | 必填 | 类型 | 说明 |
+| --- | --- | --- | --- | --- |
+| `session_id` | query | 是 | integer |  |
+| `message_id` | query | 是 | integer |  |
+
+##### 响应
+
+| 状态码 | 说明 | 数据模型 |
+| --- | --- | --- |
+| 200 | Successful Response | object |
+| 422 | Validation Error | HTTPValidationError |
+
+## 数据模型
+
+### Announcement
+
+| 字段 | 必填 | 类型 | 约束 / 说明 |
+| --- | --- | --- | --- |
+| `title` | 是 | string |  |
+| `content` | 是 | string |  |
+| `is_top` | 否 | integer | default=0 |
+| `create_time` | 否 | string |  |
+| `update_time` | 否 | string |  |
+| `id` | 否 | integer \| null |  |
+
+### Body_assign_user_to_role_api_role_user_assign_single_post
+
+| 字段 | 必填 | 类型 | 约束 / 说明 |
+| --- | --- | --- | --- |
+| `role_id` | 是 | integer |  |
+| `user_id` | 是 | integer |  |
+
+### Body_auth_api_auth_post
+
+| 字段 | 必填 | 类型 | 约束 / 说明 |
+| --- | --- | --- | --- |
+| `grant_type` | 否 | string \| null |  |
+| `username` | 是 | string |  |
+| `password` | 是 | string |  |
+| `scope` | 否 | string | default= |
+| `client_id` | 否 | string \| null |  |
+| `client_secret` | 否 | string \| null |  |
+
+### Body_batch_assign_users_to_role_api_role_user_assign_post
+
+| 字段 | 必填 | 类型 | 约束 / 说明 |
+| --- | --- | --- | --- |
+| `role_id` | 是 | integer |  |
+| `user_ids` | 是 | 数组<integer> |  |
+
+### Body_remove_user_from_role_api_role_user_remove_single_delete
+
+| 字段 | 必填 | 类型 | 约束 / 说明 |
+| --- | --- | --- | --- |
+| `role_id` | 是 | integer |  |
+| `user_id` | 是 | integer |  |
+
+### Body_set_user_admin_status_api_user_admin_status_put
+
+| 字段 | 必填 | 类型 | 约束 / 说明 |
+| --- | --- | --- | --- |
+| `id` | 是 | integer |  |
+| `isAdmin` | 是 | integer |  |
+
+### Body_update_password_api_user_password_put
+
+| 字段 | 必填 | 类型 | 约束 / 说明 |
+| --- | --- | --- | --- |
+| `oldPassword` | 是 | string |  |
+| `newPassword` | 是 | string | minLength=6, maxLength=20 |
+
+### Body_update_username_api_user_username_put
+
+| 字段 | 必填 | 类型 | 约束 / 说明 |
+| --- | --- | --- | --- |
+| `id` | 是 | integer |  |
+| `username` | 是 | string | minLength=4, maxLength=15 |
+
+### Body_upload_attachment_api_announcement_attachment_upload_post
+
+| 字段 | 必填 | 类型 | 约束 / 说明 |
+| --- | --- | --- | --- |
+| `announcement_id` | 是 | integer |  |
+| `file` | 是 | string |  |
+
+### Body_upload_document_api_document_upload_post
+
+| 字段 | 必填 | 类型 | 约束 / 说明 |
+| --- | --- | --- | --- |
+| `knowledge_base_id` | 是 | integer |  |
+| `file` | 是 | string |  |
+
+### HTTPValidationError
+
+| 字段 | 必填 | 类型 | 约束 / 说明 |
+| --- | --- | --- | --- |
+| `detail` | 否 | 数组<ValidationError> |  |
+
+### KnowledgeBase
+
+| 字段 | 必填 | 类型 | 约束 / 说明 |
+| --- | --- | --- | --- |
+| `name` | 是 | string |  |
+| `id` | 否 | integer \| null |  |
+
+### Message
+
+| 字段 | 必填 | 类型 | 约束 / 说明 |
+| --- | --- | --- | --- |
+| `session_id` | 是 | integer |  |
+| `role` | 是 | string |  |
+| `content` | 是 | string |  |
+| `create_time` | 是 | string |  |
+| `id` | 否 | integer \| null |  |
+| `rewritten_content` | 否 | string \| null |  |
+
+### Role
+
+| 字段 | 必填 | 类型 | 约束 / 说明 |
+| --- | --- | --- | --- |
+| `name` | 是 | string |  |
+| `id` | 否 | integer \| null |  |
+
+### Session
+
+| 字段 | 必填 | 类型 | 约束 / 说明 |
+| --- | --- | --- | --- |
+| `user_id` | 是 | integer |  |
+| `name` | 是 | string |  |
+| `create_time` | 否 | string \| null |  |
+| `update_time` | 否 | string \| null |  |
+| `id` | 否 | integer \| null |  |
+
+### User
+
+| 字段 | 必填 | 类型 | 约束 / 说明 |
+| --- | --- | --- | --- |
+| `username` | 是 | string | minLength=4, maxLength=15 |
+| `password` | 是 | string | minLength=6, maxLength=20 |
+| `is_admin` | 否 | integer | minimum=0.0, maximum=1.0, default=0 |
+| `id` | 否 | integer \| null |  |
+
+### ValidationError
+
+| 字段 | 必填 | 类型 | 约束 / 说明 |
+| --- | --- | --- | --- |
+| `loc` | 是 | 数组<string \| integer> |  |
+| `msg` | 是 | string |  |
+| `type` | 是 | string |  |
+| `input` | 否 | object |  |
+| `ctx` | 否 | object |  |
