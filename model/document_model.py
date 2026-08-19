@@ -1,20 +1,20 @@
-from dataclasses import dataclass, field, asdict
 from datetime import datetime
 from typing import Optional
 
+from pydantic import BaseModel, Field
 
-@dataclass
-class Document:
+
+class Document(BaseModel):
     """Document 数据模型，对应 xlt.document 表"""
-    knowledge_base_id: int
-    filename: str
-    storage_path: str
+    knowledge_base_id: int = Field(ge=1)
+    filename: str = Field(min_length=1, max_length=255)
+    storage_path: str = Field(min_length=1, max_length=500)
     create_time: datetime
     update_time: datetime
-    id: Optional[int] = field(default=None)  # 新建时 id 为 None，查询时自动填充
+    id: Optional[int] = Field(default=None, ge=1)  # 新建时 id 为 None，查询时自动填充
 
     def to_dict(self) -> dict:
-        return asdict(self)
+        return self.model_dump()
 
     @classmethod
     def from_row(cls, row: dict) -> "Document":
@@ -23,11 +23,4 @@ class Document:
         :param row: 数据库查询结果行
         :return: Document 对象
         """
-        return cls(
-            id=row["id"],
-            knowledge_base_id=row["knowledge_base_id"],
-            filename=row["filename"],
-            storage_path=row["storage_path"],
-            create_time=row["create_time"],
-            update_time=row["update_time"],
-        )
+        return cls.model_validate(row)

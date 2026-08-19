@@ -1,14 +1,13 @@
-from dataclasses import dataclass, asdict
+from pydantic import BaseModel, Field
 
 
-@dataclass
-class RoleKnowledgeBase:
+class RoleKnowledgeBase(BaseModel):
     """RoleKnowledgeBase 数据模型，对应 xlt.role_knowledge_base 表"""
-    role_id: int
-    knowledge_base_id: int
+    role_id: int = Field(ge=1)
+    knowledge_base_id: int = Field(ge=1)
 
     def to_dict(self) -> dict:
-        return asdict(self)
+        return self.model_dump()
 
     @classmethod
     def from_row(cls, row: dict) -> "RoleKnowledgeBase":
@@ -17,7 +16,4 @@ class RoleKnowledgeBase:
         :param row: 数据库查询结果行
         :return: RoleKnowledgeBase 对象
         """
-        return cls(
-            role_id=row["role_id"],
-            knowledge_base_id=row["knowledge_base_id"],
-        )
+        return cls.model_validate(row)

@@ -1,14 +1,13 @@
-from dataclasses import dataclass, asdict
+from pydantic import BaseModel, Field
 
 
-@dataclass
-class RoleUser:
+class RoleUser(BaseModel):
     """RoleUser 数据模型，对应 xlt.role_user 表"""
-    role_id: int
-    user_id: int
+    role_id: int = Field(ge=1)
+    user_id: int = Field(ge=1)
 
     def to_dict(self) -> dict:
-        return asdict(self)
+        return self.model_dump()
 
     @classmethod
     def from_row(cls, row: dict) -> "RoleUser":
@@ -17,7 +16,4 @@ class RoleUser:
         :param row: 数据库查询结果行
         :return: RoleUser 对象
         """
-        return cls(
-            role_id=row["role_id"],
-            user_id=row["user_id"],
-        )
+        return cls.model_validate(row)

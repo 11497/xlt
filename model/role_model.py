@@ -1,15 +1,15 @@
-from dataclasses import dataclass, field, asdict
 from typing import Optional
 
+from pydantic import BaseModel, Field
 
-@dataclass
-class Role:
+
+class Role(BaseModel):
     """Role 数据模型，对应 xlt.role 表"""
-    name: str
-    id: Optional[int] = field(default=None)  # 新建时 id 为 None，查询时自动填充
+    name: str = Field(min_length=1, max_length=255)
+    id: Optional[int] = Field(default=None, ge=1)  # 新建时 id 为 None，查询时自动填充
 
     def to_dict(self) -> dict:
-        return asdict(self)
+        return self.model_dump()
 
     @classmethod
     def from_row(cls, row: dict) -> "Role":
@@ -18,7 +18,4 @@ class Role:
         :param row: 数据库查询结果行
         :return: Role 对象
         """
-        return cls(
-            id=row["id"],
-            name=row["name"],
-        )
+        return cls.model_validate(row)

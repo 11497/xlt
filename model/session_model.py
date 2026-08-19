@@ -1,19 +1,19 @@
-from dataclasses import dataclass, field, asdict
 from typing import Optional
 from datetime import datetime
 
+from pydantic import BaseModel, Field
 
-@dataclass
-class Session:
+
+class Session(BaseModel):
     """Session 数据模型，对应 xlt.session 表"""
-    user_id: int
-    name: str
-    create_time: Optional[datetime] = field(default=None)
-    update_time: Optional[datetime] = field(default=None)
-    id: Optional[int] = field(default=None)  # 新建时 id 为 None，查询时自动填充
+    user_id: int = Field(ge=1)
+    name: str = Field(min_length=1, max_length=255)
+    create_time: Optional[datetime] = None
+    update_time: Optional[datetime] = None
+    id: Optional[int] = Field(default=None, ge=1)  # 新建时 id 为 None，查询时自动填充
 
     def to_dict(self) -> dict:
-        return asdict(self)
+        return self.model_dump()
 
     @classmethod
     def from_row(cls, row: dict) -> "Session":
@@ -22,10 +22,4 @@ class Session:
         :param row: 数据库查询结果行
         :return: Session 对象
         """
-        return cls(
-            id=row["id"],
-            user_id=row["user_id"],
-            name=row["name"],
-            create_time=row.get("create_time"),
-            update_time=row.get("update_time"),
-        )
+        return cls.model_validate(row)
