@@ -191,8 +191,7 @@ const handleAddSubmit = async () => {
     const payload = {
       username: dialogForm.value.username.trim(),
       is_admin: dialogForm.value.is_admin ? 1 : 0,
-      password: '123456',
-      id: null
+      password: '123456'
     };
     const res = await userRegister(payload);
 
