@@ -1,4 +1,5 @@
 from typing import List
+from pathlib import Path
 
 import chromadb
 from chromadb.config import Settings
@@ -7,15 +8,20 @@ from chromadb.api.types import QueryResult
 from config.ai_config import TOPK
 
 
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+DEFAULT_PERSIST_DIRECTORY = PROJECT_ROOT / "chroma_db"
+
+
 class ChromaService:
     """Chroma 向量数据库服务封装"""
 
-    def __init__(self, persist_directory: str = "./chroma_db"):
+    def __init__(self, persist_directory: str | Path = DEFAULT_PERSIST_DIRECTORY):
         """
         :param persist_directory: Chroma 持久化目录
         """
+        # 使用项目根目录下的固定路径，避免受启动命令所在目录影响。
         self.client = chromadb.PersistentClient(
-            path=persist_directory,
+            path=str(persist_directory),
             settings=Settings(
                 allow_reset=True,
                 anonymized_telemetry=False  # 禁用遥测
