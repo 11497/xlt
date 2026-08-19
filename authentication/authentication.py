@@ -4,6 +4,7 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from config.jwt_config import JWT_CONFIG
 from crud.user_crud import UserCRUD
 from util.jwt_util import JwtUtil
+from util.password_util import PasswordUtil
 
 jwt_util = JwtUtil(secret_key=JWT_CONFIG["secret_key"], algorithm=JWT_CONFIG["algorithm"],
                    access_token_expire_minutes=JWT_CONFIG["access_token_expire_minutes"])
@@ -30,8 +31,8 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
 async def auth(form_data: OAuth2PasswordRequestForm = Depends()):
     """Swagger 认证接口"""
     login_user = UserCRUD.get_by_username(form_data.username)
-    if login_user.password != form_data.password:
-        return HTTPException(status_code=401, detail="密码错误")
+    if not login_user or not PasswordUtil.verify_password(form_data.password, login_user.password):
+        raise HTTPException(status_code=401, detail="用户名或密码错误")
 
     token = jwt_util.create_access_token(data={"user_id": login_user.id})
     return {"access_token": token, "token_type": "bearer"}

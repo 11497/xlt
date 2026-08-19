@@ -1,6 +1,7 @@
 from typing import List, Optional, Tuple
 from util.db_util import get_cursor
 from model.user_model import User
+from util.password_util import PasswordUtil
 
 
 class UserCRUD:
@@ -12,9 +13,10 @@ class UserCRUD:
         :param user: 用户对象
         :return: 新插入记录的 id
         """
+        password_hash = PasswordUtil.hash_password(user.password)
         sql = "INSERT INTO user (username, password, is_admin) VALUES (%s, %s, %s)"
         with get_cursor() as cursor:
-            cursor.execute(sql, (user.username, user.password, user.is_admin))
+            cursor.execute(sql, (user.username, password_hash, user.is_admin))
             return cursor.lastrowid
 
     @staticmethod
@@ -121,9 +123,10 @@ class UserCRUD:
         :param new_password: 新的密码
         :return: 是否成功更新了记录
         """
+        password_hash = PasswordUtil.hash_password(new_password)
         sql = "UPDATE user SET password = %s WHERE id = %s"
         with get_cursor() as cursor:
-            affected = cursor.execute(sql, (new_password, user_id))
+            affected = cursor.execute(sql, (password_hash, user_id))
             return affected > 0
 
     @staticmethod

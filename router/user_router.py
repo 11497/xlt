@@ -7,6 +7,7 @@ from crud.user_crud import UserCRUD
 from model.result import Result
 from model.user_model import User
 from util.jwt_util import JwtUtil
+from util.password_util import PasswordUtil
 
 router = APIRouter(prefix="/api/user", tags=["user"])
 
@@ -40,10 +41,10 @@ def valid_password(
     在传入old_password时必须同时传入user
     """
     if old_password != "":
+        if user is None or not PasswordUtil.verify_password(old_password, user.password):
+            return "旧密码错误"
         if old_password == new_password:
             return "旧密码不能与新密码相同"
-        if user.password != old_password:
-            return "旧密码错误"
     # 密码长度由 User.password 或路由参数 Body 的声明自动校验。
     return None
 
@@ -77,7 +78,7 @@ async def login(user: User):
     login_user = UserCRUD.get_by_username(user.username)
     if not login_user:
         return result.error(msg="用户名不存在")
-    if login_user.password != user.password:
+    if not PasswordUtil.verify_password(user.password, login_user.password):
         return result.error(msg="密码错误")
     # 生成 JWT 令牌
     access_token = jwt_util.create_access_token(data={"user_id": login_user.id})
@@ -167,7 +168,7 @@ async def delete_user(id: int, _admin: User = Depends(require_admin)):
 
 @router.put("/password")
 async def update_password(
-        old_password: str = Body(..., alias="oldPassword"),
+        old_password: str = Body(..., alias="oldPassword", min_length=6, max_length=20),
         # 独立 Body 参数不会经过 User 模型，故在此声明 Pydantic 的长度约束。
         new_password: str = Body(..., alias="newPassword", min_length=6, max_length=20),
         user: User = Depends(require_current_user)
@@ -203,14 +204,17 @@ async def reset_password(
     """
     result = Result()
 
+    target_user = UserCRUD.get_by_id(id)
+    if not target_user:
+        return result.error(msg="用户不存在")
+
     # 重置密码为默认值（"123456"）
     default_password = "123456"
+    if PasswordUtil.verify_password(default_password, target_user.password):
+        return result.error(msg="重置密码失败，用户密码已是默认值")
+
     res = UserCRUD.update_password(id, default_password)
     if not res:
-        user = UserCRUD.get_by_id(id)
-        if user.password == default_password:
-            return result.error(msg="重置密码失败，用户密码已是默认值")
-
         return result.error(msg="重置密码失败")
     return result.success(msg="重置密码成功")
 

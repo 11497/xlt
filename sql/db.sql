@@ -7,7 +7,7 @@ drop table if exists user;
 create table user (
     id int auto_increment primary key comment '用户id',
     username varchar(255) not null unique comment '用户名',
-    password varchar(255) not null default '123456' comment '密码',
+    password varchar(255) not null default '$argon2id$v=19$m=65536,t=3,p=4$sFFvvH2qZYyhTBvJs0vx5A$nfy24ZwxcDs6A/VKWLKZlofCg3KENlL9dhExvnByGc0' comment 'Argon2id 密码哈希',
     is_admin tinyint default 0 comment '是否管理员，0为普通用户，1为管理员'
 ) comment '用户';
 
@@ -94,8 +94,8 @@ create table announcement_attachment (
 ) comment '公告附件';
 
 insert into user (username, password, is_admin)
-values ('admin', '123456', 1),
-       ('hajimi', '123456', 0);
+values ('admin', '$argon2id$v=19$m=65536,t=3,p=4$wSH04ON+NjdRsHmJ6F36fA$/g62R/uOp6WadTu1GldXdS5DxOHyALvvoDDJoTr+woU', 1),
+       ('hajimi', '$argon2id$v=19$m=65536,t=3,p=4$RZwfTmZAQNO6O2ALHSJHMA$ak/qWRD7EbYH0omX//mvDtKywR7QW11hVFCceG8p9MQ', 0);
 
 insert into role (name)
 values ('新芒'),

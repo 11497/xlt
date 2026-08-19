@@ -20,7 +20,7 @@
   - 对话模型: DeepSeek-V3.2 (SiliconFlow)
   - 向量模型: Qwen/Qwen3-Embedding-8B
   - 重排模型: Qwen/Qwen3-Reranker-8B
-- **认证**: JWT (PyJWT)
+- **认证**: JWT (PyJWT)、Argon2id 密码哈希
 - **文件处理**: pdfplumber, python-docx
 - **对象存储**: 阿里云 OSS
 - **包管理**: uv
@@ -76,6 +76,7 @@ xlt/
 │   ├── db_util.py          # 数据库工具
 │   ├── file_util.py        # 文件处理工具（PDF/DOCX 解析、文本切片）
 │   ├── jwt_util.py         # JWT 工具
+│   ├── password_util.py    # Argon2id 密码哈希与验证工具
 │   └── oss_util.py         # OSS 工具
 ├── frontend/                # 前端项目
 │   ├── src/
@@ -327,7 +328,7 @@ flowchart TD
 
 ## 开发与部署注意事项
 
-- 当前初始化账号和用户密码以明文形式保存、比较，仅适用于课程开发或本地演示。正式部署前应改为强哈希密码。
+- 用户密码使用 Argon2id 哈希保存和验证；已有明文密码的数据库需要先迁移或重置密码，不能直接沿用。
 - 必须替换默认 JWT 密钥，并避免将数据库密码、API Key 和 OSS 凭证提交到版本库。
 - 后端当前未配置 CORS；本地开发依赖 Vite 代理。前后端跨域独立部署时，需要增加可信来源的 CORS 配置或由反向代理统一域名。
 - 文档上传会依次写入 OSS、MySQL、ChromaDB 和 Elasticsearch。生产环境应补充失败补偿、事务一致性和可观测性。
