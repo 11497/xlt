@@ -1,5 +1,7 @@
 # 校灵通（XLT）
 
+[简体中文](README.md) | [English](README-en.md)
+
 > 基于 RAG 的校园智能问答系统，支持混合检索、角色权限管理和多知识库隔离。
 
 > [!WARNING]

@@ -1,5 +1,7 @@
 # Xiaolingtong (XLT)
 
+[简体中文](README.md) | [English](README-en.md)
+
 > A RAG-based intelligent campus Q&A system with hybrid retrieval, role-based access control, and knowledge base isolation.
 
 > [!WARNING]
