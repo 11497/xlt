@@ -1,20 +1,21 @@
-# 校灵通 (XLT)
+# 校灵通（XLT）
 
 > 基于 RAG 的校园智能问答系统，支持混合检索、角色权限管理和多知识库隔离。
 
+> [!WARNING]
+> 本 README 由 AI 生成，尚未经人工检查，内容仅供参考；实际行为请以项目源码为准。
+
 ## 项目简介
 
-校灵通是一个面向校园场景的智能问答平台，采用**检索增强生成（RAG）**技术，结合**向量检索**与**BM25 全文检索**的混合检索方案，为师生提供精准、可靠的知识问答服务。系统支持多知识库管理、角色权限隔离、公告发布等功能。
-
-注：该readme文件由AI生成，仅供参考。
+校灵通是一个面向校园场景的智能问答与知识管理系统。后端使用 FastAPI，前端使用 Vue 3；问答链路结合 ChromaDB 向量检索、Elasticsearch BM25 检索和 Rerank 重排，并通过角色关联控制用户可访问的知识库。
 
 ## 技术栈
 
 ### 后端
-- **框架**: FastAPI + Uvicorn
+- **框架**: FastAPI + Uvicorn + Pydantic 2
 - **数据库**: MySQL
 - **向量数据库**: ChromaDB
-- **全文检索**: Elasticsearch 8.x
+- **全文检索**: Elasticsearch 8.x + IK 中文分词器
 - **AI 模型**:
   - 对话模型: DeepSeek-V3.2 (SiliconFlow)
   - 向量模型: Qwen/Qwen3-Embedding-8B
@@ -28,7 +29,7 @@
 - **框架**: Vue 3 + Vite
 - **UI 组件库**: Element Plus
 - **路由**: Vue Router 4
-- **状态管理**: Pinia (含持久化)
+- **状态管理**: Pinia 4（含持久化）
 - **HTTP 客户端**: Axios
 - **Markdown 渲染**: markdown-it
 
@@ -63,9 +64,12 @@ xlt/
 │   └── user_*.py           # 用户及关联 CRUD
 ├── model/                   # 数据模型层
 │   ├── result.py           # 统一响应结果
-│   └── *.py                # 各业务模型
+│   └── *_model.py          # Pydantic 业务模型
 ├── router/                  # 路由层
 │   └── *_router.py         # 各业务模块路由
+├── scripts/
+│   ├── generate_api_doc.py         # Markdown 接口文档生成脚本
+│   └── generate_argon2_password.py # 明文密码 Argon2id 转换脚本
 ├── sql/                     # 数据库脚本
 │   └── db.sql              # 建表及初始化数据
 ├── util/                    # 工具类
@@ -88,8 +92,11 @@ xlt/
 │   └── package.json
 ├── main.py                  # 应用入口
 ├── pyproject.toml           # Python 项目配置
+├── 接口文档.md              # 自动生成的接口文档
 └── README.md
 ```
+
+ChromaDB 的持久化数据默认写入项目根目录的 `chroma_db/`，该目录已被 Git 忽略。
 
 ## 核心功能
 
@@ -103,7 +110,7 @@ xlt/
 
 ### 2. 知识库管理
 - 多知识库创建与管理
-- 文档上传与解析（支持 PDF、DOCX）
+- 文档上传与解析（支持 Markdown、TXT、PDF、DOCX）
 - 文本自动切片与向量化
 - 双写同步（ChromaDB + Elasticsearch）
 - 文档删除与知识库清理
@@ -111,7 +118,7 @@ xlt/
 ### 3. 角色与权限
 - 角色管理（新芒、教职工、学生等）
 - 用户-角色关联
-- 角色-知识库关联（权限隔离）
+- 角色-知识库关联（按 `user -> role -> knowledge_base` 关系计算访问权限）
 - 管理员/普通用户两级权限
 
 ### 4. 会话管理
@@ -135,93 +142,163 @@ xlt/
 | `role_user` | 角色-用户关联表 |
 | `knowledge_base` | 知识库表 |
 | `role_knowledge_base` | 角色-知识库关联表 |
-| `user_knowledge_base` | 用户-知识库关联表 |
 | `document` | 文档表 |
 | `session` | 会话表 |
 | `message` | 消息表 |
 | `announcement` | 公告表 |
 | `announcement_attachment` | 公告附件表 |
 
+项目不存在独立的用户—知识库关联表。用户可访问的知识库通过 `role_user` 和 `role_knowledge_base` 两张关联表联查获得。
+
 ## 快速开始
 
 ### 环境要求
+
 - Python >= 3.11
-- Node.js >= 22.18.0
+- Node.js `^22.18.0` 或 `>=24.12.0`
 - MySQL
-- Elasticsearch 8.x
+- Elasticsearch 8.x（需要 IK 中文分词插件）
 - uv（Python 包管理器）
+- 可访问的 SiliconFlow API
+- 阿里云 OSS Bucket
 
-### 后端启动
+### 1. 安装后端依赖
 
-1. **克隆项目**
-   ```bash
-   git clone <repository-url>
-   cd xlt
-   ```
+```bash
+uv sync
+```
 
-2. **安装依赖**
-   ```bash
-   uv sync
-   ```
+### 2. 初始化数据库
 
-3. **配置数据库**
+先修改 `config/db_config.py` 中的 MySQL 连接信息，然后登录 MySQL 并执行初始化脚本：
 
-   修改 `config/db_config.py` 中的数据库连接信息，然后执行初始化脚本：
-   ```bash
-   mysql -u root -p < sql/db.sql
-   ```
+```bash
+mysql -u root -p
+```
 
-4. **配置 AI 服务**
+```sql
+SOURCE sql/db.sql;
+```
 
-   修改 `config/ai_config.py` 中的 API Key 和模型配置。
+> [!WARNING]
+> `sql/db.sql` 开头包含 `DROP DATABASE IF EXISTS xlt`，会删除并重新创建整个 `xlt` 数据库。不要对包含有效数据的环境直接执行该脚本。
 
-5. **启动服务**
-   ```bash
-   uv run uvicorn main:app --reload --host 0.0.0.0 --port 8000
-   ```
+### 3. 配置外部服务
 
-   API 文档访问: http://localhost:8000/docs
+| 文件 | 配置内容 |
+| --- | --- |
+| `config/db_config.py` | MySQL 地址、端口、账号和数据库名 |
+| `config/ai_config.py` | SiliconFlow 地址、模型、召回数量、Elasticsearch 地址和端口 |
+| `config/jwt_config.py` | JWT 签名密钥、算法和有效期 |
+| `config/oss_config.py` | OSS Bucket、Endpoint 和 Region |
+| `config/file_config.py` | 文件类型、上传大小、下载链接有效期和切片参数 |
 
-### 前端启动
+AI 与 OSS 凭证从系统环境变量读取。PowerShell 示例：
 
-1. **进入前端目录**
-   ```bash
-   cd frontend
-   ```
+```powershell
+$env:OPENAI_API_KEY = "your-siliconflow-api-key"
+$env:OSS_ACCESS_KEY_ID = "your-oss-access-key-id"
+$env:OSS_ACCESS_KEY_SECRET = "your-oss-access-key-secret"
+```
 
-2. **安装依赖**
-   ```bash
-   npm install
-   ```
+Bash 示例：
 
-3. **启动开发服务器**
-   ```bash
-   npm run dev
-   ```
+```bash
+export OPENAI_API_KEY="your-siliconflow-api-key"
+export OSS_ACCESS_KEY_ID="your-oss-access-key-id"
+export OSS_ACCESS_KEY_SECRET="your-oss-access-key-secret"
+```
 
-4. **构建生产版本**
-   ```bash
-   npm run build
-   ```
+项目没有自动加载 `.env` 文件，因此仅创建 `.env` 不会让这些变量生效。
+
+Elasticsearch 创建知识库索引时会使用 `ik_max_word` tokenizer。服务未安装 IK 插件时，文档索引会创建失败。
+
+### 4. 启动后端
+
+确保 MySQL 和 Elasticsearch 已启动，然后在项目根目录执行：
+
+```bash
+uv run uvicorn main:app --reload --host 0.0.0.0 --port 8000
+```
+
+启动后可访问：
+
+- 服务根地址：<http://127.0.0.1:8000/>
+- Swagger UI：<http://127.0.0.1:8000/docs>
+- ReDoc：<http://127.0.0.1:8000/redoc>
+
+### 5. 启动前端
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Vite 开发服务器默认运行在 <http://127.0.0.1:5173>，并将前端的 `/api` 请求代理到 `http://127.0.0.1:8000`。
+
+生产构建：
+
+```bash
+npm run build
+```
+
+构建结果输出到 `frontend/dist/`。
 
 ### 默认账号
 
-| 用户名 | 密码 | 角色 |
-|--------|------|------|
-| admin | 123456 | 管理员 |
-| hajimi | 123456 | 学生 |
+| 用户名 | 密码 | 类型/角色 |
+| --- | --- | --- |
+| `admin` | `123456` | 管理员、新芒 |
+| `hajimi` | `123456` | 普通用户、学生 |
+
+## 文件与模型限制
+
+- 上传格式：`.md`、`.txt`、`.pdf`、`.docx`
+- 单文件最大大小：10 MB
+- OSS 下载链接默认有效期：300 秒
+- 文本切片最大长度：500 字符，重叠长度：150 字符
+- 用户名：4–15 个字符
+- 密码：6–20 个字符
+- 角色名、知识库名：1–15 个字符
+- 会话名：1–20 个字符
+- 公告置顶值：`0` 或 `1`
+- 消息角色：`user` 或 `assistant`
+
+实体 ID 和关联 ID 必须为正整数。名称唯一性、关联对象是否存在、访问权限以及上传文件内容等校验由 Router、CRUD 和数据库共同完成。
 
 ## API 模块
 
-- **认证**: `/api/auth` - 登录认证
-- **用户**: `/api/user` - 用户管理
-- **角色**: `/api/role` - 角色管理
-- **知识库**: `/api/knowledge-base` - 知识库管理
-- **文档**: `/api/document` - 文档上传与管理
-- **会话**: `/api/session` - 会话管理
-- **消息**: `/api/message` - 消息与问答
-- **公告**: `/api/announcement` - 公告管理
-- **附件**: `/api/announcement-attachment` - 公告附件
+| 模块 | 路径 | 说明 |
+| --- | --- | --- |
+| OAuth2 认证 | `/api/auth` | Swagger OAuth2 表单登录 |
+| 用户 | `/api/user` | 注册、登录、用户资料和管理员操作 |
+| 角色 | `/api/role` | 角色增删改查 |
+| 用户角色 | `/api/role_user` | 用户与角色关联 |
+| 知识库 | `/api/knowledge_base` | 知识库管理 |
+| 角色知识库 | `/api/role_knowledge_base` | 角色与知识库关联 |
+| 用户可访问知识库 | `/api/user_knowledge_base` | 按角色关系查询访问范围 |
+| 文档 | `/api/document` | 上传、下载、索引和删除 |
+| 会话 | `/api/session` | 会话创建、查询、改名和删除 |
+| 消息 | `/api/message` | RAG 问答和消息管理 |
+| 公告 | `/api/announcement` | 公告发布、查询和置顶 |
+| 公告附件 | `/api/announcement_attachment` | 附件上传、下载和删除 |
+
+除注册、登录和认证接口外，业务接口通常需要请求头：
+
+```http
+Authorization: Bearer <access-token>
+```
+
+业务响应由 `Result` 统一包装：成功时 `code` 为 `1`，失败时 `code` 为 `0`，同时返回 `msg` 和 `data`。
+
+### 生成 Markdown 接口文档
+
+```bash
+uv run python scripts/generate_api_doc.py
+```
+
+脚本从 FastAPI OpenAPI Schema 读取当前路由，并覆盖生成项目根目录的 `接口文档.md`。完整的路径、参数、请求体和响应说明请查看该文件。
 
 ## 混合检索流程
 
@@ -247,3 +324,11 @@ flowchart TD
     I --> J[注入 Prompt]
     J --> K[LLM 生成回答]
 ```
+
+## 开发与部署注意事项
+
+- 当前初始化账号和用户密码以明文形式保存、比较，仅适用于课程开发或本地演示。正式部署前应改为强哈希密码。
+- 必须替换默认 JWT 密钥，并避免将数据库密码、API Key 和 OSS 凭证提交到版本库。
+- 后端当前未配置 CORS；本地开发依赖 Vite 代理。前后端跨域独立部署时，需要增加可信来源的 CORS 配置或由反向代理统一域名。
+- 文档上传会依次写入 OSS、MySQL、ChromaDB 和 Elasticsearch。生产环境应补充失败补偿、事务一致性和可观测性。
+- 删除知识库、文档或公告附件会同步操作外部存储和索引，执行前应确认对应服务可用并做好备份。
