@@ -11,7 +11,7 @@ from typing import Any
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-OUTPUT_FILE = Path(__file__).with_name("API.md")
+OUTPUT_FILE = PROJECT_ROOT / "接口文档.md"
 
 # 直接运行脚本时，确保可以导入项目入口 `main.py` 及其依赖包。
 sys.path.insert(0, str(PROJECT_ROOT))
