@@ -145,7 +145,7 @@ async def delete_session(
 @router.put("/name")
 async def update_session_name(
         session_id: int,
-        name: str,
+        name: str = Query(..., min_length=1, max_length=20),
         user: User = Depends(require_current_user)):
     """
     更新会话名称

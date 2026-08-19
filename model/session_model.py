@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 class Session(BaseModel):
     """Session 数据模型，对应 xlt.session 表"""
     user_id: int = Field(ge=1)
-    name: str = Field(min_length=1, max_length=255)
+    name: str = Field(min_length=1, max_length=20)
     create_time: Optional[datetime] = None
     update_time: Optional[datetime] = None
     id: Optional[int] = Field(default=None, ge=1)  # 新建时 id 为 None，查询时自动填充

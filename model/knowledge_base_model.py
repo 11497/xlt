@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field
 
 class KnowledgeBase(BaseModel):
     """KnowledgeBase 数据模型，对应 xlt.knowledge_base 表"""
-    name: str = Field(min_length=1, max_length=255)
+    name: str = Field(min_length=1, max_length=15)
     id: Optional[int] = Field(default=None, ge=1)  # 新建时 id 为 None，查询时自动填充
 
     def to_dict(self) -> dict:

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Path, Query
 
 from authentication.user_auth import require_admin, require_current_user
 from crud.role_crud import RoleCRUD
@@ -54,7 +54,10 @@ async def get_all_role(
     })
 
 @router.get("/name/{role_name}")
-async def get_by_name(role_name: str, _admin: User = Depends(require_admin)):
+async def get_by_name(
+        role_name: str = Path(..., min_length=1, max_length=15),
+        _admin: User = Depends(require_admin)
+):
     """
     根据角色名查询角色
     :param role_name: 角色名
