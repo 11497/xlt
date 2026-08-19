@@ -36,9 +36,7 @@ const login = async () => {
 
     const result = await userLogin({
       username: userForm.value.username,
-      password: userForm.value.password,
-      is_admin: 0,
-      id: 0
+      password: userForm.value.password
     });
     if (result.code) {
         // 1. 提示信息
