@@ -13,14 +13,19 @@ router = APIRouter(prefix="/api/user", tags=["user"])
 jwt_util = JwtUtil(secret_key=JWT_CONFIG["secret_key"], algorithm=JWT_CONFIG["algorithm"],
                    access_token_expire_minutes=JWT_CONFIG["access_token_expire_minutes"])
 
+
+def user_to_response(user: User) -> dict:
+    # BaseModel 使用 model_dump 导出数据；排除 password，避免任何用户信息接口泄露密码。
+    return user.model_dump(exclude={"password"})
+
+
 def valid_username(username: str):
     """
     验证用户名是否符合要求
     :param username: 用户名
     :return: 验证结果
     """
-    if len(username) < 4 or len(username) > 15:
-        return "用户名长度必须在4到15位之间"
+    # 用户名长度由 User.username 的 Field 约束自动校验；此处只处理数据库业务规则。
     user = UserCRUD.get_by_username(username)
     if user:
         return "用户名已存在"
@@ -39,8 +44,7 @@ def valid_password(
             return "旧密码不能与新密码相同"
         if user.password != old_password:
             return "旧密码错误"
-    if len(new_password) < 6 or len(new_password) > 20:
-        return "密码长度必须在6到20位之间"
+    # 密码长度由 User.password 或路由参数 Body 的声明自动校验。
     return None
 
 @router.post("/register")
@@ -96,7 +100,8 @@ async def get_all_user(
 
     users, total = UserCRUD.get_page(page=page, page_size=page_size)
     return result.success(msg="查询成功", data={
-        "list": users,
+        # 将每个 BaseModel 转为安全的字典后再作为 JSON 响应返回。
+        "list": [user_to_response(user) for user in users],
         "total": total,
         "page": page,
         "page_size": page_size
@@ -111,14 +116,14 @@ async def get_user(user: User = Depends(require_current_user)):
     """
     result = Result()
 
-    # 返回去掉 password 字段的用户信息
-    user.password = ""
-    return result.success(msg="查询成功", data=user)
+    # 不修改 Depends 注入的 BaseModel 实例，直接导出不含密码的响应数据。
+    return result.success(msg="查询成功", data=user_to_response(user))
 
 @router.put("/username")
 async def update_username(
         id: int = Body(..., alias="id"),
-        username: str = Body(..., alias="username"),
+        # 独立 Body 参数不会经过 User 模型，故在此声明 Pydantic 的长度约束。
+        username: str = Body(..., alias="username", min_length=4, max_length=15),
         _admin: User = Depends(require_admin)
 ):
     """
@@ -133,14 +138,12 @@ async def update_username(
     user_exist = UserCRUD.get_by_username(username)
     if user_exist:
         return result.error(msg="用户名已存在")
-    if len(username) < 4 or len(username) > 15:
-        return result.error(msg="用户名长度必须在4到15位之间")
-
     update_result = UserCRUD.update_username(id, username)
     if not update_result:
         return result.error(msg="用户不存在")
     updated_user = UserCRUD.get_by_username(username)
-    return result.success(msg="更新成功", data=updated_user)
+    # 数据库查询结果同样是 User(BaseModel)，导出时排除敏感字段。
+    return result.success(msg="更新成功", data=user_to_response(updated_user))
 
 @router.delete("/{id}")
 async def delete_user(id: int, _admin: User = Depends(require_admin)):
@@ -165,7 +168,8 @@ async def delete_user(id: int, _admin: User = Depends(require_admin)):
 @router.put("/password")
 async def update_password(
         old_password: str = Body(..., alias="oldPassword"),
-        new_password: str = Body(..., alias="newPassword"),
+        # 独立 Body 参数不会经过 User 模型，故在此声明 Pydantic 的长度约束。
+        new_password: str = Body(..., alias="newPassword", min_length=6, max_length=20),
         user: User = Depends(require_current_user)
 ):
     """
@@ -244,7 +248,8 @@ async def set_user_admin_status(
         return result.error(msg="更新用户权限失败")
 
     updated_user = UserCRUD.get_by_id(id)
-    return result.success(msg="用户权限更新成功", data=updated_user)
+    # 数据库查询结果同样是 User(BaseModel)，导出时排除敏感字段。
+    return result.success(msg="用户权限更新成功", data=user_to_response(updated_user))
 
 @router.get("/search/{content}")
 async def search_user(content: str, _admin: User = Depends(require_admin)):
@@ -257,4 +262,5 @@ async def search_user(content: str, _admin: User = Depends(require_admin)):
     result = Result()
 
     users = UserCRUD.search(content)
-    return result.success(msg="查询成功", data=users)
+    # 列表中的元素也是 BaseModel，逐个导出为可 JSON 序列化的安全字典。
+    return result.success(msg="查询成功", data=[user_to_response(user) for user in users])
