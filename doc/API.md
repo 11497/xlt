@@ -395,7 +395,7 @@ Create Role
 
 | 内容类型 | 请求体必填 | 字段 | 字段必填 | 类型 | 约束 / 说明 |
 | --- | --- | --- | --- | --- | --- |
-| `application/json` | 是 | `name` | 是 | string |  |
+| `application/json` | 是 | `name` | 是 | string | minLength=1, maxLength=15 |
 | `application/json` | 是 | `id` | 否 | integer \| null |  |
 
 ##### 响应
@@ -428,7 +428,7 @@ Update
 
 | 内容类型 | 请求体必填 | 字段 | 字段必填 | 类型 | 约束 / 说明 |
 | --- | --- | --- | --- | --- | --- |
-| `application/json` | 是 | `name` | 是 | string |  |
+| `application/json` | 是 | `name` | 是 | string | minLength=1, maxLength=15 |
 | `application/json` | 是 | `id` | 否 | integer \| null |  |
 
 ##### 响应
@@ -877,7 +877,7 @@ Create Knowledge Base
 
 | 内容类型 | 请求体必填 | 字段 | 字段必填 | 类型 | 约束 / 说明 |
 | --- | --- | --- | --- | --- | --- |
-| `application/json` | 是 | `name` | 是 | string |  |
+| `application/json` | 是 | `name` | 是 | string | minLength=1, maxLength=15 |
 | `application/json` | 是 | `id` | 否 | integer \| null |  |
 
 ##### 响应
@@ -910,7 +910,7 @@ Update Knowledge Base
 
 | 内容类型 | 请求体必填 | 字段 | 字段必填 | 类型 | 约束 / 说明 |
 | --- | --- | --- | --- | --- | --- |
-| `application/json` | 是 | `name` | 是 | string |  |
+| `application/json` | 是 | `name` | 是 | string | minLength=1, maxLength=15 |
 | `application/json` | 是 | `id` | 否 | integer \| null |  |
 
 ##### 响应
@@ -1320,8 +1320,8 @@ Create Session
 
 | 内容类型 | 请求体必填 | 字段 | 字段必填 | 类型 | 约束 / 说明 |
 | --- | --- | --- | --- | --- | --- |
-| `application/json` | 是 | `user_id` | 是 | integer |  |
-| `application/json` | 是 | `name` | 是 | string |  |
+| `application/json` | 是 | `user_id` | 是 | integer | minimum=1.0 |
+| `application/json` | 是 | `name` | 是 | string | minLength=1, maxLength=20 |
 | `application/json` | 是 | `create_time` | 否 | string \| null |  |
 | `application/json` | 是 | `update_time` | 否 | string \| null |  |
 | `application/json` | 是 | `id` | 否 | integer \| null |  |
@@ -1543,9 +1543,9 @@ Create Announcement
 
 | 内容类型 | 请求体必填 | 字段 | 字段必填 | 类型 | 约束 / 说明 |
 | --- | --- | --- | --- | --- | --- |
-| `application/json` | 是 | `title` | 是 | string |  |
-| `application/json` | 是 | `content` | 是 | string |  |
-| `application/json` | 是 | `is_top` | 否 | integer | default=0 |
+| `application/json` | 是 | `title` | 是 | string | minLength=1, maxLength=255 |
+| `application/json` | 是 | `content` | 是 | string | minLength=1 |
+| `application/json` | 是 | `is_top` | 否 | integer | minimum=0.0, maximum=1.0, default=0 |
 | `application/json` | 是 | `create_time` | 否 | string |  |
 | `application/json` | 是 | `update_time` | 否 | string |  |
 | `application/json` | 是 | `id` | 否 | integer \| null |  |
@@ -1580,9 +1580,9 @@ Update Announcement
 
 | 内容类型 | 请求体必填 | 字段 | 字段必填 | 类型 | 约束 / 说明 |
 | --- | --- | --- | --- | --- | --- |
-| `application/json` | 是 | `title` | 是 | string |  |
-| `application/json` | 是 | `content` | 是 | string |  |
-| `application/json` | 是 | `is_top` | 否 | integer | default=0 |
+| `application/json` | 是 | `title` | 是 | string | minLength=1, maxLength=255 |
+| `application/json` | 是 | `content` | 是 | string | minLength=1 |
+| `application/json` | 是 | `is_top` | 否 | integer | minimum=0.0, maximum=1.0, default=0 |
 | `application/json` | 是 | `create_time` | 否 | string |  |
 | `application/json` | 是 | `update_time` | 否 | string |  |
 | `application/json` | 是 | `id` | 否 | integer \| null |  |
@@ -2125,9 +2125,9 @@ Chat
 
 | 内容类型 | 请求体必填 | 字段 | 字段必填 | 类型 | 约束 / 说明 |
 | --- | --- | --- | --- | --- | --- |
-| `application/json` | 是 | `session_id` | 是 | integer |  |
-| `application/json` | 是 | `role` | 是 | string |  |
-| `application/json` | 是 | `content` | 是 | string |  |
+| `application/json` | 是 | `session_id` | 是 | integer | minimum=1.0 |
+| `application/json` | 是 | `role` | 是 | string: user, assistant |  |
+| `application/json` | 是 | `content` | 是 | string | minLength=1 |
 | `application/json` | 是 | `create_time` | 是 | string |  |
 | `application/json` | 是 | `id` | 否 | integer \| null |  |
 | `application/json` | 是 | `rewritten_content` | 否 | string \| null |  |
@@ -2275,9 +2275,9 @@ Delete Messages After
 
 | 字段 | 必填 | 类型 | 约束 / 说明 |
 | --- | --- | --- | --- |
-| `title` | 是 | string |  |
-| `content` | 是 | string |  |
-| `is_top` | 否 | integer | default=0 |
+| `title` | 是 | string | minLength=1, maxLength=255 |
+| `content` | 是 | string | minLength=1 |
+| `is_top` | 否 | integer | minimum=0.0, maximum=1.0, default=0 |
 | `create_time` | 否 | string |  |
 | `update_time` | 否 | string |  |
 | `id` | 否 | integer \| null |  |
@@ -2359,16 +2359,16 @@ Delete Messages After
 
 | 字段 | 必填 | 类型 | 约束 / 说明 |
 | --- | --- | --- | --- |
-| `name` | 是 | string |  |
+| `name` | 是 | string | minLength=1, maxLength=15 |
 | `id` | 否 | integer \| null |  |
 
 ### Message
 
 | 字段 | 必填 | 类型 | 约束 / 说明 |
 | --- | --- | --- | --- |
-| `session_id` | 是 | integer |  |
-| `role` | 是 | string |  |
-| `content` | 是 | string |  |
+| `session_id` | 是 | integer | minimum=1.0 |
+| `role` | 是 | string: user, assistant |  |
+| `content` | 是 | string | minLength=1 |
 | `create_time` | 是 | string |  |
 | `id` | 否 | integer \| null |  |
 | `rewritten_content` | 否 | string \| null |  |
@@ -2377,15 +2377,15 @@ Delete Messages After
 
 | 字段 | 必填 | 类型 | 约束 / 说明 |
 | --- | --- | --- | --- |
-| `name` | 是 | string |  |
+| `name` | 是 | string | minLength=1, maxLength=15 |
 | `id` | 否 | integer \| null |  |
 
 ### Session
 
 | 字段 | 必填 | 类型 | 约束 / 说明 |
 | --- | --- | --- | --- |
-| `user_id` | 是 | integer |  |
-| `name` | 是 | string |  |
+| `user_id` | 是 | integer | minimum=1.0 |
+| `name` | 是 | string | minLength=1, maxLength=20 |
 | `create_time` | 否 | string \| null |  |
 | `update_time` | 否 | string \| null |  |
 | `id` | 否 | integer \| null |  |
