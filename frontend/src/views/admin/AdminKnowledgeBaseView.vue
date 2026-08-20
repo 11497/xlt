@@ -36,8 +36,7 @@ const handleCreate = async () => {
     return;
   }
   const res = await createKnowledgeBase({
-    name: createForm.value.name,
-    id: null
+    name: createForm.value.name
   });
 
   if (res.code === 1) {
