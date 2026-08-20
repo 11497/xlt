@@ -1,8 +1,11 @@
+import os
+
+
 DB_CONFIG = {
-    "host": "localhost",
-    "port": 3306,
-    "user": "root",
-    "password": "123456",
-    "database": "xlt",
+    "host": os.getenv("DB_HOST"),
+    "port": int(os.getenv("DB_PORT", "3306")),
+    "user": os.getenv("DB_USER"),
+    "password": os.getenv("DB_PASSWORD"),
+    "database": os.getenv("DB_NAME"),
     "charset": "utf8mb4",
 }

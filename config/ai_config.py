@@ -1,3 +1,6 @@
+import os
+
+
 BASE_URL = "https://api.siliconflow.cn/v1"
 EMBEDDING_MODEL = "Qwen/Qwen3-Embedding-8B"
 EMBEDDING_DIM = 4096
@@ -6,8 +9,8 @@ EMBEDDING_BATCH_SIZE = 10
 TOPK = 20
 TOPN = 5
 
-VIRTUAL_MACHINE_HOST = "192.168.150.101"
-ES_PORT = 9200
+VIRTUAL_MACHINE_HOST = os.getenv("ES_HOST")
+ES_PORT = int(os.getenv("ES_PORT", "9200"))
 
 RERANK_MODEL = "Qwen/Qwen3-Reranker-8B"
 

@@ -1,5 +1,8 @@
+import os
+
+
 JWT_CONFIG = {
-    "secret_key": "sOQ/irXB$p^kCO！O'i}t?=JHxArl$l>5'X&]NP%d'M](*Z!@",
+    "secret_key": os.getenv("JWT_SECRET_KEY"),
     "algorithm": "HS256",
     "access_token_expire_minutes": 1440,
 }
