@@ -25,8 +25,8 @@
   - [快速开始](#快速开始)
     - [环境要求](#环境要求)
     - [1. 安装后端依赖](#1-安装后端依赖)
-    - [2. 初始化数据库](#2-初始化数据库)
-    - [3. 配置外部服务](#3-配置外部服务)
+    - [2. 配置环境变量](#2-配置环境变量)
+    - [3. 初始化数据库](#3-初始化数据库)
     - [4. 启动后端](#4-启动后端)
     - [5. 启动前端](#5-启动前端)
     - [默认账号](#默认账号)
@@ -80,6 +80,7 @@ xlt/
 │   ├── authentication.py   # 认证路由与 JWT 依赖
 │   └── user_auth.py        # 用户权限校验装饰器
 ├── config/                  # 配置模块
+│   ├── __init__.py         # 加载项目根目录的 .env
 │   ├── ai_config.py        # AI 相关配置
 │   ├── db_config.py        # 数据库配置
 │   ├── file_config.py      # 文件配置
@@ -103,7 +104,7 @@ xlt/
 │   └── generate_argon2_password.py # 明文密码 Argon2id 转换脚本
 ├── sql/                     # 数据库脚本
 │   ├── db.sql              # 非破坏性建表及初始化数据
-│   └── reset-dev.sql       # 仅限开发环境的数据库重置脚本
+│   └── reset-dev.sql       # 仅限开发环境的数据库清理脚本
 ├── util/                    # 工具类
 │   ├── db_util.py          # 数据库工具
 │   ├── file_util.py        # 文件处理工具（PDF/DOCX 解析、文本切片）
@@ -124,6 +125,7 @@ xlt/
 │   ├── vite.config.js      # Vite 配置
 │   └── package.json
 ├── main.py                  # 应用入口
+├── .env.example             # 环境变量模板（不含真实凭证）
 ├── pyproject.toml           # Python 项目配置
 ├── 接口文档.md              # 自动生成的接口文档
 └── README.md
@@ -201,13 +203,51 @@ ChromaDB 的持久化数据默认写入项目根目录的 `chroma_db/`，该目�
 uv sync
 ```
 
-### 2. 初始化数据库
+### 2. 配置环境变量
 
-先修改 `config/db_config.py` 中的 MySQL 连接信息，然后在项目根目录登录 MySQL 并执行初始化脚本：
+复制环境变量模板：
+
+```powershell
+# PowerShell
+Copy-Item .env.example .env
+```
 
 ```bash
-mysql -u root -p
+# Bash
+cp .env.example .env
 ```
+
+编辑项目根目录的 `.env`，填写以下配置：
+
+| 变量 | 说明 |
+| --- | --- |
+| `DB_HOST` | MySQL 主机地址 |
+| `DB_PORT` | MySQL 端口，默认 `3306` |
+| `DB_USER` | MySQL 用户名 |
+| `DB_PASSWORD` | MySQL 密码 |
+| `DB_NAME` | MySQL 数据库名 |
+| `JWT_SECRET_KEY` | JWT 签名密钥，应使用足够长的随机值 |
+| `ES_HOST` | Elasticsearch 主机地址 |
+| `ES_PORT` | Elasticsearch 端口，默认 `9200` |
+| `OPENAI_API_KEY` | SiliconFlow API Key |
+| `OSS_ACCESS_KEY_ID` | 阿里云 OSS AccessKey ID |
+| `OSS_ACCESS_KEY_SECRET` | 阿里云 OSS AccessKey Secret |
+
+项目启动时会自动加载根目录的 `.env`。如果系统环境中已经存在同名变量，系统环境变量优先，不会被 `.env` 覆盖。
+
+`.env` 已被 Git 忽略，请勿强制提交；`.env.example` 仅用于记录变量名，不应包含真实凭证。模型名称、召回参数、文件限制、OSS Bucket 和 Endpoint 等非敏感配置仍保留在 `config/` 下对应模块中。
+
+Elasticsearch 创建知识库索引时会使用 `ik_max_word` tokenizer。服务未安装 IK 插件时，文档索引会创建失败。
+
+### 3. 初始化数据库
+
+按照 `.env` 中的数据库配置登录 MySQL，并在项目根目录执行初始化脚本：
+
+```bash
+mysql -h localhost -P 3306 -u your_database_user -p
+```
+
+将示例中的主机、端口和用户名替换为 `.env` 中的对应值。
 
 ```sql
 SOURCE sql/db.sql;
@@ -215,44 +255,15 @@ SOURCE sql/db.sql;
 
 `sql/db.sql` 用于首次初始化，不会删除已有数据库、表或数据。已有数据库的结构变更应通过增量迁移完成。
 
-需要清空并重建本地开发数据库时，执行：
+需要清空并重建本地开发数据库时，依次执行：
 
 ```sql
 SOURCE sql/reset-dev.sql;
+SOURCE sql/db.sql;
 ```
 
 > [!WARNING]
-> `sql/reset-dev.sql` 会删除并重新创建整个 `xlt` 数据库，只能用于可以丢弃全部数据的本地开发环境。
-
-### 3. 配置外部服务
-
-| 文件 | 配置内容 |
-| --- | --- |
-| `config/db_config.py` | MySQL 地址、端口、账号和数据库名 |
-| `config/ai_config.py` | SiliconFlow 地址、模型、召回数量、Elasticsearch 地址和端口 |
-| `config/jwt_config.py` | JWT 签名密钥、算法和有效期 |
-| `config/oss_config.py` | OSS Bucket、Endpoint 和 Region |
-| `config/file_config.py` | 文件类型、上传大小、下载链接有效期和切片参数 |
-
-AI 与 OSS 凭证从系统环境变量读取。PowerShell 示例：
-
-```powershell
-$env:OPENAI_API_KEY = "your-siliconflow-api-key"
-$env:OSS_ACCESS_KEY_ID = "your-oss-access-key-id"
-$env:OSS_ACCESS_KEY_SECRET = "your-oss-access-key-secret"
-```
-
-Bash 示例：
-
-```bash
-export OPENAI_API_KEY="your-siliconflow-api-key"
-export OSS_ACCESS_KEY_ID="your-oss-access-key-id"
-export OSS_ACCESS_KEY_SECRET="your-oss-access-key-secret"
-```
-
-项目没有自动加载 `.env` 文件，因此仅创建 `.env` 不会让这些变量生效。
-
-Elasticsearch 创建知识库索引时会使用 `ik_max_word` tokenizer。服务未安装 IK 插件时，文档索引会创建失败。
+> `sql/reset-dev.sql` 会删除整个 `xlt` 数据库，只能用于可以丢弃全部数据的本地开发环境；随后执行 `sql/db.sql` 才会重新创建数据库。
 
 ### 4. 启动后端
 
@@ -369,7 +380,7 @@ flowchart TD
 ## 开发与部署注意事项
 
 - 用户密码使用 Argon2id 哈希保存和验证；已有明文密码的数据库需要先迁移或重置密码，不能直接沿用。
-- 必须替换默认 JWT 密钥，并避免将数据库密码、API Key 和 OSS 凭证提交到版本库。
+- 必须为 `JWT_SECRET_KEY` 配置独立且足够强的随机值，并避免将 `.env`、数据库密码、API Key 和 OSS 凭证提交到版本库。
 - 后端当前未配置 CORS；本地开发依赖 Vite 代理。前后端跨域独立部署时，需要增加可信来源的 CORS 配置或由反向代理统一域名。
 - 文档上传会依次写入 OSS、MySQL、ChromaDB 和 Elasticsearch。生产环境应补充失败补偿、事务一致性和可观测性。
 - 删除知识库、文档或公告附件会同步操作外部存储和索引，执行前应确认对应服务可用并做好备份。

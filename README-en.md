@@ -25,8 +25,8 @@
   - [Quick Start](#quick-start)
     - [Prerequisites](#prerequisites)
     - [1. Install Backend Dependencies](#1-install-backend-dependencies)
-    - [2. Initialize the Database](#2-initialize-the-database)
-    - [3. Configure External Services](#3-configure-external-services)
+    - [2. Configure Environment Variables](#2-configure-environment-variables)
+    - [3. Initialize the Database](#3-initialize-the-database)
     - [4. Start the Backend](#4-start-the-backend)
     - [5. Start the Frontend](#5-start-the-frontend)
     - [Default Accounts](#default-accounts)
@@ -82,6 +82,7 @@ xlt/
 │   ├── authentication.py   # Authentication routes and JWT dependencies
 │   └── user_auth.py        # User authorization decorators
 ├── config/                  # Configuration module
+│   ├── __init__.py         # Loads .env from the project root
 │   ├── ai_config.py        # AI-related configuration
 │   ├── db_config.py        # Database configuration
 │   ├── file_config.py      # File configuration
@@ -105,7 +106,7 @@ xlt/
 │   └── generate_argon2_password.py # Plaintext-to-Argon2id password conversion script
 ├── sql/                     # Database scripts
 │   ├── db.sql              # Non-destructive schema and initial data
-│   └── reset-dev.sql       # Development-only database reset script
+│   └── reset-dev.sql       # Development-only database cleanup script
 ├── util/                    # Utilities
 │   ├── db_util.py          # Database utilities
 │   ├── file_util.py        # File utilities (PDF/DOCX parsing and text chunking)
@@ -126,6 +127,7 @@ xlt/
 │   ├── vite.config.js      # Vite configuration
 │   └── package.json
 ├── main.py                  # Application entry point
+├── .env.example             # Environment variable template (no real credentials)
 ├── pyproject.toml           # Python project configuration
 ├── 接口文档.md              # Auto-generated API documentation
 ├── README.md
@@ -209,13 +211,51 @@ The project does not have a separate user-knowledge base association table. Know
 uv sync
 ```
 
-### 2. Initialize the Database
+### 2. Configure Environment Variables
 
-First, update the MySQL connection settings in `config/db_config.py`. Then, from the project root, log in to MySQL and run the initialization script:
+Copy the environment variable template:
+
+```powershell
+# PowerShell
+Copy-Item .env.example .env
+```
 
 ```bash
-mysql -u root -p
+# Bash
+cp .env.example .env
 ```
+
+Edit `.env` in the project root and provide the following settings:
+
+| Variable | Description |
+| --- | --- |
+| `DB_HOST` | MySQL host |
+| `DB_PORT` | MySQL port; defaults to `3306` |
+| `DB_USER` | MySQL username |
+| `DB_PASSWORD` | MySQL password |
+| `DB_NAME` | MySQL database name |
+| `JWT_SECRET_KEY` | JWT signing secret; use a sufficiently long random value |
+| `ES_HOST` | Elasticsearch host |
+| `ES_PORT` | Elasticsearch port; defaults to `9200` |
+| `OPENAI_API_KEY` | SiliconFlow API key |
+| `OSS_ACCESS_KEY_ID` | Alibaba Cloud OSS AccessKey ID |
+| `OSS_ACCESS_KEY_SECRET` | Alibaba Cloud OSS AccessKey Secret |
+
+The application automatically loads `.env` from the project root at startup. Existing system environment variables take precedence and are not overwritten by values from `.env`.
+
+`.env` is ignored by Git and must not be force-committed. `.env.example` records variable names only and must not contain real credentials. Non-sensitive settings such as model names, retrieval parameters, file limits, the OSS bucket, and endpoints remain in the corresponding modules under `config/`.
+
+Elasticsearch uses the `ik_max_word` tokenizer when creating a knowledge base index. Document index creation will fail if the IK plugin is not installed.
+
+### 3. Initialize the Database
+
+Use the database settings from `.env` to log in to MySQL, then run the initialization script from the project root:
+
+```bash
+mysql -h localhost -P 3306 -u your_database_user -p
+```
+
+Replace the example host, port, and username with the corresponding values from `.env`.
 
 ```sql
 SOURCE sql/db.sql;
@@ -223,44 +263,15 @@ SOURCE sql/db.sql;
 
 `sql/db.sql` is intended for first-time initialization and does not delete existing databases, tables, or data. Apply later schema changes through incremental migrations.
 
-To clear and rebuild the local development database, run:
+To clear and rebuild the local development database, run these commands in order:
 
 ```sql
 SOURCE sql/reset-dev.sql;
+SOURCE sql/db.sql;
 ```
 
 > [!WARNING]
-> `sql/reset-dev.sql` deletes and recreates the entire `xlt` database. Use it only in a local development environment where all data can be discarded.
-
-### 3. Configure External Services
-
-| File | Configuration |
-| --- | --- |
-| `config/db_config.py` | MySQL host, port, credentials, and database name |
-| `config/ai_config.py` | SiliconFlow endpoint, models, recall count, and Elasticsearch host and port |
-| `config/jwt_config.py` | JWT signing secret, algorithm, and expiration |
-| `config/oss_config.py` | OSS bucket, endpoint, and region |
-| `config/file_config.py` | File types, upload size, download URL expiration, and chunking parameters |
-
-AI and OSS credentials are read from system environment variables. PowerShell example:
-
-```powershell
-$env:OPENAI_API_KEY = "your-siliconflow-api-key"
-$env:OSS_ACCESS_KEY_ID = "your-oss-access-key-id"
-$env:OSS_ACCESS_KEY_SECRET = "your-oss-access-key-secret"
-```
-
-Bash example:
-
-```bash
-export OPENAI_API_KEY="your-siliconflow-api-key"
-export OSS_ACCESS_KEY_ID="your-oss-access-key-id"
-export OSS_ACCESS_KEY_SECRET="your-oss-access-key-secret"
-```
-
-The project does not automatically load `.env` files, so creating a `.env` file alone will not set these variables.
-
-Elasticsearch uses the `ik_max_word` tokenizer when creating a knowledge base index. Document index creation will fail if the IK plugin is not installed.
+> `sql/reset-dev.sql` deletes the entire `xlt` database. Use it only in a local development environment where all data can be discarded; the following `sql/db.sql` command recreates the database.
 
 ### 4. Start the Backend
 
@@ -377,7 +388,7 @@ flowchart TD
 ## Development and Deployment Notes
 
 - User passwords are stored and verified using Argon2id hashes. Databases containing existing plaintext passwords must be migrated or have their passwords reset; the plaintext values cannot be used as-is.
-- Replace the default JWT secret, and do not commit database passwords, API keys, or OSS credentials to version control.
+- Configure `JWT_SECRET_KEY` with a strong, unique random value, and do not commit `.env`, database passwords, API keys, or OSS credentials to version control.
 - CORS is not currently configured on the backend; local development relies on the Vite proxy. For separate cross-origin frontend and backend deployments, configure CORS with trusted origins or use a reverse proxy to serve both under one domain.
 - Document uploads write sequentially to OSS, MySQL, ChromaDB, and Elasticsearch. Production deployments should add failure compensation, transactional consistency safeguards, and observability.
 - Deleting knowledge bases, documents, or announcement attachments also modifies external storage and indexes. Verify that the corresponding services are available and create backups before performing these operations.
