@@ -94,10 +94,7 @@ const handleDelete = (session) => {
 const createSessionBtn = async () => {
   const res = await createSession({
     user_id: user.value.id,
-    name: '新建会话',
-    create_time: null,
-    update_time: null,
-    id: null
+    name: '新建会话'
   })
   if (res.code) {
     const result = await sessionByUserId(user.value.id)
@@ -121,10 +118,8 @@ const handleSend = async (content) => {
 
   // 2. 先追加用户消息到界面
   const userMsg = {
-    id: null,
     role: 'user',
     content,
-    rewritten_content: null,
     session_id: currentSessionId.value,
     create_time: new Date().toISOString()
   }
