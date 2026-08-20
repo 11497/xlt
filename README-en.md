@@ -104,7 +104,8 @@ xlt/
 │   ├── generate_api_doc.py         # Markdown API documentation generator
 │   └── generate_argon2_password.py # Plaintext-to-Argon2id password conversion script
 ├── sql/                     # Database scripts
-│   └── db.sql              # Schema and initial data
+│   ├── db.sql              # Non-destructive schema and initial data
+│   └── reset-dev.sql       # Development-only database reset script
 ├── util/                    # Utilities
 │   ├── db_util.py          # Database utilities
 │   ├── file_util.py        # File utilities (PDF/DOCX parsing and text chunking)
@@ -210,7 +211,7 @@ uv sync
 
 ### 2. Initialize the Database
 
-First, update the MySQL connection settings in `config/db_config.py`. Then log in to MySQL and run the initialization script:
+First, update the MySQL connection settings in `config/db_config.py`. Then, from the project root, log in to MySQL and run the initialization script:
 
 ```bash
 mysql -u root -p
@@ -220,8 +221,16 @@ mysql -u root -p
 SOURCE sql/db.sql;
 ```
 
+`sql/db.sql` is intended for first-time initialization and does not delete existing databases, tables, or data. Apply later schema changes through incremental migrations.
+
+To clear and rebuild the local development database, run:
+
+```sql
+SOURCE sql/reset-dev.sql;
+```
+
 > [!WARNING]
-> `sql/db.sql` begins with `DROP DATABASE IF EXISTS xlt`, which deletes and recreates the entire `xlt` database. Do not run this script directly in an environment that contains data you need to keep.
+> `sql/reset-dev.sql` deletes and recreates the entire `xlt` database. Use it only in a local development environment where all data can be discarded.
 
 ### 3. Configure External Services
 

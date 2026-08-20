@@ -102,7 +102,8 @@ xlt/
 │   ├── generate_api_doc.py         # Markdown 接口文档生成脚本
 │   └── generate_argon2_password.py # 明文密码 Argon2id 转换脚本
 ├── sql/                     # 数据库脚本
-│   └── db.sql              # 建表及初始化数据
+│   ├── db.sql              # 非破坏性建表及初始化数据
+│   └── reset-dev.sql       # 仅限开发环境的数据库重置脚本
 ├── util/                    # 工具类
 │   ├── db_util.py          # 数据库工具
 │   ├── file_util.py        # 文件处理工具（PDF/DOCX 解析、文本切片）
@@ -202,7 +203,7 @@ uv sync
 
 ### 2. 初始化数据库
 
-先修改 `config/db_config.py` 中的 MySQL 连接信息，然后登录 MySQL 并执行初始化脚本：
+先修改 `config/db_config.py` 中的 MySQL 连接信息，然后在项目根目录登录 MySQL 并执行初始化脚本：
 
 ```bash
 mysql -u root -p
@@ -212,8 +213,16 @@ mysql -u root -p
 SOURCE sql/db.sql;
 ```
 
+`sql/db.sql` 用于首次初始化，不会删除已有数据库、表或数据。已有数据库的结构变更应通过增量迁移完成。
+
+需要清空并重建本地开发数据库时，执行：
+
+```sql
+SOURCE sql/reset-dev.sql;
+```
+
 > [!WARNING]
-> `sql/db.sql` 开头包含 `DROP DATABASE IF EXISTS xlt`，会删除并重新创建整个 `xlt` 数据库。不要对包含有效数据的环境直接执行该脚本。
+> `sql/reset-dev.sql` 会删除并重新创建整个 `xlt` 数据库，只能用于可以丢弃全部数据的本地开发环境。
 
 ### 3. 配置外部服务
 
