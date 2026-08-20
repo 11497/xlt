@@ -1,6 +1,6 @@
 <script setup>
 import { useCurrentUser } from '@/hooks/useCurrentUser.js'
-import { ref, watch, nextTick } from 'vue'
+import { reactive, ref, watch, nextTick } from 'vue'
 import { createSession, deleteSession, renameSession, sessionByUserId } from '@/api/session.js'
 import { chat, deleteMessagesAfter, deleteMessagesBySessionId, messageBySessionId } from '@/api/message.js'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -14,6 +14,7 @@ const sessions = ref([])
 const sessionsLoading = ref(false)
 const currentSessionId = ref(0)
 const messages = ref([])
+const isStreaming = ref(false)
 
 watch(
   () => user.value?.id,
@@ -111,35 +112,67 @@ const switchToMyPage = async () => {
 }
 
 const handleSend = async (content) => {
-  // 1. 确保会话存在
-  if (currentSessionId.value === 0) {
-    await createSessionBtn()
+  if (isStreaming.value) return
+  isStreaming.value = true
+
+  let assistantMsg = null
+  let targetSessionId = 0
+
+  try {
+    // 1. 确保会话存在
+    if (currentSessionId.value === 0) {
+      await createSessionBtn()
+    }
+
+    targetSessionId = currentSessionId.value
+
+    // 2. 先追加用户消息到界面
+    const userMsg = reactive({
+      role: 'user',
+      content,
+      session_id: targetSessionId,
+      create_time: new Date().toISOString()
+    })
+    messages.value.push(userMsg)
+    assistantMsg = reactive({
+      role: 'assistant',
+      content: '',
+      session_id: targetSessionId,
+      create_time: new Date().toISOString()
+    })
+    messages.value.push(assistantMsg)
+    await nextTick(() => scrollToBottom())
+
+    // 3. 逐段接收 AI 回复并更新当前消息气泡
+    await chat(userMsg, (event) => {
+      if (event.type === 'start') {
+        userMsg.id = event.user_message_id
+      } else if (event.type === 'delta') {
+        assistantMsg.content += event.content
+        scrollToBottom()
+      } else if (event.type === 'done') {
+        assistantMsg.id = event.assistant_message_id
+      }
+    })
+
+    // 4. 刷新会话列表（第一轮对话可能已生成标题）
+    const sessionRes = await sessionByUserId(user.value.id)
+    sessions.value = sessionRes.data
+  } catch (error) {
+    // 后端不会存储发送失败的部分回复。重新加载当前会话，
+    // 以避免界面内容与持久化的历史记录不一致。
+    if (targetSessionId && currentSessionId.value === targetSessionId) {
+      try {
+        await handleSessionClick(targetSessionId)
+      } catch {
+        const index = messages.value.indexOf(assistantMsg)
+        if (index !== -1) messages.value.splice(index, 1)
+      }
+    }
+    ElMessage.error(error.message || '发送消息失败')
+  } finally {
+    isStreaming.value = false
   }
-
-  // 2. 先追加用户消息到界面
-  const userMsg = {
-    role: 'user',
-    content,
-    session_id: currentSessionId.value,
-    create_time: new Date().toISOString()
-  }
-  messages.value.push(userMsg)
-  await nextTick(() => scrollToBottom())
-
-  // 3. 发送消息并获取AI回复
-  // 注意：chat API 现在应返回 AI 的回复内容，而非仅确认收到
-  const res = await chat(userMsg)
-
-  // 4. 刷新消息列表
-  if (res.code) {
-    await handleSessionClick(currentSessionId.value)
-  } else {
-    ElMessage.error(res.msg)
-  }
-
-  // 5. 仅在必要时刷新会话列表（如标题可能已更新）
-  const sessionRes = await sessionByUserId(user.value.id)
-  sessions.value = sessionRes.data
 }
 
 const handleDeleteMessage = async (msg) => {
@@ -186,6 +219,7 @@ const handleDeleteMessage = async (msg) => {
       <ChatPanel
         :messages="messages"
         :current-session-id="currentSessionId"
+        :is-streaming="isStreaming"
         @send="handleSend"
         @delete-message="handleDeleteMessage"
       />
