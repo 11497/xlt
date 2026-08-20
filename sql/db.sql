@@ -1,4 +1,4 @@
-drop database if exists xlt;
+-- 非破坏性初始化脚本：不会删除已有数据库、表或数据。
 create database if not exists xlt;
 
 use xlt;
@@ -7,7 +7,6 @@ use xlt;
 -- 1. 完全隶属于父记录、且不关联外部资源的数据使用 CASCADE。
 -- 2. 需要先解绑或清理 OSS、Chroma、Elasticsearch 的数据使用 RESTRICT。
 
-drop table if exists user;
 create table user (
     id int auto_increment primary key comment '用户id',
     username varchar(255) not null unique comment '用户名',
@@ -15,7 +14,6 @@ create table user (
     is_admin tinyint default 0 comment '是否管理员，0为普通用户，1为管理员'
 ) comment '用户';
 
-drop table if exists session;
 create table session (
     id int auto_increment primary key comment '会话id',
     user_id int not null comment '用户id',
@@ -26,7 +24,6 @@ create table session (
         foreign key (user_id) references user(id) on delete cascade
 ) comment '会话';
 
-drop table if exists message;
 create table message (
     id int auto_increment primary key comment '消息id',
     session_id int not null comment '会话id',
@@ -38,19 +35,16 @@ create table message (
         foreign key (session_id) references session(id) on delete cascade
 ) comment '消息';
 
-drop table if exists knowledge_base;
 create table knowledge_base (
     id int auto_increment primary key comment '知识库id',
     name varchar(255) not null unique comment '知识库名称'
 ) comment '知识库';
 
-drop table if exists role;
 create table role (
     id int auto_increment primary key comment '角色id',
     name varchar(255) not null unique comment '角色名称'
 ) comment '角色';
 
-drop table if exists role_user;
 create table role_user (
     role_id int comment '角色id',
     user_id int comment '用户id',
@@ -61,7 +55,6 @@ create table role_user (
         foreign key (user_id) references user(id) on delete restrict
 ) comment '角色用户关联';
 
-drop table if exists role_knowledge_base;
 create table role_knowledge_base (
     role_id int comment '角色id',
     knowledge_base_id int comment '知识库id',
@@ -72,7 +65,6 @@ create table role_knowledge_base (
         foreign key (knowledge_base_id) references knowledge_base(id) on delete restrict
 ) comment '角色知识库关联';
 
-drop table if exists document;
 create table document (
     id int auto_increment primary key comment '文档id',
     knowledge_base_id int not null comment '知识库id',
@@ -84,7 +76,6 @@ create table document (
         foreign key (knowledge_base_id) references knowledge_base(id) on delete restrict
 ) comment '文档';
 
-drop table if exists announcement;
 create table announcement (
     id int auto_increment primary key comment '公告id',
     title varchar(255) not null comment '公告标题',
@@ -94,7 +85,6 @@ create table announcement (
     update_time datetime not null default current_timestamp comment '更新时间'
 ) comment '公告';
 
-drop table if exists announcement_attachment;
 create table announcement_attachment (
     id int auto_increment primary key comment '公告附件id',
     announcement_id int not null comment '公告id',
