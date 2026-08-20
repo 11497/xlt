@@ -202,14 +202,12 @@ const handleSaveAnnouncement = async () => {
     return;
   }
 
-  // 3. 构建符合后端模型要求的对象
+  // 3. 构建更新请求
   const updatedAnnouncement = {
     id: currentAnnouncement.value.id,
     title: currentAnnouncement.value.title,
     content: currentAnnouncement.value.content,
-    is_top: currentAnnouncement.value.is_top ? 1 : 0, // 模型中 is_top 是 int 类型
-    create_time: currentAnnouncement.value.create_time,
-    update_time: new Date(),
+    is_top: currentAnnouncement.value.is_top ? 1 : 0
   };
 
   try {
@@ -235,14 +233,11 @@ const handleSaveAnnouncement = async () => {
 
 // 发布公告
 const handlePublishAnnouncement = async () => {
-  // 1. 构建符合后端模型要求的对象
+  // 1. 构建发布请求
   const newAnnouncement = {
     title: publishForm.value.title,
     content: publishForm.value.content,
-    is_top: publishForm.value.is_top ? 1 : 0, // 模型中 is_top 是 int 类型
-    id: null,
-    create_time: new Date(),
-    update_time: new Date(),
+    is_top: publishForm.value.is_top ? 1 : 0
   };
 
   try {
