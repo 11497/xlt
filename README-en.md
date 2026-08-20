@@ -32,6 +32,7 @@
     - [Default Accounts](#default-accounts)
   - [File and Model Constraints](#file-and-model-constraints)
   - [API Modules](#api-modules)
+    - [Streaming Chat Response](#streaming-chat-response)
     - [Generate Markdown API Documentation](#generate-markdown-api-documentation)
   - [Hybrid Retrieval Flow](#hybrid-retrieval-flow)
   - [Development and Deployment Notes](#development-and-deployment-notes)
@@ -63,7 +64,7 @@ Xiaolingtong is an intelligent Q&A and knowledge management system designed for 
 - **UI component library**: Element Plus
 - **Routing**: Vue Router 4
 - **State management**: Pinia 4 (with persistence)
-- **HTTP client**: Axios
+- **HTTP client**: Axios; the chat endpoint uses Fetch Streams for streaming responses
 - **Markdown rendering**: markdown-it
 
 ## Project Structure
@@ -71,7 +72,7 @@ Xiaolingtong is an intelligent Q&A and knowledge management system designed for 
 ```text
 xlt/
 ├── ai/                      # AI service layer
-│   ├── chat.py             # Chat service (conversation, summarization, malicious-content detection, query rewriting)
+│   ├── chat.py             # Chat service (streaming conversation, summarization, malicious-content detection, query rewriting)
 │   ├── chroma_service.py   # Chroma vector database service
 │   ├── embedding.py        # Text embedding service
 │   ├── es_service.py       # Elasticsearch BM25 retrieval service
@@ -145,6 +146,7 @@ By default, ChromaDB persistence data is written to `chroma_db/` in the project 
 - **Query rewriting**: Rewrites user queries using conversation history to improve retrieval accuracy
 - **Conversation summarization**: Automatically generates session titles
 - **Safety checks**: Detects and filters malicious content
+- **Streaming answers**: Delivers AI-generated content incrementally over NDJSON and renders it in real time
 - **Markdown output**: Renders answers in Markdown format
 
 ### 2. Knowledge Base Management
@@ -350,7 +352,52 @@ Except for registration, login, and authentication endpoints, business endpoints
 Authorization: Bearer <access-token>
 ```
 
-Business responses are uniformly wrapped in `Result`: `code` is `1` on success and `0` on failure, with `msg` and `data` included in the response.
+Except for the streaming chat endpoint, business responses are uniformly wrapped in `Result`: `code` is `1` on success and `0` on failure, with `msg` and `data` included in the response.
+
+### Streaming Chat Response
+
+`POST /api/message/chat` returns a streaming response with the `application/x-ndjson` media type. The request still requires a Bearer token. Example request body:
+
+```json
+{
+  "session_id": 1,
+  "role": "user",
+  "content": "When does the campus library close?",
+  "create_time": "2026-08-20T16:00:00.000Z"
+}
+```
+
+Each line in the response body is an independent JSON event:
+
+| Event type | Field | Description |
+| --- | --- | --- |
+| `start` | `user_message_id` | Confirms that the user message was saved and returns its database ID |
+| `delta` | `content` | Contains the latest AI-generated text fragment, which can be appended to the current response |
+| `done` | `assistant_message_id` | Indicates that generation completed and the assistant message was saved |
+| `error` | `message` | Indicates a generation failure; incomplete assistant responses are not saved |
+
+Example response:
+
+```ndjson
+{"type":"start","user_message_id":101}
+{"type":"delta","content":"The campus library"}
+{"type":"delta","content":" usually closes at 10:00 PM."}
+{"type":"done","assistant_message_id":102}
+```
+
+Use `curl -N` to disable client-side output buffering and observe the response as it arrives:
+
+```bash
+curl -N http://127.0.0.1:8000/api/message/chat \
+  -H "Authorization: Bearer <access-token>" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/x-ndjson" \
+  -d '{"session_id":1,"role":"user","content":"When does the campus library close?","create_time":"2026-08-20T16:00:00.000Z"}'
+```
+
+In the browser, use `fetch()` to access `response.body`, then parse events line by line with `ReadableStream` and `TextDecoder`. The streaming message object must remain reactive in Vue; append each `delta` event's `content` to the current assistant message to update the page in real time.
+
+Session authorization and request validation errors that occur before streaming begins are still returned as regular JSON responses. Errors after the stream starts are returned as `error` events. The user message is saved before generation, while the assistant message is saved only after the complete response has been generated.
 
 ### Generate Markdown API Documentation
 
@@ -382,7 +429,8 @@ flowchart TD
     G --> H[Rerank]
     H --> I[Top-N results]
     I --> J[Inject into prompt]
-    J --> K[LLM-generated answer]
+    J --> K[LLM streams the answer]
+    K --> L[Push NDJSON chunks to the frontend]
 ```
 
 ## Development and Deployment Notes
@@ -390,5 +438,6 @@ flowchart TD
 - User passwords are stored and verified using Argon2id hashes. Databases containing existing plaintext passwords must be migrated or have their passwords reset; the plaintext values cannot be used as-is.
 - Configure `JWT_SECRET_KEY` with a strong, unique random value, and do not commit `.env`, database passwords, API keys, or OSS credentials to version control.
 - CORS is not currently configured on the backend; local development relies on the Vite proxy. For separate cross-origin frontend and backend deployments, configure CORS with trusted origins or use a reverse proxy to serve both under one domain.
+- Reverse proxies must disable response buffering and caching for `/api/message/chat`; otherwise, the browser may receive the entire answer only after generation finishes. The backend already sends `X-Accel-Buffering: no` and `Cache-Control: no-cache`, but Nginx deployments should still verify that proxy settings do not override this behavior.
 - Document uploads write sequentially to OSS, MySQL, ChromaDB, and Elasticsearch. Production deployments should add failure compensation, transactional consistency safeguards, and observability.
 - Deleting knowledge bases, documents, or announcement attachments also modifies external storage and indexes. Verify that the corresponding services are available and create backups before performing these operations.
