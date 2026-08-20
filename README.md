@@ -32,6 +32,7 @@
     - [默认账号](#默认账号)
   - [文件与模型限制](#文件与模型限制)
   - [API 模块](#api-模块)
+    - [聊天流式响应](#聊天流式响应)
     - [生成 Markdown 接口文档](#生成-markdown-接口文档)
   - [混合检索流程](#混合检索流程)
   - [开发与部署注意事项](#开发与部署注意事项)
@@ -61,7 +62,7 @@
 - **UI 组件库**: Element Plus
 - **路由**: Vue Router 4
 - **状态管理**: Pinia 4（含持久化）
-- **HTTP 客户端**: Axios
+- **HTTP 客户端**: Axios；聊天接口使用 Fetch Streams 读取流式响应
 - **Markdown 渲染**: markdown-it
 
 ## 项目结构
@@ -69,7 +70,7 @@
 ```
 xlt/
 ├── ai/                      # AI 服务层
-│   ├── chat.py             # 聊天服务（对话、总结、恶意检测、问题重写）
+│   ├── chat.py             # 聊天服务（流式对话、总结、恶意检测、问题重写）
 │   ├── chroma_service.py   # Chroma 向量数据库服务
 │   ├── embedding.py        # 文本向量化服务
 │   ├── es_service.py       # Elasticsearch BM25 检索服务
@@ -141,6 +142,7 @@ ChromaDB 的持久化数据默认写入项目根目录的 `chroma_db/`，该目�
 - **问题重写**: 结合对话历史重写用户问题，提升检索准确率
 - **对话总结**: 自动生成会话标题
 - **安全检测**: 恶意内容检测过滤
+- **流式回答**: AI 生成内容通过 NDJSON 逐段推送并实时显示
 - **Markdown 输出**: 回答支持 Markdown 格式渲染
 
 ### 2. 知识库管理
@@ -342,7 +344,52 @@ npm run build
 Authorization: Bearer <access-token>
 ```
 
-业务响应由 `Result` 统一包装：成功时 `code` 为 `1`，失败时 `code` 为 `0`，同时返回 `msg` 和 `data`。
+除聊天流式接口外，业务响应由 `Result` 统一包装：成功时 `code` 为 `1`，失败时 `code` 为 `0`，同时返回 `msg` 和 `data`。
+
+### 聊天流式响应
+
+`POST /api/message/chat` 使用 `application/x-ndjson` 返回流式响应。请求仍需携带 Bearer Token，请求体示例：
+
+```json
+{
+  "session_id": 1,
+  "role": "user",
+  "content": "学校图书馆几点关闭？",
+  "create_time": "2026-08-20T16:00:00.000Z"
+}
+```
+
+响应体的每一行都是一个独立 JSON 事件：
+
+| 事件类型 | 字段 | 说明 |
+| --- | --- | --- |
+| `start` | `user_message_id` | 用户消息已保存，返回其数据库 ID |
+| `delta` | `content` | AI 本次生成的文本片段，可直接追加到当前回复 |
+| `done` | `assistant_message_id` | AI 回复生成完成并已保存，返回其数据库 ID |
+| `error` | `message` | 生成过程失败；不保存不完整的 AI 回复 |
+
+示例响应：
+
+```ndjson
+{"type":"start","user_message_id":101}
+{"type":"delta","content":"学校图书馆"}
+{"type":"delta","content":"通常在晚上 22:00 关闭。"}
+{"type":"done","assistant_message_id":102}
+```
+
+可使用 `curl -N` 关闭客户端输出缓冲并观察响应过程：
+
+```bash
+curl -N http://127.0.0.1:8000/api/message/chat \
+  -H "Authorization: Bearer <access-token>" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/x-ndjson" \
+  -d '{"session_id":1,"role":"user","content":"学校图书馆几点关闭？","create_time":"2026-08-20T16:00:00.000Z"}'
+```
+
+浏览器端使用 `fetch()` 获取 `response.body`，通过 `ReadableStream` 和 `TextDecoder` 按行解析事件。流式消息对象必须保持 Vue 响应式，收到 `delta` 后将 `content` 追加到当前 AI 消息即可实时更新页面。
+
+会话权限或请求参数等在建立流之前发生的错误仍返回普通 JSON；流开始后的生成错误通过 `error` 事件返回。用户消息在生成前保存，AI 消息仅在完整生成后保存。
 
 ### 生成 Markdown 接口文档
 
@@ -374,7 +421,8 @@ flowchart TD
     G --> H[Rerank 精排]
     H --> I[Top-N 结果]
     I --> J[注入 Prompt]
-    J --> K[LLM 生成回答]
+    J --> K[LLM 流式生成回答]
+    K --> L[NDJSON 分片推送至前端]
 ```
 
 ## 开发与部署注意事项
@@ -382,5 +430,6 @@ flowchart TD
 - 用户密码使用 Argon2id 哈希保存和验证；已有明文密码的数据库需要先迁移或重置密码，不能直接沿用。
 - 必须为 `JWT_SECRET_KEY` 配置独立且足够强的随机值，并避免将 `.env`、数据库密码、API Key 和 OSS 凭证提交到版本库。
 - 后端当前未配置 CORS；本地开发依赖 Vite 代理。前后端跨域独立部署时，需要增加可信来源的 CORS 配置或由反向代理统一域名。
+- 反向代理必须关闭 `/api/message/chat` 的响应缓冲和缓存，否则浏览器可能在生成结束后才一次性收到全部内容。后端已返回 `X-Accel-Buffering: no` 和 `Cache-Control: no-cache`，使用 Nginx 时仍应确认代理配置未覆盖这些行为。
 - 文档上传会依次写入 OSS、MySQL、ChromaDB 和 Elasticsearch。生产环境应补充失败补偿、事务一致性和可观测性。
 - 删除知识库、文档或公告附件会同步操作外部存储和索引，执行前应确认对应服务可用并做好备份。
