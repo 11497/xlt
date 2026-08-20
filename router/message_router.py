@@ -1,7 +1,9 @@
+import json
 from datetime import datetime
 from typing import List
 
 from fastapi import APIRouter, Depends
+from fastapi.responses import StreamingResponse
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage, BaseMessage
 
 from ai.chat import ChatService
@@ -20,6 +22,13 @@ router = APIRouter(prefix="/api/message", tags=["message"])
 # 初始化服务
 hybrid_search_service = HybridSearchService()
 chat_service = ChatService()
+
+
+def encode_stream_event(event: dict) -> str:
+    """
+    编码一个流式 NDJSON 事件，不转义中文文本
+    """
+    return json.dumps(event, ensure_ascii=False) + "\n"
 
 
 def retrieve_context_from_knowledge_bases(user_id: int, query: str) -> str:
@@ -97,8 +106,18 @@ async def chat(
             rewritten_content=None,
             create_time=datetime.now()
         )
-        MessageCRUD.create(ai_message)
-        return result.success(msg="对话包含恶意或敏感内容", data=ai_message.content)
+        ai_message_id = MessageCRUD.create(ai_message)
+
+        async def malicious_response():
+            yield encode_stream_event({"type": "start", "user_message_id": message_id})
+            yield encode_stream_event({"type": "delta", "content": ai_message.content})
+            yield encode_stream_event({"type": "done", "assistant_message_id": ai_message_id})
+
+        return StreamingResponse(
+            malicious_response(),
+            media_type="application/x-ndjson",
+            headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"}
+        )
     
     # 构建历史对话消息（用于重写问题）
     history_messages: List[BaseMessage] = []
@@ -134,29 +153,50 @@ async def chat(
         current_content = rewritten_query
     messages.append(HumanMessage(content=current_content))
 
-    # 调用AI模型获取响应
-    response = chat_service.send_message(messages)
-        
-    # 响应结束后，保存AI回复到数据库
-    ai_message = Message(
-        session_id=message.session_id,
-        role="assistant",
-        content=response,
-        rewritten_content=None,
-        create_time=datetime.now()
+    async def generate_response():
+        response_parts = []
+        yield encode_stream_event({"type": "start", "user_message_id": message_id})
+
+        try:
+            async for chunk in chat_service.stream_message(messages):
+                response_parts.append(chunk)
+                yield encode_stream_event({"type": "delta", "content": chunk})
+
+            response = "".join(response_parts)
+            if not response.strip():
+                raise RuntimeError("AI returned an empty response")
+
+            # 只持久化完整的回复，取消或失败的流必须保持对话历史的完整性。
+            ai_message = Message(
+                session_id=message.session_id,
+                role="assistant",
+                content=response,
+                rewritten_content=None,
+                create_time=datetime.now()
+            )
+            ai_message_id = MessageCRUD.create(ai_message)
+
+            try:
+                if is_first_round and session.name == "新建会话":
+                    conversation = [HumanMessage(content=message.content), AIMessage(content=response)]
+                    summary = chat_service.summarize_conversation(conversation)
+                    SessionCRUD.update_session_name(message.session_id, summary)
+
+                SessionCRUD.update_session_update_time(message.session_id)
+            except Exception as exc:
+                # 回复已完整持久化，所以可选的会话元更新必须保持成功。
+                print(f"更新会话信息失败: {exc}")
+
+            yield encode_stream_event({"type": "done", "assistant_message_id": ai_message_id})
+        except Exception as exc:
+            print(f"生成 AI 回复失败: {exc}")
+            yield encode_stream_event({"type": "error", "message": "AI 回复生成失败，请稍后重试"})
+
+    return StreamingResponse(
+        generate_response(),
+        media_type="application/x-ndjson",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"}
     )
-    MessageCRUD.create(ai_message)
-        
-    # 如果是第一轮对话，总结对话并更新会话名称
-    if is_first_round and session.name == "新建会话":
-        messages = [HumanMessage(content=message.content), AIMessage(content=response)]
-        summary = chat_service.summarize_conversation(messages)
-        SessionCRUD.update_session_name(message.session_id, summary)
-
-    # 更新会话更新时间
-    SessionCRUD.update_session_update_time(message.session_id)
-
-    return result.success(msg="对话成功", data=response)
 
 
 @router.get("/session/{session_id}")

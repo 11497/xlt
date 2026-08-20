@@ -1,3 +1,4 @@
+from collections.abc import AsyncIterator
 from typing import List
 
 from langchain_core.messages import BaseMessage, HumanMessage
@@ -47,6 +48,25 @@ class ChatService:
         """
         response = self.llm.invoke(messages)
         return response.content.strip()
+
+    async def stream_message(self, messages: List[BaseMessage]) -> AsyncIterator[str]:
+        """
+        向AI发送消息并流式获取回复内容
+        :param messages: LangChain消息对象列表，如 [SystemMessage(...), HumanMessage(...)]
+        :return: 异步迭代器，每次迭代返回AI回复内容字符串
+        """
+        async for chunk in self.llm.astream(messages):
+            if isinstance(chunk.content, str) and chunk.content:
+                yield chunk.content
+                continue
+
+            # 某些兼容 OpenAI 的服务提供商会返回结构化内容块。
+            if isinstance(chunk.content, list):
+                for block in chunk.content:
+                    if isinstance(block, str) and block:
+                        yield block
+                    elif isinstance(block, dict) and isinstance(block.get("text"), str):
+                        yield block["text"]
 
     def summarize_conversation(self, messages: List[BaseMessage]) -> str:
         """
