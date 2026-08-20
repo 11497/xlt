@@ -80,8 +80,8 @@ xlt/
 │   ├── ingestion_service.py      # Document ingestion service (dual writes to Chroma + ES)
 │   └── rerank_service.py   # Reranking service
 ├── authentication/          # Authentication module
-│   ├── authentication.py   # Authentication routes and JWT dependencies
-│   └── user_auth.py        # User authorization decorators
+│   ├── authentication.py   # Authentication routes and current-user dependency
+│   └── user_auth.py        # User and administrator authorization dependencies
 ├── config/                  # Configuration module
 │   ├── __init__.py         # Loads .env from the project root
 │   ├── ai_config.py        # AI-related configuration

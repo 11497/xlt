@@ -78,8 +78,8 @@ xlt/
 │   ├── ingestion_service.py      # 文档入库服务（双写 Chroma + ES）
 │   └── rerank_service.py   # 重排服务
 ├── authentication/          # 认证模块
-│   ├── authentication.py   # 认证路由与 JWT 依赖
-│   └── user_auth.py        # 用户权限校验装饰器
+│   ├── authentication.py   # 认证路由与当前用户依赖
+│   └── user_auth.py        # 用户与管理员权限依赖
 ├── config/                  # 配置模块
 │   ├── __init__.py         # 加载项目根目录的 .env
 │   ├── ai_config.py        # AI 相关配置
