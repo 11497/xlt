@@ -3,6 +3,10 @@ create database if not exists xlt;
 
 use xlt;
 
+-- 外键删除策略：
+-- 1. 完全隶属于父记录、且不关联外部资源的数据使用 CASCADE。
+-- 2. 需要先解绑或清理 OSS、Chroma、Elasticsearch 的数据使用 RESTRICT。
+
 drop table if exists user;
 create table user (
     id int auto_increment primary key comment '用户id',
@@ -18,7 +22,8 @@ create table session (
     name varchar(255) not null default '新建会话' comment '会话名称',
     create_time datetime default current_timestamp comment '创建时间',
     update_time datetime not null default current_timestamp comment '更新时间',
-    foreign key (user_id) references user(id)
+    constraint fk_session_user
+        foreign key (user_id) references user(id) on delete cascade
 ) comment '会话';
 
 drop table if exists message;
@@ -29,7 +34,8 @@ create table message (
     content text comment '消息内容',
     rewritten_content text comment '重写后的内容',
     create_time datetime default current_timestamp comment '创建时间',
-    foreign key (session_id) references session(id)
+    constraint fk_message_session
+        foreign key (session_id) references session(id) on delete cascade
 ) comment '消息';
 
 drop table if exists knowledge_base;
@@ -49,8 +55,10 @@ create table role_user (
     role_id int comment '角色id',
     user_id int comment '用户id',
     primary key (role_id, user_id),
-    foreign key (role_id) references role(id),
-    foreign key (user_id) references user(id)
+    constraint fk_role_user_role
+        foreign key (role_id) references role(id) on delete restrict,
+    constraint fk_role_user_user
+        foreign key (user_id) references user(id) on delete restrict
 ) comment '角色用户关联';
 
 drop table if exists role_knowledge_base;
@@ -58,8 +66,10 @@ create table role_knowledge_base (
     role_id int comment '角色id',
     knowledge_base_id int comment '知识库id',
     primary key (role_id, knowledge_base_id),
-    foreign key (role_id) references role(id),
-    foreign key (knowledge_base_id) references knowledge_base(id)
+    constraint fk_role_knowledge_base_role
+        foreign key (role_id) references role(id) on delete restrict,
+    constraint fk_role_knowledge_base_knowledge_base
+        foreign key (knowledge_base_id) references knowledge_base(id) on delete restrict
 ) comment '角色知识库关联';
 
 drop table if exists document;
@@ -70,7 +80,8 @@ create table document (
     storage_path varchar(500) not null comment '文档存储路径',
     create_time datetime not null default current_timestamp comment '创建时间',
     update_time datetime not null default current_timestamp comment '更新时间',
-    foreign key (knowledge_base_id) references knowledge_base(id)
+    constraint fk_document_knowledge_base
+        foreign key (knowledge_base_id) references knowledge_base(id) on delete restrict
 ) comment '文档';
 
 drop table if exists announcement;
@@ -90,7 +101,8 @@ create table announcement_attachment (
     filename varchar(255) not null comment '附件文件名',
     storage_path varchar(500) not null comment '附件存储路径',
     upload_time datetime not null default current_timestamp comment '上传时间',
-    foreign key (announcement_id) references announcement(id)
+    constraint fk_announcement_attachment_announcement
+        foreign key (announcement_id) references announcement(id) on delete restrict
 ) comment '公告附件';
 
 insert into user (username, password, is_admin)
