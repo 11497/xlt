@@ -1,8 +1,7 @@
-import os
 import requests
 from typing import List, Tuple
 
-from config.ai_config import RERANK_BASE_URL, RERANK_MODEL
+from config.ai_config import RERANK_API_KEY, RERANK_BASE_URL, RERANK_MODEL
 
 
 class RerankService:
@@ -11,7 +10,7 @@ class RerankService:
     def __init__(
             self,
             model: str = RERANK_MODEL,
-            api_key: str = os.getenv("OPENAI_API_KEY"),
+            api_key: str = RERANK_API_KEY,
             base_url: str = RERANK_BASE_URL + "/rerank"
     ):
         """
