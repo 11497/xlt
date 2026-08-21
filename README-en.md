@@ -246,6 +246,8 @@ Edit `.env` in the project root and provide the following settings:
 
 The application automatically loads `.env` from the project root at startup. Existing system environment variables take precedence and are not overwritten by values from `.env`.
 
+The current `sql/db.sql` script always creates and uses a database named `xlt`. When using this initialization script, `DB_NAME` in `.env` must therefore be set to `xlt`. To use a different database name, update both the `create database` and `use` statements in the initialization script.
+
 `.env` is ignored by Git and must not be force-committed. `.env.example` records variable names only and must not contain real credentials. Non-sensitive settings such as model names, retrieval parameters, file limits, the OSS bucket, and endpoints remain in the corresponding modules under `config/`.
 
 Elasticsearch uses the `ik_max_word` tokenizer when creating a knowledge base index. Document index creation will fail if the IK plugin is not installed.
@@ -264,7 +266,7 @@ Replace the example host, port, and username with the corresponding values from 
 SOURCE sql/db.sql;
 ```
 
-`sql/db.sql` is intended for first-time initialization and does not delete existing databases, tables, or data. Apply later schema changes through incremental migrations.
+`sql/db.sql` is intended only for the first initialization of an empty environment. It does not actively delete existing databases, tables, or data, but it is not idempotent: its table creation and seed-data statements cannot be rerun against an initialized database. The database account executing the script must be allowed to create databases and tables and insert data. Apply later schema changes through incremental migrations.
 
 To clear and rebuild the local development database, run these commands in order:
 
@@ -318,14 +320,18 @@ Build output is written to `frontend/dist/`.
 ## File and Model Constraints
 
 - Supported upload formats: `.md`, `.txt`, `.pdf`, and `.docx`
-- Maximum file size: 10 MB
+- Uploaded files must not be empty; the maximum file size is 10 MB, and a file of exactly 10 MB is accepted
+- Uploaded filenames: 1-255 characters; storage paths: 1-500 characters
+- Both the frontend and backend validate file extensions, size, empty files, and filename length
 - Default OSS download URL validity: 300 seconds
 - Maximum text chunk length: 500 characters; overlap: 150 characters
 - Username: 4-15 characters
 - Password: 6-20 characters
 - Role and knowledge base names: 1-15 characters
 - Session name: 1-20 characters
-- Chat input (frontend UI only): counted by Unicode grapheme clusters, with a limit of 2,000; sending is disabled at the limit, and oversized pasted content is truncated automatically
+- Announcement title: 1-255 characters; announcement content must not be empty
+- Chat input (frontend UI only): limited to 2,000 characters, with exactly 2,000 characters accepted; oversized typed or pasted content is truncated automatically. Counting uses Unicode grapheme clusters when `Intl.Segmenter` is available and falls back to Unicode code points otherwise
+- Administrator status: `0` or `1`
 - Announcement pin value: `0` or `1`
 - Message role: `user` or `assistant`
 
