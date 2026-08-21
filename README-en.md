@@ -131,8 +131,8 @@ xlt/
 ├── .env.example             # Environment variable template (no real credentials)
 ├── pyproject.toml           # Python project configuration
 ├── 接口文档.md              # Auto-generated API documentation
-├── README.md
-└── README-en.md
+├── README.md                # Chinese documentation
+└── README-en.md             # English documentation
 ```
 
 By default, ChromaDB persistence data is written to `chroma_db/` in the project root. This directory is ignored by Git.
@@ -167,6 +167,7 @@ By default, ChromaDB persistence data is written to `chroma_db/` in the project 
 ### 4. Session Management
 
 - Create and switch between multiple sessions
+- Clicking "Create Conversation" only opens a blank conversation; the session is created and saved when the first message is sent
 - Preserve session history
 - Rename and delete sessions
 
@@ -324,6 +325,7 @@ Build output is written to `frontend/dist/`.
 - Password: 6-20 characters
 - Role and knowledge base names: 1-15 characters
 - Session name: 1-20 characters
+- Chat input (frontend UI only): counted by Unicode grapheme clusters, with a limit of 2,000; sending is disabled at the limit, and oversized pasted content is truncated automatically
 - Announcement pin value: `0` or `1`
 - Message role: `user` or `assistant`
 
