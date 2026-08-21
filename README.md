@@ -259,7 +259,7 @@ mysql -h localhost -P 3306 -u your_database_user -p
 
 将示例中的主机、端口和用户名替换为 `.env` 中的对应值。
 
-```sql
+```text
 SOURCE sql/db.sql;
 ```
 
@@ -267,7 +267,7 @@ SOURCE sql/db.sql;
 
 需要清空并重建本地开发数据库时，依次执行：
 
-```sql
+```text
 SOURCE sql/reset-dev.sql;
 SOURCE sql/db.sql;
 ```

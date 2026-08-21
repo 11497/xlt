@@ -266,7 +266,7 @@ mysql -h localhost -P 3306 -u your_database_user -p
 
 Replace the example host, port, and username with the corresponding values from `.env`.
 
-```sql
+```text
 SOURCE sql/db.sql;
 ```
 
@@ -274,7 +274,7 @@ SOURCE sql/db.sql;
 
 To clear and rebuild the local development database, run these commands in order:
 
-```sql
+```text
 SOURCE sql/reset-dev.sql;
 SOURCE sql/db.sql;
 ```
