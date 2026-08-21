@@ -1,9 +1,13 @@
 <script setup>
-import { ref, nextTick } from 'vue'
+import { computed, ref, nextTick } from 'vue'
 import MarkdownIt from 'markdown-it'
+import { ElMessage } from 'element-plus'
 import { Delete, Position } from '@element-plus/icons-vue'
+import { countCharacters, truncateCharacters } from '@/utils/characterCount.js'
+import ChatInputCounter from './ChatInputCounter.vue'
 
 const md = new MarkdownIt({ html: true, linkify: true, typographer: true })
+const MAX_INPUT_LENGTH = 2000
 
 const props = defineProps({
   messages: Array,
@@ -14,24 +18,81 @@ const emit = defineEmits(['send', 'delete-message'])
 
 const inputContent = ref('')
 const textareaRef = ref(null)
+const isComposing = ref(false)
+const inputLength = computed(() => countCharacters(inputContent.value))
+const isAtLimit = computed(() => inputLength.value >= MAX_INPUT_LENGTH)
+
 const autoResizeTextarea = () => {
   const el = textareaRef.value
   if (!el) return
-  el.style.height = 'auto'
-  const lineHeight = 24
-  const maxHeight = lineHeight * 5
-  if (el.scrollHeight <= maxHeight) {
-    el.style.height = el.scrollHeight + 'px'
-    el.style.overflowY = 'hidden'
-  } else {
-    el.style.height = maxHeight + 'px'
-    el.style.overflowY = 'auto'
+  const minHeight = 40
+  const maxHeight = 120
+  el.style.height = `${minHeight}px`
+  const contentHeight = el.scrollHeight + 2
+  el.style.height = `${Math.min(Math.max(contentHeight, minHeight), maxHeight)}px`
+  el.style.overflowY = contentHeight > maxHeight ? 'auto' : 'hidden'
+}
+
+const enforceInputLimit = (event) => {
+  if (isComposing.value) return
+
+  const value = event.target.value
+  if (countCharacters(value) <= MAX_INPUT_LENGTH) return
+
+  inputContent.value = truncateCharacters(value, MAX_INPUT_LENGTH)
+  event.target.value = inputContent.value
+}
+
+const handleInput = (event) => {
+  enforceInputLimit(event)
+  nextTick(() => autoResizeTextarea())
+}
+
+const handleCompositionEnd = (event) => {
+  isComposing.value = false
+  enforceInputLimit(event)
+  nextTick(() => autoResizeTextarea())
+}
+
+const handlePaste = (event) => {
+  const textarea = textareaRef.value
+  if (!textarea) return
+
+  event.preventDefault()
+  const pastedText = event.clipboardData?.getData('text') || ''
+  const selectionStart = textarea.selectionStart
+  const selectionEnd = textarea.selectionEnd
+  const beforeSelection = inputContent.value.slice(0, selectionStart)
+  const afterSelection = inputContent.value.slice(selectionEnd)
+  const availableLength = Math.max(
+    0,
+    MAX_INPUT_LENGTH - countCharacters(beforeSelection) - countCharacters(afterSelection)
+  )
+  const acceptedText = truncateCharacters(pastedText, availableLength)
+
+  inputContent.value = beforeSelection + acceptedText + afterSelection
+
+  if (countCharacters(pastedText) > availableLength) {
+    ElMessage.warning(`粘贴内容超过 ${MAX_INPUT_LENGTH} 个字符，已自动截断`)
   }
+
+  nextTick(() => {
+    const cursorPosition = beforeSelection.length + acceptedText.length
+    textarea.setSelectionRange(cursorPosition, cursorPosition)
+    autoResizeTextarea()
+  })
+}
+
+const handleEnter = (event) => {
+  if (event.isComposing || isComposing.value) return
+  event.preventDefault()
+  handleSend()
 }
 
 const handleSend = () => {
   const content = inputContent.value.trim()
   if (!content || props.isStreaming) return
+  if (countCharacters(content) >= MAX_INPUT_LENGTH) return
   emit('send', content)
   inputContent.value = ''
   nextTick(() => autoResizeTextarea())
@@ -54,16 +115,29 @@ const handleSend = () => {
       </div>
     </div>
     <div class="chat-input-area">
-      <textarea
-        v-model="inputContent"
-        class="chat-textarea"
-        placeholder="输入消息..."
-        rows="1"
-        @keydown.enter.exact.prevent="handleSend"
-        @input="autoResizeTextarea"
-        ref="textareaRef"
-      ></textarea>
-      <el-button type="primary" class="send-btn" @click="handleSend" :loading="isStreaming" :disabled="isStreaming">
+      <div class="chat-input-wrapper">
+        <textarea
+          v-model="inputContent"
+          class="chat-textarea"
+          placeholder="输入消息..."
+          rows="1"
+          aria-describedby="chat-input-count-status"
+          @keydown.enter.exact="handleEnter"
+          @input="handleInput"
+          @paste="handlePaste"
+          @compositionstart="isComposing = true"
+          @compositionend="handleCompositionEnd"
+          ref="textareaRef"
+        ></textarea>
+        <ChatInputCounter :count="inputLength" :max-length="MAX_INPUT_LENGTH" />
+      </div>
+      <el-button
+        type="primary"
+        class="send-btn"
+        @click="handleSend"
+        :loading="isStreaming"
+        :disabled="isStreaming || isAtLimit"
+      >
         <el-icon v-if="!isStreaming"><Position /></el-icon> {{ isStreaming ? '发送中' : '发送' }}
       </el-button>
     </div>
@@ -85,7 +159,8 @@ const handleSend = () => {
 .is-assistant .message-bubble { background-color: #f0f2f5; color: #303133; border-top-left-radius: 2px; }
 .is-user .message-bubble { background-color: #409eff; color: #fff; border-top-right-radius: 2px; }
 .chat-input-area { flex-shrink: 0; display: flex; align-items: flex-end; gap: 8px; padding: 12px 16px; border-top: 1px solid #dcdfe6; background-color: #fff; }
-.chat-textarea { flex: 1; resize: none; border: 1px solid #dcdfe6; border-radius: 4px; padding: 8px 12px; font-size: 14px; line-height: 24px; max-height: 120px; outline: none; transition: border-color 0.2s; font-family: inherit; box-sizing: border-box; }
+.chat-input-wrapper { position: relative; flex: 1; min-width: 0; }
+.chat-textarea { display: block; width: 100%; min-height: 40px; resize: none; border: 1px solid #dcdfe6; border-radius: 4px; padding: 7px 12px; font-size: 14px; line-height: 24px; max-height: 120px; outline: none; transition: border-color 0.2s; font-family: inherit; box-sizing: border-box; }
 .chat-textarea:focus { border-color: #409eff; }
 .send-btn { flex-shrink: 0; height: 40px; }
 </style>
