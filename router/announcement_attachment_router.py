@@ -1,15 +1,15 @@
-from typing import Optional, List
+from typing import Optional
 
 from fastapi import APIRouter, Depends, UploadFile, File, Form
 
 from authentication.user_auth import require_admin, require_current_user
+from config.file_config import ALLOWED_FILE_TYPES, MAX_FILE_SIZE, EXPIRES
 from crud.announcement_attachment_crud import AnnouncementAttachmentCRUD
 from crud.announcement_crud import AnnouncementCRUD
 from model.announcement_attachment_model import AnnouncementAttachment
 from model.result import Result
 from model.user_model import User
 from util.oss_util import OSSUtil
-from config.file_config import ALLOWED_FILE_TYPES, MAX_FILE_SIZE, EXPIRES
 
 router = APIRouter(prefix="/api/announcement_attachment", tags=["announcement_attachment"])
 
