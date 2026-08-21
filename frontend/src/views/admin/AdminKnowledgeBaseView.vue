@@ -1,5 +1,5 @@
 <script setup>
-import {onMounted, ref} from "vue";
+import {nextTick, onMounted, ref} from "vue";
 import {ElMessage, ElMessageBox} from "element-plus";
 import {InfoFilled, Delete, Plus, Document, Service} from "@element-plus/icons-vue";
 import {
@@ -21,22 +21,36 @@ const selectedRows = ref([]); // 存放表格选中的行
 
 // 创建知识库弹窗相关
 const createDialogVisible = ref(false);
+const createFormRef = ref(null);
+const detailFormRef = ref(null);
 const createForm = ref({
   name: ""
 });
 
+const nameRules = {
+  name: [{
+    validator: (_rule, value, callback) => {
+      const name = value?.trim() || '';
+      if (!name) callback(new Error('请输入知识库名称'));
+      else if (Array.from(name).length > 15) callback(new Error('知识库名称不能超过 15 个字符'));
+      else callback();
+    },
+    trigger: 'blur'
+  }]
+};
+
 const openCreateDialog = () => {
   createForm.value.name = "";
   createDialogVisible.value = true;
+  nextTick(() => createFormRef.value?.clearValidate());
 };
 
 const handleCreate = async () => {
-  if (!createForm.value.name.trim()) {
-    ElMessage.warning("请输入知识库名称");
-    return;
-  }
+  const valid = await createFormRef.value?.validate().catch(() => false);
+  if (!valid) return;
+  const name = createForm.value.name.trim();
   const res = await createKnowledgeBase({
-    name: createForm.value.name
+    name
   });
 
   if (res.code === 1) {
@@ -132,14 +146,13 @@ const openDetailDialog = (row) => {
   detailForm.value.name = row.name;
   detailForm.value.originalName = row.name;
   detailDialogVisible.value = true;
+  nextTick(() => detailFormRef.value?.clearValidate());
 };
 
 const handleDetailSave = async () => {
+  const valid = await detailFormRef.value?.validate().catch(() => false);
+  if (!valid) return;
   const newName = detailForm.value.name.trim();
-  if (!newName) {
-    ElMessage.warning("知识库名称不能为空");
-    return;
-  }
   if (newName === detailForm.value.originalName) {
     ElMessage.info("名称未修改，无需保存");
     detailDialogVisible.value = false;
@@ -243,9 +256,9 @@ const handleManageRoles = (row) => {
 
   <!-- 创建知识库弹窗 -->
   <el-dialog v-model="createDialogVisible" title="创建知识库" width="420" :close-on-click-modal="false">
-    <el-form>
-      <el-form-item label="知识库名称">
-        <el-input v-model="createForm.name" placeholder="请输入知识库名称" clearable />
+    <el-form ref="createFormRef" :model="createForm" :rules="nameRules">
+      <el-form-item label="知识库名称" prop="name">
+        <el-input v-model="createForm.name" placeholder="请输入知识库名称" maxlength="15" show-word-limit clearable />
       </el-form-item>
     </el-form>
     <template #footer>
@@ -256,12 +269,12 @@ const handleManageRoles = (row) => {
 
   <!-- 知识库详情弹窗 -->
   <el-dialog v-model="detailDialogVisible" title="知识库详情" width="420" :close-on-click-modal="false">
-    <el-form label-width="100px">
+    <el-form ref="detailFormRef" :model="detailForm" :rules="nameRules" label-width="100px">
       <el-form-item label="知识库ID">
         <el-input v-model="detailForm.id" disabled />
       </el-form-item>
-      <el-form-item label="知识库名称">
-        <el-input v-model="detailForm.name" placeholder="请输入知识库名称" clearable />
+      <el-form-item label="知识库名称" prop="name">
+        <el-input v-model="detailForm.name" placeholder="请输入知识库名称" maxlength="15" show-word-limit clearable />
       </el-form-item>
     </el-form>
     <template #footer>
