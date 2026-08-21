@@ -5,7 +5,7 @@ from config.jwt_config import JWT_CONFIG
 from crud.role_user_crud import RoleUserCRUD
 from crud.user_crud import UserCRUD
 from model.result import Result
-from model.user_model import User
+from model.user_model import User, UserRegistration
 from util.jwt_util import JwtUtil
 from util.password_util import PasswordUtil
 
@@ -48,13 +48,7 @@ def valid_password(
     # 密码长度由 User.password 或路由参数 Body 的声明自动校验。
     return None
 
-@router.post("/register")
-async def register(user: User):
-    """
-    用户注册
-    :param user: 用户对象
-    :return: 注册结果
-    """
+def _create_user(user: User):
     result = Result()
     password_result = valid_password(user.password)
     if password_result is not None:
@@ -66,6 +60,28 @@ async def register(user: User):
 
     UserCRUD.create(user)
     return result.success(msg="注册成功")
+
+
+@router.post("/register")
+async def register(registration: UserRegistration):
+    """
+    普通用户注册
+    :param registration: 注册信息
+    :return: 注册结果
+    """
+    user = User(username=registration.username, password=registration.password, is_admin=0)
+    return _create_user(user)
+
+
+@router.post("/register-admin")
+async def register_admin(user: User, _admin: User = Depends(require_admin)):
+    """
+    管理员创建用户
+    :param user: 用户对象
+    :param _admin: 管理员用户对象
+    :return: 注册结果
+    """
+    return _create_user(user)
 
 @router.post("/login")
 async def login(user: User):

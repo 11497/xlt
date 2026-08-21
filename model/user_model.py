@@ -1,6 +1,14 @@
 from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
+
+
+class UserRegistration(BaseModel):
+    """普通用户注册请求，不允许设置管理员权限。"""
+    model_config = ConfigDict(extra="forbid")
+
+    username: str = Field(min_length=4, max_length=15)
+    password: str = Field(min_length=6, max_length=20, exclude=True, repr=False)
 
 
 class User(BaseModel):
