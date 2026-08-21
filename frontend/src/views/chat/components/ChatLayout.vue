@@ -67,9 +67,16 @@ const handleRename = (session) => {
   ElMessageBox.prompt(`确定要重命名会话「${session.name}」吗？`, '重命名', {
     confirmButtonText: '确定',
     cancelButtonText: '取消',
-    type: 'info'
+    type: 'info',
+    inputValue: session.name,
+    inputValidator: (value) => {
+      const name = value?.trim() || ''
+      if (!name) return '会话名称不能为空'
+      if (Array.from(name).length > 20) return '会话名称不能超过 20 个字符'
+      return true
+    }
   }).then(async ({ value }) => {
-    await renameSession(session.id, value)
+    await renameSession(session.id, value.trim())
     const res = await sessionByUserId(user.value.id)
     sessions.value = res.data
   }).catch(() => {})

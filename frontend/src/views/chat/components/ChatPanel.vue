@@ -20,7 +20,7 @@ const inputContent = ref('')
 const textareaRef = ref(null)
 const isComposing = ref(false)
 const inputLength = computed(() => countCharacters(inputContent.value))
-const isAtLimit = computed(() => inputLength.value >= MAX_INPUT_LENGTH)
+const isOverLimit = computed(() => inputLength.value > MAX_INPUT_LENGTH)
 
 const autoResizeTextarea = () => {
   const el = textareaRef.value
@@ -92,7 +92,7 @@ const handleEnter = (event) => {
 const handleSend = () => {
   const content = inputContent.value.trim()
   if (!content || props.isStreaming) return
-  if (countCharacters(content) >= MAX_INPUT_LENGTH) return
+  if (countCharacters(content) > MAX_INPUT_LENGTH) return
   emit('send', content)
   inputContent.value = ''
   nextTick(() => autoResizeTextarea())
@@ -136,7 +136,7 @@ const handleSend = () => {
         class="send-btn"
         @click="handleSend"
         :loading="isStreaming"
-        :disabled="isStreaming || isAtLimit"
+        :disabled="isStreaming || isOverLimit"
       >
         <el-icon v-if="!isStreaming"><Position /></el-icon> {{ isStreaming ? '发送中' : '发送' }}
       </el-button>

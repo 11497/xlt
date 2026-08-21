@@ -7,7 +7,9 @@ export const sessionByUserId = (userId) => request.get(`/session/user?user_id=${
 export const deleteSession = (session_id) => request.delete(`/session/${session_id}`)
 
 // 重命名会话
-export const renameSession = (session_id, name) => request.put(`/session/name?session_id=${session_id}&name=${name}`)
+export const renameSession = (session_id, name) => request.put('/session/name', null, {
+  params: { session_id, name }
+})
 
 // 创建会话
 export const createSession = (session) => request.post("/session", session)
