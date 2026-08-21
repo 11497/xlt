@@ -335,7 +335,7 @@ npm run build
 | 模块 | 路径 | 说明 |
 | --- | --- | --- |
 | OAuth2 认证 | `/api/auth` | Swagger OAuth2 表单登录 |
-| 用户 | `/api/user` | 注册、登录、用户资料和管理员操作 |
+| 用户 | `/api/user` | 普通用户注册、登录、用户资料和管理员操作 |
 | 角色 | `/api/role` | 角色增删改查 |
 | 用户角色 | `/api/role_user` | 用户与角色关联 |
 | 知识库 | `/api/knowledge_base` | 知识库管理 |
@@ -347,7 +347,9 @@ npm run build
 | 公告 | `/api/announcement` | 公告发布、查询和置顶 |
 | 公告附件 | `/api/announcement_attachment` | 附件上传、下载和删除 |
 
-除注册、登录和认证接口外，业务接口通常需要请求头：
+`POST /api/user/register` 是公开的普通用户注册接口，只接受用户名和密码，且不能设置管理员权限。`POST /api/user/register-admin` 用于管理员创建用户，需要管理员身份认证，并可设置用户是否为管理员。
+
+普通用户注册、登录和认证接口无需身份认证；管理员注册及其他业务接口通常需要请求头：
 
 ```http
 Authorization: Bearer <access-token>

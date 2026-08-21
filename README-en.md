@@ -342,7 +342,7 @@ Entity IDs and association IDs must be positive integers. Validation of name uni
 | Module | Path | Description |
 | --- | --- | --- |
 | OAuth2 authentication | `/api/auth` | Swagger OAuth2 form login |
-| Users | `/api/user` | Registration, login, user profiles, and administrative operations |
+| Users | `/api/user` | Regular-user registration, login, user profiles, and administrative operations |
 | Roles | `/api/role` | Role CRUD |
 | User roles | `/api/role_user` | User-role associations |
 | Knowledge bases | `/api/knowledge_base` | Knowledge base management |
@@ -354,7 +354,9 @@ Entity IDs and association IDs must be positive integers. Validation of name uni
 | Announcements | `/api/announcement` | Announcement publishing, querying, and pinning |
 | Announcement attachments | `/api/announcement_attachment` | Attachment upload, download, and deletion |
 
-Except for registration, login, and authentication endpoints, business endpoints generally require the following request header:
+`POST /api/user/register` is the public regular-user registration endpoint. It accepts only a username and password and cannot grant administrator privileges. `POST /api/user/register-admin` allows an administrator to create users, requires administrator authentication, and can set whether the new user is an administrator.
+
+Regular-user registration, login, and authentication endpoints do not require authentication. Administrator registration and other business endpoints generally require the following request header:
 
 ```http
 Authorization: Bearer <access-token>
@@ -381,7 +383,7 @@ Each line in the response body is an independent JSON event:
 | --- | --- | --- |
 | `start` | `user_message_id` | Confirms that the user message was saved and returns its database ID |
 | `delta` | `content` | Contains the latest AI-generated text fragment, which can be appended to the current response |
-| `done` | `assistant_message_id` | Indicates that generation completed and the assistant message was saved |
+| `done` | `assistant_message_id` | Indicates that generation completed, confirms that the assistant message was saved, and returns its database ID |
 | `error` | `message` | Indicates a generation failure; incomplete assistant responses are not saved |
 
 Example response:
