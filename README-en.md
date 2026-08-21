@@ -240,7 +240,9 @@ Edit `.env` in the project root and provide the following settings:
 | `JWT_SECRET_KEY` | JWT signing secret; use a sufficiently long random value |
 | `ES_HOST` | Elasticsearch host |
 | `ES_PORT` | Elasticsearch port; defaults to `9200` |
-| `OPENAI_API_KEY` | SiliconFlow API key |
+| `CHAT_API_KEY` | Chat service API key |
+| `EMBEDDING_API_KEY` | Embedding service API key |
+| `RERANK_API_KEY` | Reranking service API key |
 | `OSS_ACCESS_KEY_ID` | Alibaba Cloud OSS AccessKey ID |
 | `OSS_ACCESS_KEY_SECRET` | Alibaba Cloud OSS AccessKey Secret |
 

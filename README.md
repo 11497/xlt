@@ -233,7 +233,9 @@ cp .env.example .env
 | `JWT_SECRET_KEY` | JWT 签名密钥，应使用足够长的随机值 |
 | `ES_HOST` | Elasticsearch 主机地址 |
 | `ES_PORT` | Elasticsearch 端口，默认 `9200` |
-| `OPENAI_API_KEY` | SiliconFlow API Key |
+| `CHAT_API_KEY` | 聊天服务 API Key |
+| `EMBEDDING_API_KEY` | 向量化服务 API Key |
+| `RERANK_API_KEY` | 精排服务 API Key |
 | `OSS_ACCESS_KEY_ID` | 阿里云 OSS AccessKey ID |
 | `OSS_ACCESS_KEY_SECRET` | 阿里云 OSS AccessKey Secret |
 
