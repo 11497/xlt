@@ -127,11 +127,22 @@ const pwdForm = reactive({
 });
 
 const pwdRules = {
-  oldPassword: [{ required: true, message: '请输入旧密码', trigger: 'blur' }],
+  oldPassword: [
+    { required: true, message: '请输入旧密码', trigger: 'blur' },
+    { min: 6, message: '密码长度不能少于6位', trigger: 'blur' },
+    { max: 20, message: '密码长度不能超过20位', trigger: 'blur' }
+  ],
   newPassword: [
     { required: true, message: '请输入新密码', trigger: 'blur' },
     { min: 6, message: '密码长度不能少于6位', trigger: 'blur' },
-    { max: 20, message: '密码长度不能超过20位', trigger: 'blur' }
+    { max: 20, message: '密码长度不能超过20位', trigger: 'blur' },
+    {
+      validator: (_rule, value, callback) => {
+        if (value && value === pwdForm.oldPassword) callback(new Error('新密码不能与旧密码相同'));
+        else callback();
+      },
+      trigger: 'blur'
+    }
   ],
   confirmPassword: [
     { required: true, message: '请再次输入新密码', trigger: 'blur' },
@@ -269,6 +280,7 @@ const submitPassword = async () => {
             type="password"
             show-password
             placeholder="请输入当前使用的密码"
+            maxlength="20"
           />
         </el-form-item>
         <el-form-item label="新密码" prop="newPassword">
@@ -277,6 +289,7 @@ const submitPassword = async () => {
             type="password"
             show-password
             placeholder="请输入新密码"
+            maxlength="20"
             @input="pwdFormRef?.validateField('confirmPassword')"
           />
         </el-form-item>
@@ -286,6 +299,7 @@ const submitPassword = async () => {
             type="password"
             show-password
             placeholder="请再次输入新密码"
+            maxlength="20"
           />
         </el-form-item>
       </el-form>

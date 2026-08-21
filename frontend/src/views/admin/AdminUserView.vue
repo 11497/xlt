@@ -16,6 +16,7 @@ const selectedRows = ref([]);
 // 弹窗相关状态
 // 控制弹窗显示
 const dialogVisible = ref(false);
+const dialogFormRef = ref(null);
 // 弹窗模式: 'detail' | 'add'
 const dialogMode = ref('detail');
 // 弹窗表单数据
@@ -24,6 +25,19 @@ const dialogForm = ref({
   username: '',
   is_admin: false
 });
+
+const dialogRules = {
+  username: [{
+    validator: (_rule, value, callback) => {
+      const username = value?.trim() || '';
+      if (!username) callback(new Error('请输入用户名'));
+      else if (Array.from(username).length < 4) callback(new Error('用户名不能少于 4 个字符'));
+      else if (Array.from(username).length > 15) callback(new Error('用户名不能超过 15 个字符'));
+      else callback();
+    },
+    trigger: 'blur'
+  }]
+};
 
 // 获取用户列表
 const getUser = async () => {
@@ -123,7 +137,11 @@ const handleDetail = (row) => {
 
 // 保存用户详情（分别检测、分别调用）
 const handleSaveDetail = async () => {
-  const usernameChanged = dialogForm.value.username !== originalForm.value.username;
+  const valid = await dialogFormRef.value?.validate().catch(() => false);
+  if (!valid) return;
+  const username = dialogForm.value.username.trim();
+  dialogForm.value.username = username;
+  const usernameChanged = username !== originalForm.value.username;
   const isAdminChanged = dialogForm.value.is_admin !== originalForm.value.is_admin;
 
   // 两个属性都没有修改，直接关闭窗口
@@ -137,7 +155,7 @@ const handleSaveDetail = async () => {
     if (usernameChanged) {
       const res = await updateUsername({
         id: dialogForm.value.id,
-        username: dialogForm.value.username.trim()
+        username
       })
 
       if (res.code === 1) {
@@ -183,10 +201,8 @@ const handleAddUser = () => {
 
 // 新增用户提交
 const handleAddSubmit = async () => {
-  if (!dialogForm.value.username?.trim()) {
-    ElMessage.warning('用户名不能为空');
-    return;
-  }
+  const valid = await dialogFormRef.value?.validate().catch(() => false);
+  if (!valid) return;
   try {
     const payload = {
       username: dialogForm.value.username.trim(),
@@ -312,9 +328,9 @@ const handleManageRoles = (row) => {
       width="460px"
       destroy-on-close
   >
-    <el-form :model="dialogForm" label-width="100px">
-      <el-form-item label="用户名">
-        <el-input v-model="dialogForm.username" placeholder="请输入用户名" />
+    <el-form ref="dialogFormRef" :model="dialogForm" :rules="dialogRules" label-width="100px">
+      <el-form-item label="用户名" prop="username">
+        <el-input v-model="dialogForm.username" placeholder="请输入用户名" maxlength="15" show-word-limit />
       </el-form-item>
       <el-form-item label="是否管理员">
         <el-checkbox v-model="dialogForm.is_admin">管理员</el-checkbox>
