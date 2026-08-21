@@ -6,8 +6,8 @@ export const userLogin = (user) => request.post("/user/login", user);
 // 查询当前用户信息
 export const userInfo = () => request.get("/user");
 
-// 用户注册
-export const userRegister = (user) => request.post("/user/register", user);
+// 管理员创建用户
+export const userRegister = (user) => request.post("/user/register-admin", user);
 
 // 分页查询所有用户信息（管理员）
 export const getAllUsers = (page = 1, pageSize = 10) =>
