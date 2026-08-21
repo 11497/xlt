@@ -92,19 +92,22 @@ const handleDelete = (session) => {
   }).catch(() => {})
 }
 
-const createSessionBtn = async () => {
+const handleNewSession = () => {
+  currentSessionId.value = 0
+  messages.value = []
+}
+
+const createSessionForMessage = async () => {
   const res = await createSession({
     user_id: user.value.id,
     name: '新建会话'
   })
   if (res.code) {
-    const result = await sessionByUserId(user.value.id)
-    sessions.value = result.data
     currentSessionId.value = res.data.id
-    messages.value = []
-  } else {
-    ElMessage.error(res.msg)
+    return res.data.id
   }
+
+  throw new Error(res.msg || '创建会话失败')
 }
 
 const switchToMyPage = async () => {
@@ -119,12 +122,8 @@ const handleSend = async (content) => {
   let targetSessionId = 0
 
   try {
-    // 1. 确保会话存在
-    if (currentSessionId.value === 0) {
-      await createSessionBtn()
-    }
-
-    targetSessionId = currentSessionId.value
+    // 1. 首次发送消息时再创建会话
+    targetSessionId = currentSessionId.value || await createSessionForMessage()
 
     // 2. 先追加用户消息到界面
     const userMsg = reactive({
@@ -214,7 +213,7 @@ const handleDeleteMessage = async (msg) => {
         @select="handleSessionClick"
         @rename="handleRename"
         @delete="handleDelete"
-        @create="createSessionBtn"
+        @create="handleNewSession"
       />
       <ChatPanel
         :messages="messages"
