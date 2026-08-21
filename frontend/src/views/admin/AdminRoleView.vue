@@ -1,5 +1,5 @@
 <script setup>
-import {onMounted, ref} from "vue";
+import {nextTick, onMounted, ref} from "vue";
 import {ElMessage, ElMessageBox} from "element-plus";
 import {InfoFilled, Delete, Plus, User, Notebook} from "@element-plus/icons-vue";
 import {createRole, deleteRole, getAllRoles, updateRole} from "@/api/role.js";
@@ -67,29 +67,53 @@ const handleBatchDelete = async () => {
   }
 }
 
+// 角色表单校验
+const roleRules = {
+  name: [{
+    validator: (_rule, value, callback) => {
+      const name = value?.trim() || '';
+      if (!name) callback(new Error('请输入角色名称'));
+      else if (Array.from(name).length > 15) callback(new Error('角色名称不能超过 15 个字符'));
+      else callback();
+    },
+    trigger: ['change', 'blur']
+  }]
+};
+
 // 新增角色弹窗
-const handleAddRole = async () => {
+const addRoleVisible = ref(false);
+const addRoleFormRef = ref(null);
+const addRoleForm = ref({name: ''});
+const addRoleLoading = ref(false);
+
+const handleAddRole = () => {
+  addRoleForm.value.name = '';
+  addRoleVisible.value = true;
+  nextTick(() => addRoleFormRef.value?.clearValidate());
+}
+
+const handleAddRoleSubmit = async () => {
+  const valid = await addRoleFormRef.value?.validate().catch(() => false);
+  if (!valid) return;
+
+  addRoleLoading.value = true;
   try {
-    const {value} = await ElMessageBox.prompt('请输入角色名称', '新增角色', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      inputPattern: /\S+/,
-      inputErrorMessage: '角色名称不能为空'
-    });
-    const res = await createRole({name: value});
+    const res = await createRole({name: addRoleForm.value.name.trim()});
     if (res.code === 1) {
       ElMessage.success('新增角色成功');
+      addRoleVisible.value = false;
       await getRole();
     } else {
       ElMessage.error(res.msg);
     }
-  } catch {
-    // 用户取消操作
+  } finally {
+    addRoleLoading.value = false;
   }
 }
 
 // 角色详情弹窗
 const roleDetailVisible = ref(false);
+const roleDetailFormRef = ref(null);
 const roleDetailForm = ref({id: null, name: ''});
 const originalRoleName = ref('');
 
@@ -97,10 +121,14 @@ const handleRoleDetail = (row) => {
   roleDetailForm.value = {id: row.id, name: row.name};
   originalRoleName.value = row.name;
   roleDetailVisible.value = true;
+  nextTick(() => roleDetailFormRef.value?.clearValidate());
 }
 
 const handleRoleDetailSave = async () => {
-  if (roleDetailForm.value.name === originalRoleName.value) {
+  const valid = await roleDetailFormRef.value?.validate().catch(() => false);
+  if (!valid) return;
+  const name = roleDetailForm.value.name.trim();
+  if (name === originalRoleName.value) {
     ElMessage.info('角色名未变更');
     roleDetailVisible.value = false;
     return;
@@ -108,7 +136,7 @@ const handleRoleDetailSave = async () => {
 
   const res = await updateRole({
     id: roleDetailForm.value.id,
-    name: roleDetailForm.value.name
+    name
   })
 
   if (res.code === 1) {
@@ -205,11 +233,30 @@ const handleRelationKb = (row) => {
     />
   </div>
 
+  <!-- 新增角色弹窗 -->
+  <el-dialog v-model="addRoleVisible" title="新增角色" width="400px" :close-on-click-modal="false">
+    <el-form ref="addRoleFormRef" :model="addRoleForm" :rules="roleRules" label-width="80px">
+      <el-form-item label="角色名称" prop="name">
+        <el-input
+          v-model="addRoleForm.name"
+          placeholder="请输入角色名称"
+          maxlength="15"
+          show-word-limit
+          clearable
+        />
+      </el-form-item>
+    </el-form>
+    <template #footer>
+      <el-button @click="addRoleVisible = false">取消</el-button>
+      <el-button type="primary" :loading="addRoleLoading" @click="handleAddRoleSubmit">确定</el-button>
+    </template>
+  </el-dialog>
+
   <!-- 角色详情弹窗 -->
   <el-dialog v-model="roleDetailVisible" title="角色详情" width="400px">
-    <el-form label-width="80px">
-      <el-form-item label="角色名称">
-        <el-input v-model="roleDetailForm.name" placeholder="请输入角色名称" />
+    <el-form ref="roleDetailFormRef" :model="roleDetailForm" :rules="roleRules" label-width="80px">
+      <el-form-item label="角色名称" prop="name">
+        <el-input v-model="roleDetailForm.name" placeholder="请输入角色名称" maxlength="15" show-word-limit />
       </el-form-item>
     </el-form>
     <template #footer>
