@@ -4,7 +4,7 @@ from typing import List
 from langchain_core.messages import BaseMessage, HumanMessage
 from langchain_openai import ChatOpenAI
 
-from config.ai_config import BASE_URL, CHAT_CONFIG, SUMMARY_PROMPT, MALICIOUS_CHECK_PROMPT, REWRITE_PROMPT
+from config.ai_config import CHAT_BASE_URL, CHAT_CONFIG, SUMMARY_PROMPT, MALICIOUS_CHECK_PROMPT, REWRITE_PROMPT
 
 
 class ChatService:
@@ -13,7 +13,7 @@ class ChatService:
     def __init__(
             self,
             chat_model: str = CHAT_CONFIG["CHAT_MODEL"],
-            base_url: str = BASE_URL,
+            base_url: str = CHAT_BASE_URL,
             temperature: float = CHAT_CONFIG["TEMPERATURE"],
             max_tokens: int = CHAT_CONFIG["MAX_TOKENS"],
             top_p: float = CHAT_CONFIG["TOP_P"],

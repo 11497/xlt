@@ -3,7 +3,7 @@ from typing import List
 import numpy as np
 from langchain_openai import OpenAIEmbeddings
 
-from config.ai_config import BASE_URL, EMBEDDING_MODEL, EMBEDDING_DIM, EMBEDDING_BATCH_SIZE
+from config.ai_config import EMBEDDING_BASE_URL, EMBEDDING_MODEL, EMBEDDING_DIM, EMBEDDING_BATCH_SIZE
 
 
 class EmbeddingService:
@@ -12,7 +12,7 @@ class EmbeddingService:
     def __init__(
             self,
             model: str = EMBEDDING_MODEL,
-            base_url: str = BASE_URL
+            base_url: str = EMBEDDING_BASE_URL
     ):
         """
         :param model: Embedding模型名称

@@ -1,7 +1,10 @@
 import os
 
 
-BASE_URL = "https://api.siliconflow.cn/v1"
+CHAT_BASE_URL = "https://api.siliconflow.cn/v1"
+EMBEDDING_BASE_URL = "https://api.siliconflow.cn/v1"
+RERANK_BASE_URL = "https://api.siliconflow.cn/v1"
+
 EMBEDDING_MODEL = "Qwen/Qwen3-Embedding-8B"
 EMBEDDING_DIM = 4096
 EMBEDDING_BATCH_SIZE = 10

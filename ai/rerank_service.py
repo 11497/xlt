@@ -2,7 +2,7 @@ import os
 import requests
 from typing import List, Tuple
 
-from config.ai_config import RERANK_MODEL, BASE_URL
+from config.ai_config import RERANK_BASE_URL, RERANK_MODEL
 
 
 class RerankService:
@@ -12,7 +12,7 @@ class RerankService:
             self,
             model: str = RERANK_MODEL,
             api_key: str = os.getenv("OPENAI_API_KEY"),
-            base_url: str = BASE_URL + "/rerank"
+            base_url: str = RERANK_BASE_URL + "/rerank"
     ):
         """
         :param model: 重排序模型名称
