@@ -5,6 +5,10 @@ CHAT_BASE_URL = "https://api.siliconflow.cn/v1"
 EMBEDDING_BASE_URL = "https://api.siliconflow.cn/v1"
 RERANK_BASE_URL = "https://api.siliconflow.cn/v1"
 
+CHAT_API_KEY = os.getenv("CHAT_API_KEY")
+EMBEDDING_API_KEY = os.getenv("EMBEDDING_API_KEY")
+RERANK_API_KEY = os.getenv("RERANK_API_KEY")
+
 EMBEDDING_MODEL = "Qwen/Qwen3-Embedding-8B"
 EMBEDDING_DIM = 4096
 EMBEDDING_BATCH_SIZE = 10
