@@ -243,6 +243,8 @@ cp .env.example .env
 
 `.env` 已被 Git 忽略，请勿强制提交；`.env.example` 仅用于记录变量名，不应包含真实凭证。模型名称、召回参数、文件限制、OSS Bucket 和 Endpoint 等非敏感配置仍保留在 `config/` 下对应模块中。
 
+AI 服务地址在 `config/ai_config.py` 中按用途拆分为 `CHAT_BASE_URL`、`EMBEDDING_BASE_URL` 和 `RERANK_BASE_URL`，分别用于聊天、向量化和精排服务。当前三个地址均为 `https://api.siliconflow.cn/v1`，后续可按服务独立调整。
+
 Elasticsearch 创建知识库索引时会使用 `ik_max_word` tokenizer。服务未安装 IK 插件时，文档索引会创建失败。
 
 ### 3. 初始化数据库

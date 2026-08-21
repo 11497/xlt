@@ -250,6 +250,8 @@ The current `sql/db.sql` script always creates and uses a database named `xlt`. 
 
 `.env` is ignored by Git and must not be force-committed. `.env.example` records variable names only and must not contain real credentials. Non-sensitive settings such as model names, retrieval parameters, file limits, the OSS bucket, and endpoints remain in the corresponding modules under `config/`.
 
+AI service endpoints are split by purpose in `config/ai_config.py`: `CHAT_BASE_URL`, `EMBEDDING_BASE_URL`, and `RERANK_BASE_URL` are used for chat, embedding, and reranking, respectively. All three currently use `https://api.siliconflow.cn/v1` and can be adjusted independently for each service later.
+
 Elasticsearch uses the `ik_max_word` tokenizer when creating a knowledge base index. Document index creation will fail if the IK plugin is not installed.
 
 ### 3. Initialize the Database
