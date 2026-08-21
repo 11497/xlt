@@ -3,6 +3,7 @@ import { ref, reactive } from 'vue';
 import { Delete, Upload } from '@element-plus/icons-vue';
 import { getDocumentListByKnowledgeBase, deleteDocument, uploadDocument } from '@/api/document.js';
 import { ElMessage, ElMessageBox } from 'element-plus';
+import { UPLOAD_ACCEPT, validateUploadFile } from '@/utils/uploadValidation.js';
 
 // 状态定义
 const dialogVisible = ref(false);
@@ -102,9 +103,9 @@ const handleUploadRequest = async (options) => {
 
 // 上传前的校验
 const beforeUpload = (file) => {
-  const isLt10M = file.size / 1024 / 1024 < 10;
-  if (!isLt10M) {
-    ElMessage.error('文件大小不能超过 10MB');
+  const errorMessage = validateUploadFile(file);
+  if (errorMessage) {
+    ElMessage.error(errorMessage);
     return false;
   }
   return true;
@@ -128,7 +129,7 @@ defineExpose({ open });
           :http-request="handleUploadRequest"
           :before-upload="beforeUpload"
           :show-file-list="false"
-          accept=".pdf,.doc,.docx,.txt,.md,.xlsx,.xls"
+          :accept="UPLOAD_ACCEPT"
       >
         <el-button type="primary">
           <el-icon><Upload /></el-icon> 上传文档

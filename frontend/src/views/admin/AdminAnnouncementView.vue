@@ -8,6 +8,29 @@ import {
 } from "@/api/announcement_attachment.js";
 import {ElMessage, ElMessageBox} from "element-plus";
 import {InfoFilled, Download, Delete, Plus} from "@element-plus/icons-vue";
+import {UPLOAD_ACCEPT, validateUploadFile} from "@/utils/uploadValidation.js";
+
+const MAX_TITLE_LENGTH = 255;
+
+const validateAnnouncement = (announcement) => {
+  const title = announcement.title?.trim() || '';
+  const content = announcement.content?.trim() || '';
+  if (!title) {
+    ElMessage.warning('请输入公告标题');
+    return false;
+  }
+  if (Array.from(title).length > MAX_TITLE_LENGTH) {
+    ElMessage.warning('公告标题不能超过 255 个字符');
+    return false;
+  }
+  if (!content) {
+    ElMessage.warning('请输入公告内容');
+    return false;
+  }
+  announcement.title = title;
+  announcement.content = content;
+  return true;
+};
 
 // 列表相关状态
 let announcementList = ref([]);
@@ -119,6 +142,11 @@ const handleDeleteAttachment = async (attachmentId, filename) => {
 
 // 上传附件
 const handleUploadAttachment = async (file) => {
+  const errorMessage = validateUploadFile(file.raw);
+  if (errorMessage) {
+    ElMessage.error(errorMessage);
+    return false;
+  }
   // 1. 创建 FormData 对象
   const formData = new FormData();
   formData.append('file', file.raw); // file.raw 是原始的 File 对象
@@ -179,6 +207,7 @@ const showDetail = async (row) => {
 const handleSaveAnnouncement = async () => {
   // 1. 变更检测
   if (!originalAnnouncement.value) return;
+  if (!validateAnnouncement(currentAnnouncement.value)) return;
 
   const isChanged =
     currentAnnouncement.value.title !== originalAnnouncement.value.title ||
@@ -233,6 +262,7 @@ const handleSaveAnnouncement = async () => {
 
 // 发布公告
 const handlePublishAnnouncement = async () => {
+  if (!validateAnnouncement(publishForm.value)) return;
   // 1. 构建发布请求
   const newAnnouncement = {
     title: publishForm.value.title,
@@ -347,6 +377,8 @@ const handleSelectionChange = (rows) => {
           v-model="currentAnnouncement.title"
           placeholder="请输入公告标题"
           class="form-title-input"
+          :maxlength="MAX_TITLE_LENGTH"
+          show-word-limit
         />
         <el-checkbox
           v-model="currentAnnouncement.is_top"
@@ -403,6 +435,7 @@ const handleSelectionChange = (rows) => {
               :auto-upload="false"
               :show-file-list="false"
               :on-change="handleUploadAttachment"
+              :accept="UPLOAD_ACCEPT"
           >
             <el-button type="primary" plain>
               <el-icon><Plus /></el-icon> 上传附件
@@ -434,6 +467,8 @@ const handleSelectionChange = (rows) => {
           v-model="publishForm.title"
           placeholder="请输入公告标题"
           class="form-title-input"
+          :maxlength="MAX_TITLE_LENGTH"
+          show-word-limit
         />
         <el-checkbox
           v-model="publishForm.is_top"
