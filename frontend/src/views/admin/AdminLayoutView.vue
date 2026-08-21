@@ -1,5 +1,5 @@
 <script setup>
-import {ref, watch} from 'vue';
+import {watch} from 'vue';
 import {ElMessage, ElMessageBox} from "element-plus";
 import {useRouter} from "vue-router";
 import {useCurrentUser} from "@/hooks/useCurrentUser.js";
