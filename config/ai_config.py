@@ -2,10 +2,12 @@ import os
 
 
 CHAT_BASE_URL = "https://api.siliconflow.cn/v1"
+UTILITY_BASE_URL = "https://api.siliconflow.cn/v1"
 EMBEDDING_BASE_URL = "https://api.siliconflow.cn/v1"
 RERANK_BASE_URL = "https://api.siliconflow.cn/v1"
 
 CHAT_API_KEY = os.getenv("CHAT_API_KEY")
+UTILITY_API_KEY = os.getenv("UTILITY_API_KEY")
 EMBEDDING_API_KEY = os.getenv("EMBEDDING_API_KEY")
 RERANK_API_KEY = os.getenv("RERANK_API_KEY")
 
@@ -25,6 +27,15 @@ CHAT_CONFIG = {
     "CHAT_MODEL": "deepseek-ai/DeepSeek-V3.2",
     "TEMPERATURE": 0.7,
     "MAX_TOKENS": 4096,
+    "TOP_P": 1.0,
+    "FREQUENCY_PENALTY": 0.0,
+    "PRESENCE_PENALTY": 0.0
+}
+
+UTILITY_CONFIG = {
+    "CHAT_MODEL": "Qwen/Qwen3-8B",
+    "TEMPERATURE": 0.0,
+    "MAX_TOKENS": 512,
     "TOP_P": 1.0,
     "FREQUENCY_PENALTY": 0.0,
     "PRESENCE_PENALTY": 0.0

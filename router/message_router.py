@@ -97,7 +97,7 @@ async def chat(
     message_id = MessageCRUD.create(message)
 
     # 判断对话是否为恶意或敏感内容
-    if chat_service.is_malicious([HumanMessage(content=message.content)]):
+    if await chat_service.is_malicious([HumanMessage(content=message.content)]):
         # AI回复：对话包含恶意或敏感内容
         ai_message = Message(
             session_id=message.session_id,
@@ -130,7 +130,7 @@ async def chat(
             history_messages.append(AIMessage(content=msg.content))
     
     # 重写用户问题（结合历史对话）
-    rewritten_query = chat_service.rewrite_question(history_messages, message.content)
+    rewritten_query = await chat_service.rewrite_question(history_messages, message.content)
     
     # 更新数据库中的重写后内容
     if rewritten_query != message.content and rewritten_query != "" and rewritten_query is not None:
@@ -179,7 +179,7 @@ async def chat(
             try:
                 if is_first_round and session.name == "新建会话":
                     conversation = [HumanMessage(content=message.content), AIMessage(content=response)]
-                    summary = chat_service.summarize_conversation(conversation)
+                    summary = await chat_service.summarize_conversation(conversation)
                     SessionCRUD.update_session_name(message.session_id, summary)
 
                 SessionCRUD.update_session_update_time(message.session_id)
