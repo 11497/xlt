@@ -83,6 +83,11 @@ xlt/
 ├── config/                  # 配置模块
 │   ├── __init__.py         # 加载项目根目录的 .env
 │   ├── ai_config.py        # AI 相关配置
+│   ├── prompts/            # AI 提示词模板
+│   │   ├── malicious_check.md  # 恶意与敏感内容检查
+│   │   ├── rewrite.md      # 用户问题重写
+│   │   ├── summary.md      # 会话标题总结
+│   │   └── system.md       # 知识库问答系统提示词
 │   ├── db_config.py        # 数据库配置
 │   ├── file_config.py      # 文件配置
 │   ├── jwt_config.py       # JWT 配置
@@ -247,6 +252,8 @@ cp .env.example .env
 `.env` 已被 Git 忽略，请勿强制提交；`.env.example` 仅用于记录变量名，不应包含真实凭证。模型名称、召回参数、文件限制、OSS Bucket 和 Endpoint 等非敏感配置仍保留在 `config/` 下对应模块中。
 
 正式回答使用 `CHAT_API_KEY`，问题重写、恶意检查和标题总结使用独立的 `UTILITY_API_KEY`。聊天、辅助任务、向量化和精排的服务地址分别由 `config/ai_config.py` 中的 `CHAT_BASE_URL`、`UTILITY_BASE_URL`、`EMBEDDING_BASE_URL` 和 `RERANK_BASE_URL` 配置，并非环境变量；当前均指向 SiliconFlow。辅助模型默认为 `Qwen/Qwen3-8B`，模型名称与生成参数也可在该配置文件中修改。
+
+AI 提示词正文存放在 `config/prompts/` 下，并由 `config/ai_config.py` 以 UTF-8 编码加载。`system.md` 用于知识库问答，`summary.md` 用于生成会话标题，`malicious_check.md` 用于内容安全检查，`rewrite.md` 用于结合历史对话重写问题。编辑模板时请保留 `{conversation}`、`{user_input}`、`{conversation_history}` 和 `{user_question}` 等运行时占位符。
 
 Elasticsearch 创建知识库索引时会使用 `ik_max_word` tokenizer。服务未安装 IK 插件时，文档索引会创建失败。
 

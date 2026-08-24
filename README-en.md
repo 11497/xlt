@@ -85,6 +85,11 @@ xlt/
 ├── config/                  # Configuration module
 │   ├── __init__.py         # Loads .env from the project root
 │   ├── ai_config.py        # AI-related configuration
+│   ├── prompts/            # AI prompt templates
+│   │   ├── malicious_check.md  # Malicious and sensitive content check
+│   │   ├── rewrite.md      # User query rewriting
+│   │   ├── summary.md      # Conversation title summarization
+│   │   └── system.md       # Knowledge base Q&A system prompt
 │   ├── db_config.py        # Database configuration
 │   ├── file_config.py      # File configuration
 │   ├── jwt_config.py       # JWT configuration
@@ -254,6 +259,8 @@ The current `sql/db.sql` script always creates and uses a database named `xlt`. 
 `.env` is ignored by Git and must not be force-committed. `.env.example` records variable names only and must not contain real credentials. Non-sensitive settings such as model names, retrieval parameters, file limits, the OSS bucket, and endpoints remain in the corresponding modules under `config/`.
 
 Formal answers use `CHAT_API_KEY`, while question rewriting, malicious-content checks, and title summaries use the independent `UTILITY_API_KEY`. The chat, utility, embedding, and reranking service endpoints are configured by `CHAT_BASE_URL`, `UTILITY_BASE_URL`, `EMBEDDING_BASE_URL`, and `RERANK_BASE_URL` in `config/ai_config.py`; they are not environment variables and currently all point to SiliconFlow. The default utility model is `Qwen/Qwen3-8B`, and model names and generation parameters can also be changed in that configuration file.
+
+AI prompt text is stored under `config/prompts/` and loaded as UTF-8 by `config/ai_config.py`. `system.md` controls knowledge base Q&A, `summary.md` generates conversation titles, `malicious_check.md` performs content safety checks, and `rewrite.md` rewrites queries using conversation history. When editing these templates, preserve runtime placeholders such as `{conversation}`, `{user_input}`, `{conversation_history}`, and `{user_question}`.
 
 Elasticsearch uses the `ik_max_word` tokenizer when creating a knowledge base index. Document index creation will fail if the IK plugin is not installed.
 
