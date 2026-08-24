@@ -233,7 +233,8 @@ cp .env.example .env
 | `JWT_SECRET_KEY` | JWT 签名密钥，应使用足够长的随机值 |
 | `ES_HOST` | Elasticsearch 主机地址 |
 | `ES_PORT` | Elasticsearch 端口，默认 `9200` |
-| `CHAT_API_KEY` | 聊天服务 API Key |
+| `CHAT_API_KEY` | 正式聊天回答服务 API Key |
+| `UTILITY_API_KEY` | 问题重写、恶意检查和标题总结服务 API Key |
 | `EMBEDDING_API_KEY` | 向量化服务 API Key |
 | `RERANK_API_KEY` | 精排服务 API Key |
 | `OSS_ACCESS_KEY_ID` | 阿里云 OSS AccessKey ID |
@@ -245,7 +246,7 @@ cp .env.example .env
 
 `.env` 已被 Git 忽略，请勿强制提交；`.env.example` 仅用于记录变量名，不应包含真实凭证。模型名称、召回参数、文件限制、OSS Bucket 和 Endpoint 等非敏感配置仍保留在 `config/` 下对应模块中。
 
-AI 服务地址在 `config/ai_config.py` 中按用途拆分为 `CHAT_BASE_URL`、`EMBEDDING_BASE_URL` 和 `RERANK_BASE_URL`，分别用于聊天、向量化和精排服务。当前三个地址均为 `https://api.siliconflow.cn/v1`，后续可按服务独立调整。
+正式回答使用 `CHAT_API_KEY`，问题重写、恶意检查和标题总结使用独立的 `UTILITY_API_KEY`。聊天、辅助任务、向量化和精排的服务地址分别由 `config/ai_config.py` 中的 `CHAT_BASE_URL`、`UTILITY_BASE_URL`、`EMBEDDING_BASE_URL` 和 `RERANK_BASE_URL` 配置，并非环境变量；当前均指向 SiliconFlow。辅助模型默认为 `Qwen/Qwen3-8B`，模型名称与生成参数也可在该配置文件中修改。
 
 Elasticsearch 创建知识库索引时会使用 `ik_max_word` tokenizer。服务未安装 IK 插件时，文档索引会创建失败。
 
@@ -359,7 +360,7 @@ npm run build
 Authorization: Bearer <access-token>
 ```
 
-除聊天流式接口外，业务响应由 `Result` 统一包装：成功时 `code` 为 `1`，失败时 `code` 为 `0`，同时返回 `msg` 和 `data`。
+普通业务接口的业务响应由 `Result` 包装：成功时 `code` 为 `1`，失败时 `code` 为 `0`，同时返回 `msg` 和 `data`。OAuth2 的 `/api/auth` 成功时直接返回 `access_token` 和 `token_type`；认证失败、请求参数校验失败等框架级错误使用 FastAPI 的标准 JSON 错误格式。`POST /api/message/chat` 建流前的业务错误返回 `Result`，成功建立流后则使用 `application/x-ndjson` 逐行输出 `start`、`delta`、`done` 或 `error` 事件，各事件的具体内容见下节。
 
 ### 聊天流式响应
 
@@ -412,7 +413,7 @@ curl -N http://127.0.0.1:8000/api/message/chat \
 uv run python scripts/generate_api_doc.py
 ```
 
-脚本从 FastAPI OpenAPI Schema 读取当前路由，并覆盖生成项目根目录的 `接口文档.md`。完整的路径、参数、请求体和响应说明请查看该文件。
+脚本从 FastAPI OpenAPI Schema 读取当前路由，并覆盖生成项目根目录的 `接口文档.md`。该文件提供路径、参数、请求体以及 OpenAPI 可推导的响应模型摘要；聊天流的媒体类型、事件字段与处理时序以本 README 的“聊天流式响应”一节为准。
 
 ## 混合检索流程
 

@@ -240,7 +240,8 @@ Edit `.env` in the project root and provide the following settings:
 | `JWT_SECRET_KEY` | JWT signing secret; use a sufficiently long random value |
 | `ES_HOST` | Elasticsearch host |
 | `ES_PORT` | Elasticsearch port; defaults to `9200` |
-| `CHAT_API_KEY` | Chat service API key |
+| `CHAT_API_KEY` | Formal chat answer service API key |
+| `UTILITY_API_KEY` | API key for question rewriting, malicious-content checks, and title summaries |
 | `EMBEDDING_API_KEY` | Embedding service API key |
 | `RERANK_API_KEY` | Reranking service API key |
 | `OSS_ACCESS_KEY_ID` | Alibaba Cloud OSS AccessKey ID |
@@ -252,7 +253,7 @@ The current `sql/db.sql` script always creates and uses a database named `xlt`. 
 
 `.env` is ignored by Git and must not be force-committed. `.env.example` records variable names only and must not contain real credentials. Non-sensitive settings such as model names, retrieval parameters, file limits, the OSS bucket, and endpoints remain in the corresponding modules under `config/`.
 
-AI service endpoints are split by purpose in `config/ai_config.py`: `CHAT_BASE_URL`, `EMBEDDING_BASE_URL`, and `RERANK_BASE_URL` are used for chat, embedding, and reranking, respectively. All three currently use `https://api.siliconflow.cn/v1` and can be adjusted independently for each service later.
+Formal answers use `CHAT_API_KEY`, while question rewriting, malicious-content checks, and title summaries use the independent `UTILITY_API_KEY`. The chat, utility, embedding, and reranking service endpoints are configured by `CHAT_BASE_URL`, `UTILITY_BASE_URL`, `EMBEDDING_BASE_URL`, and `RERANK_BASE_URL` in `config/ai_config.py`; they are not environment variables and currently all point to SiliconFlow. The default utility model is `Qwen/Qwen3-8B`, and model names and generation parameters can also be changed in that configuration file.
 
 Elasticsearch uses the `ik_max_word` tokenizer when creating a knowledge base index. Document index creation will fail if the IK plugin is not installed.
 
@@ -366,7 +367,7 @@ Regular-user registration, login, and authentication endpoints do not require au
 Authorization: Bearer <access-token>
 ```
 
-Except for the streaming chat endpoint, business responses are uniformly wrapped in `Result`: `code` is `1` on success and `0` on failure, with `msg` and `data` included in the response.
+Business responses from regular application endpoints are wrapped in `Result`: `code` is `1` on success and `0` on failure, with `msg` and `data` included. A successful OAuth2 `/api/auth` request directly returns `access_token` and `token_type`; authentication failures, request validation failures, and other framework-level errors use FastAPI's standard JSON error format. For `POST /api/message/chat`, business errors detected before streaming begins return `Result`; once streaming starts, the endpoint emits newline-delimited `start`, `delta`, `done`, or `error` events using `application/x-ndjson`, as detailed in the next section.
 
 ### Streaming Chat Response
 
@@ -419,7 +420,7 @@ Session authorization and request validation errors that occur before streaming 
 uv run python scripts/generate_api_doc.py
 ```
 
-The script reads the current routes from the FastAPI OpenAPI schema and overwrites `接口文档.md` in the project root. See that file for complete path, parameter, request body, and response documentation.
+The script reads the current routes from the FastAPI OpenAPI schema and overwrites `接口文档.md` in the project root. That file provides paths, parameters, request bodies, and response-model summaries that can be inferred from OpenAPI. The chat stream's media type, event fields, and processing sequence are documented in the "Streaming Chat Response" section of this README.
 
 ## Hybrid Retrieval Flow
 
