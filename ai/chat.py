@@ -3,6 +3,7 @@ from typing import List
 
 from langchain_core.messages import BaseMessage, HumanMessage
 from langchain_openai import ChatOpenAI
+from pydantic import SecretStr
 
 from config.ai_config import (
     CHAT_API_KEY,
@@ -23,7 +24,7 @@ class ChatService:
     def __init__(
             self,
             chat_model: str = CHAT_CONFIG["CHAT_MODEL"],
-            api_key: str = CHAT_API_KEY,
+            api_key: str | None = CHAT_API_KEY,
             base_url: str = CHAT_BASE_URL,
             temperature: float = CHAT_CONFIG["TEMPERATURE"],
             max_tokens: int = CHAT_CONFIG["MAX_TOKENS"],
@@ -31,7 +32,7 @@ class ChatService:
             frequency_penalty: float = CHAT_CONFIG["FREQUENCY_PENALTY"],
             presence_penalty: float = CHAT_CONFIG["PRESENCE_PENALTY"],
             utility_model: str = UTILITY_CONFIG["CHAT_MODEL"],
-            utility_api_key: str = UTILITY_API_KEY,
+            utility_api_key: str | None = UTILITY_API_KEY,
             utility_base_url: str = UTILITY_BASE_URL,
             utility_temperature: float = UTILITY_CONFIG["TEMPERATURE"],
             utility_max_tokens: int = UTILITY_CONFIG["MAX_TOKENS"],
@@ -51,7 +52,7 @@ class ChatService:
         """
         self.answer_llm = ChatOpenAI(
             model=chat_model,
-            api_key=api_key,
+            api_key=SecretStr(api_key) if api_key is not None else None,
             base_url=base_url,
             temperature=temperature,
             max_tokens=max_tokens,
@@ -61,7 +62,7 @@ class ChatService:
         )
         self.utility_llm = ChatOpenAI(
             model=utility_model,
-            api_key=utility_api_key,
+            api_key=SecretStr(utility_api_key) if utility_api_key is not None else None,
             base_url=utility_base_url,
             temperature=utility_temperature,
             max_tokens=utility_max_tokens,

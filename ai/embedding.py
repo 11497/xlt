@@ -2,6 +2,7 @@ from typing import List
 
 import numpy as np
 from langchain_openai import OpenAIEmbeddings
+from pydantic import SecretStr
 
 from config.ai_config import EMBEDDING_API_KEY, EMBEDDING_BASE_URL, EMBEDDING_MODEL, EMBEDDING_DIM, EMBEDDING_BATCH_SIZE
 
@@ -12,7 +13,7 @@ class EmbeddingService:
     def __init__(
             self,
             model: str = EMBEDDING_MODEL,
-            api_key: str = EMBEDDING_API_KEY,
+            api_key: str | None = EMBEDDING_API_KEY,
             base_url: str = EMBEDDING_BASE_URL
     ):
         """
@@ -22,7 +23,7 @@ class EmbeddingService:
         # 使用 langchain_openai 替代原生 openai.OpenAI
         self.embeddings = OpenAIEmbeddings(
             model=model,
-            api_key=api_key,
+            api_key=SecretStr(api_key) if api_key is not None else None,
             base_url=base_url
         )
         self.model = model
