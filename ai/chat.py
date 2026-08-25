@@ -1,5 +1,5 @@
 from collections.abc import AsyncIterator
-from typing import List
+from typing import Any, List
 
 from langchain_core.messages import BaseMessage, HumanMessage
 from langchain_openai import ChatOpenAI
@@ -16,6 +16,22 @@ from config.ai_config import (
     UTILITY_BASE_URL,
     UTILITY_CONFIG,
 )
+
+
+def _content_to_text(content: str | list[str | dict[Any, Any]]) -> str:
+    if isinstance(content, str):
+        return content.strip()
+
+    text_parts: list[str] = []
+    for block in content:
+        if isinstance(block, str):
+            text_parts.append(block)
+        elif isinstance(block, dict):
+            text = block.get("text")
+            if isinstance(text, str):
+                text_parts.append(text)
+
+    return "".join(text_parts).strip()
 
 
 class ChatService:
@@ -78,7 +94,7 @@ class ChatService:
         :return: AI回复内容字符串
         """
         response = self.answer_llm.invoke(messages)
-        return response.content.strip()
+        return _content_to_text(response.content)
 
     async def stream_message(self, messages: List[BaseMessage]) -> AsyncIterator[str]:
         """
@@ -114,7 +130,7 @@ class ChatService:
 
         response = await self.utility_llm.ainvoke([HumanMessage(content=prompt)])
 
-        return response.content.strip()
+        return _content_to_text(response.content)
 
     async def is_malicious(self, messages: List[BaseMessage]) -> bool:
         """
@@ -130,7 +146,7 @@ class ChatService:
 
         response = await self.utility_llm.ainvoke([HumanMessage(content=prompt)])
 
-        return response.content.strip().upper() == "TRUE"
+        return _content_to_text(response.content).upper() == "TRUE"
 
     async def rewrite_question(self, messages: List[BaseMessage], current_query: str) -> str:
         """
@@ -154,4 +170,4 @@ class ChatService:
 
         response = await self.utility_llm.ainvoke([HumanMessage(content=prompt)])
 
-        return response.content.strip()
+        return _content_to_text(response.content)
