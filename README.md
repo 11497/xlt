@@ -132,6 +132,7 @@ xlt/
 │   └── package.json
 ├── main.py                  # 应用入口
 ├── .env.example             # 环境变量模板（不含真实凭证）
+├── AGENTS.md                # 编码代理的项目工作约定
 ├── pyproject.toml           # Python 项目配置
 ├── 接口文档.md              # 自动生成的接口文档
 ├── README.md                # 中文说明文档
@@ -450,6 +451,7 @@ flowchart TD
 
 ## 开发与部署注意事项
 
+- 使用 Codex 等编码代理参与开发时，应遵循根目录 `AGENTS.md` 中的工程约定、安全边界、验证要求和 Git 规范。
 - 用户密码使用 Argon2id 哈希保存和验证；已有明文密码的数据库需要先迁移或重置密码，不能直接沿用。
 - 必须为 `JWT_SECRET_KEY` 配置独立且足够强的随机值，并避免将 `.env`、数据库密码、API Key 和 OSS 凭证提交到版本库。
 - 后端当前未配置 CORS；本地开发依赖 Vite 代理。前后端跨域独立部署时，需要增加可信来源的 CORS 配置或由反向代理统一域名。

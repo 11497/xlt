@@ -134,6 +134,7 @@ xlt/
 │   └── package.json
 ├── main.py                  # Application entry point
 ├── .env.example             # Environment variable template (no real credentials)
+├── AGENTS.md                # Project working agreements for coding agents
 ├── pyproject.toml           # Python project configuration
 ├── 接口文档.md              # Auto-generated API documentation
 ├── README.md                # Chinese documentation
@@ -457,6 +458,7 @@ flowchart TD
 
 ## Development and Deployment Notes
 
+- When using Codex or another coding agent, follow the engineering conventions, safety boundaries, verification requirements, and Git rules in the root-level `AGENTS.md`.
 - User passwords are stored and verified using Argon2id hashes. Databases containing existing plaintext passwords must be migrated or have their passwords reset; the plaintext values cannot be used as-is.
 - Configure `JWT_SECRET_KEY` with a strong, unique random value, and do not commit `.env`, database passwords, API keys, or OSS credentials to version control.
 - CORS is not currently configured on the backend; local development relies on the Vite proxy. For separate cross-origin frontend and backend deployments, configure CORS with trusted origins or use a reverse proxy to serve both under one domain.
