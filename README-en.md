@@ -21,6 +21,7 @@
     - [3. Roles and Permissions](#3-roles-and-permissions)
     - [4. Session Management](#4-session-management)
     - [5. Announcement System](#5-announcement-system)
+    - [6. Admin Overview](#6-admin-overview)
   - [Database Design](#database-design)
   - [Quick Start](#quick-start)
     - [Prerequisites](#prerequisites)
@@ -184,6 +185,11 @@ By default, ChromaDB persistence data is written to `chroma_db/` in the project 
 - Publish and manage announcements
 - Upload attachments
 - Pin announcements
+
+### 6. Admin Overview
+
+- Summarizes user, role, knowledge base, session, and announcement counts
+- Shows recently published announcements with links to the corresponding management pages
 
 ## Database Design
 
