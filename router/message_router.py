@@ -1,7 +1,10 @@
+import asyncio
 import json
+from dataclasses import dataclass
 from datetime import datetime
 from functools import lru_cache
 from typing import List
+from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
@@ -19,6 +22,16 @@ from model.result import Result
 from model.user_model import User
 
 router = APIRouter(prefix="/api/message", tags=["message"])
+
+
+@dataclass
+class ActiveChatRequest:
+    user_id: int
+    session_id: int
+    stop_event: asyncio.Event
+
+
+active_chat_requests: dict[UUID, ActiveChatRequest] = {}
 
 
 @lru_cache
@@ -124,7 +137,11 @@ async def chat(
         ai_message_id = MessageCRUD.create(ai_message)
 
         async def malicious_response():
-            yield encode_stream_event({"type": "start", "user_message_id": message_id})
+            yield encode_stream_event({
+                "type": "start",
+                "user_message_id": message_id,
+                "request_id": None
+            })
             yield encode_stream_event({"type": "delta", "content": ai_message.content})
             yield encode_stream_event({"type": "done", "assistant_message_id": ai_message_id})
 
@@ -168,49 +185,96 @@ async def chat(
         current_content = rewritten_query
     messages.append(HumanMessage(content=current_content))
 
+    request_id = uuid4()
+    stop_event = asyncio.Event()
+    active_chat_requests[request_id] = ActiveChatRequest(
+        user_id=user.id,
+        session_id=message.session_id,
+        stop_event=stop_event
+    )
+
     async def generate_response():
         response_parts = []
-        yield encode_stream_event({"type": "start", "user_message_id": message_id})
 
         try:
+            yield encode_stream_event({
+                "type": "start",
+                "user_message_id": message_id,
+                "request_id": str(request_id)
+            })
+
             async for chunk in chat_service.stream_message(messages):
+                if stop_event.is_set():
+                    break
                 response_parts.append(chunk)
                 yield encode_stream_event({"type": "delta", "content": chunk})
 
             response = "".join(response_parts)
-            if not response.strip():
+            was_stopped = stop_event.is_set()
+            if not response.strip() and not was_stopped:
                 raise RuntimeError("AI returned an empty response")
 
-            # 只持久化完整的回复，取消或失败的流必须保持对话历史的完整性。
-            ai_message = Message(
-                session_id=message.session_id,
-                role="assistant",
-                content=response,
-                rewritten_content=None,
-                create_time=datetime.now()
-            )
-            ai_message_id = MessageCRUD.create(ai_message)
+            ai_message_id = None
+            if response.strip():
+                ai_message = Message(
+                    session_id=message.session_id,
+                    role="assistant",
+                    content=response,
+                    rewritten_content=None,
+                    create_time=datetime.now()
+                )
+                ai_message_id = MessageCRUD.create(ai_message)
 
             try:
-                if is_first_round and session.name == "新建会话":
+                if response.strip() and is_first_round and session.name == "新建会话":
                     conversation = [HumanMessage(content=message.content), AIMessage(content=response)]
                     summary = await chat_service.summarize_conversation(conversation)
                     SessionCRUD.update_session_name(message.session_id, summary)
 
                 SessionCRUD.update_session_update_time(message.session_id)
             except Exception as exc:
-                # 回复已完整持久化，所以可选的会话元更新必须保持成功。
+                # 回复已持久化，可选的会话元更新失败不影响流的终止事件。
                 print(f"更新会话信息失败: {exc}")
 
-            yield encode_stream_event({"type": "done", "assistant_message_id": ai_message_id})
+            terminal_type = "stopped" if was_stopped else "done"
+            yield encode_stream_event({
+                "type": terminal_type,
+                "assistant_message_id": ai_message_id
+            })
+        except asyncio.CancelledError:
+            # 断网或页面离开仍视为连接中断，不保存部分回复。
+            raise
         except Exception as exc:
             print(f"生成 AI 回复失败: {exc}")
             yield encode_stream_event({"type": "error", "message": "AI 回复生成失败，请稍后重试"})
+        finally:
+            active_chat_requests.pop(request_id, None)
 
     return StreamingResponse(
         generate_response(),
         media_type="application/x-ndjson",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"}
+    )
+
+
+@router.post("/chat/stop/{request_id}")
+async def stop_chat(
+        request_id: UUID,
+        user: User = Depends(require_current_user)
+):
+    """停止当前用户的活动生成，并保存已生成的非空回复。"""
+    result = Result()
+    active_request = active_chat_requests.get(request_id)
+
+    if not active_request:
+        return result.error(msg="生成请求不存在或已结束")
+    if active_request.user_id != user.id:
+        return result.error(msg="无权停止该生成请求")
+
+    active_request.stop_event.set()
+    return result.success(
+        msg="已请求停止生成",
+        data={"request_id": str(request_id)}
     )
 
 
