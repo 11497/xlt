@@ -137,6 +137,8 @@ const handleSend = () => {
         class="send-btn"
         @click="isStreaming ? emit('stop') : handleSend()"
         :disabled="isStopping || (!isStreaming && isOverLimit)"
+        :aria-label="isStreaming ? '停止生成' : '发送消息'"
+        :title="isStreaming ? '停止生成' : '发送消息'"
       >
         <el-icon><VideoPause v-if="isStreaming"/><Position v-else/></el-icon>
         {{ isStopping ? '停止中' : (isStreaming ? '停止' : '发送') }}
@@ -164,4 +166,14 @@ const handleSend = () => {
 .chat-textarea { display: block; width: 100%; min-height: 40px; resize: none; border: 1px solid #dcdfe6; border-radius: 4px; padding: 7px 12px; font-size: 14px; line-height: 24px; max-height: 120px; outline: none; transition: border-color 0.2s; font-family: inherit; box-sizing: border-box; }
 .chat-textarea:focus { border-color: #409eff; }
 .send-btn { flex-shrink: 0; height: 40px; }
+
+@media (max-width: 768px) {
+  .chat-messages { padding: 12px; }
+  .message-bubble { max-width: 92vw; }
+  .message-delete-btn { opacity: 1; }
+  .message-bubble :deep(pre), .message-bubble :deep(table) { max-width: 100%; overflow-x: auto; }
+  .chat-input-area { gap: 6px; padding: 8px; padding-bottom: max(8px, env(safe-area-inset-bottom)); }
+  .send-btn { width: 42px; padding: 0; font-size: 0; }
+  .send-btn .el-icon { margin: 0; font-size: 18px; }
+}
 </style>

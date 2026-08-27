@@ -68,4 +68,8 @@ defineEmits(['select', 'rename', 'delete', 'create'])
 .session-popover-menu .menu-item:hover { background-color: #f5f7fa; }
 .session-popover-menu .menu-item.danger { color: #f56c6c; }
 .session-popover-menu .menu-item.danger:hover { background-color: #fef0f0; }
+
+@media (max-width: 768px) {
+  .session-more-btn { display: inline-block; min-width: 28px; min-height: 28px; text-align: center; }
+}
 </style>
