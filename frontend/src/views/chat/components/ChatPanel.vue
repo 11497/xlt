@@ -2,7 +2,7 @@
 import { computed, ref, nextTick } from 'vue'
 import MarkdownIt from 'markdown-it'
 import { ElMessage } from 'element-plus'
-import { Delete, Position } from '@element-plus/icons-vue'
+import { Delete, Position, VideoPause } from '@element-plus/icons-vue'
 import { countCharacters, truncateCharacters } from '@/utils/characterCount.js'
 import ChatInputCounter from './ChatInputCounter.vue'
 
@@ -12,9 +12,10 @@ const MAX_INPUT_LENGTH = 2000
 const props = defineProps({
   messages: Array,
   currentSessionId: Number,
-  isStreaming: Boolean
+  isStreaming: Boolean,
+  isStopping: Boolean
 })
-const emit = defineEmits(['send', 'delete-message'])
+const emit = defineEmits(['send', 'stop', 'delete-message'])
 
 const inputContent = ref('')
 const textareaRef = ref(null)
@@ -109,7 +110,7 @@ const handleSend = () => {
           <template v-if="msg.role === 'user'">{{ msg.content }}</template>
           <div v-else class="markdown-body" v-html="md.render(msg.content)"></div>
         </div>
-        <el-button v-if="msg.id" class="message-delete-btn" size="small" type="danger" text @click="$emit('delete-message', msg)">
+        <el-button v-if="msg.id && !isStreaming" class="message-delete-btn" size="small" type="danger" text @click="$emit('delete-message', msg)">
           <el-icon><Delete /></el-icon> 删除
         </el-button>
       </div>
@@ -132,13 +133,13 @@ const handleSend = () => {
         <ChatInputCounter :count="inputLength" :max-length="MAX_INPUT_LENGTH" />
       </div>
       <el-button
-        type="primary"
+        :type="isStreaming ? 'danger' : 'primary'"
         class="send-btn"
-        @click="handleSend"
-        :loading="isStreaming"
-        :disabled="isStreaming || isOverLimit"
+        @click="isStreaming ? emit('stop') : handleSend()"
+        :disabled="isStopping || (!isStreaming && isOverLimit)"
       >
-        <el-icon v-if="!isStreaming"><Position /></el-icon> {{ isStreaming ? '发送中' : '发送' }}
+        <el-icon><VideoPause v-if="isStreaming"/><Position v-else/></el-icon>
+        {{ isStopping ? '停止中' : (isStreaming ? '停止' : '发送') }}
       </el-button>
     </div>
   </section>

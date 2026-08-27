@@ -5,7 +5,7 @@ import router from '@/router/index.js'
 export const messageBySessionId = (sessionId) => request.get(`/message/session/${sessionId}`)
 
 // 发送消息，并逐行解析后端返回的 NDJSON 流
-export const chat = async (message, onEvent) => {
+export const chat = async (message, onEvent, { signal } = {}) => {
   const loginUserStr = localStorage.getItem('loginUser')
   let token = null
 
@@ -17,6 +17,7 @@ export const chat = async (message, onEvent) => {
 
   const response = await fetch('/api/message/chat', {
     method: 'POST',
+    signal,
     headers: {
       'Content-Type': 'application/json',
       Accept: 'application/x-ndjson',
@@ -51,7 +52,7 @@ export const chat = async (message, onEvent) => {
       throw new Error(event.message || 'AI 回复生成失败')
     }
     onEvent?.(event)
-    if (event.type === 'done') completedEvent = event
+    if (event.type === 'done' || event.type === 'stopped') completedEvent = event
   }
 
   while (true) {
@@ -76,3 +77,6 @@ export const getMessageById = (messageId) => request.get(`/message/${messageId}`
 
 // 删除指定会话ID下的所有消息
 export const deleteMessagesBySessionId = (sessionId) => request.delete(`/message/session/${sessionId}`);
+
+// 停止指定的活动生成，后端会保存已生成的非空回复
+export const stopChat = (requestId) => request.post(`/message/chat/stop/${requestId}`)

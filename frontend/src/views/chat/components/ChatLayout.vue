@@ -1,8 +1,8 @@
 <script setup>
 import { useCurrentUser } from '@/hooks/useCurrentUser.js'
-import { reactive, ref, watch, nextTick } from 'vue'
+import { reactive, ref, watch, nextTick, onBeforeUnmount } from 'vue'
 import { createSession, deleteSession, renameSession, sessionByUserId } from '@/api/session.js'
-import { chat, deleteMessagesAfter, deleteMessagesBySessionId, messageBySessionId } from '@/api/message.js'
+import { chat, deleteMessagesAfter, deleteMessagesBySessionId, messageBySessionId, stopChat } from '@/api/message.js'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import router from '@/router/index.js'
 import { House, SwitchButton } from '@element-plus/icons-vue'
@@ -15,6 +15,10 @@ const sessionsLoading = ref(false)
 const currentSessionId = ref(0)
 const messages = ref([])
 const isStreaming = ref(false)
+const isStopping = ref(false)
+let activeChatController = null
+let activeServerRequestId = null
+let activeChatRequestId = 0
 
 watch(
   () => user.value?.id,
@@ -31,7 +35,7 @@ watch(
   { immediate: true }
 )
 
-const handleSessionClick = async (sessionId) => {
+const loadSessionMessages = async (sessionId) => {
   const res = await messageBySessionId(sessionId)
   if (res.code) {
     messages.value = res.data
@@ -40,6 +44,23 @@ const handleSessionClick = async (sessionId) => {
   } else {
     ElMessage.error(res.msg)
   }
+}
+
+const cancelForNavigation = () => {
+  if (!activeChatController) return
+
+  const controller = activeChatController
+  activeChatRequestId += 1
+  activeChatController = null
+  activeServerRequestId = null
+  isStreaming.value = false
+  isStopping.value = false
+  controller.abort()
+}
+
+const handleSessionClick = async (sessionId) => {
+  cancelForNavigation()
+  await loadSessionMessages(sessionId)
 }
 
 const scrollToBottom = () => {
@@ -55,6 +76,7 @@ const logout = () => {
     cancelButtonText: '取消',
     type: 'warning'
   }).then(async () => {
+    cancelForNavigation()
     ElMessage.success('退出成功')
     localStorage.removeItem('loginUser')
     await router.push({ path: '/login' })
@@ -88,6 +110,7 @@ const handleDelete = (session) => {
     cancelButtonText: '取消',
     type: 'warning'
   }).then(async () => {
+    cancelForNavigation()
     await deleteMessagesBySessionId(session.id)
     await deleteSession(session.id)
     const res = await sessionByUserId(user.value.id)
@@ -100,6 +123,7 @@ const handleDelete = (session) => {
 }
 
 const handleNewSession = () => {
+  cancelForNavigation()
   currentSessionId.value = 0
   messages.value = []
 }
@@ -118,12 +142,40 @@ const createSessionForMessage = async () => {
 }
 
 const switchToMyPage = async () => {
+  cancelForNavigation()
   await router.push({ path: '/user' })
+}
+
+const handleStopGeneration = async () => {
+  if (!activeChatController || isStopping.value) return
+
+  // 建流前还没有服务端请求 ID，此时只能直接取消请求。
+  if (!activeServerRequestId) {
+    activeChatController.abort()
+    return
+  }
+
+  isStopping.value = true
+  try {
+    const res = await stopChat(activeServerRequestId)
+    if (!res.code) {
+      isStopping.value = false
+      ElMessage.error(res.msg || '停止生成失败')
+    }
+  } catch {
+    isStopping.value = false
+  }
 }
 
 const handleSend = async (content) => {
   if (isStreaming.value) return
   isStreaming.value = true
+
+  const controller = new AbortController()
+  const requestId = ++activeChatRequestId
+  activeChatController = controller
+  activeServerRequestId = null
+  isStopping.value = false
 
   let assistantMsg = null
   let targetSessionId = 0
@@ -131,6 +183,9 @@ const handleSend = async (content) => {
   try {
     // 1. 首次发送消息时再创建会话
     targetSessionId = currentSessionId.value || await createSessionForMessage()
+    if (controller.signal.aborted || requestId !== activeChatRequestId) {
+      throw new DOMException('请求已取消', 'AbortError')
+    }
 
     // 2. 先追加用户消息到界面
     const userMsg = reactive({
@@ -153,33 +208,64 @@ const handleSend = async (content) => {
     await chat(userMsg, (event) => {
       if (event.type === 'start') {
         userMsg.id = event.user_message_id
+        activeServerRequestId = event.request_id || null
       } else if (event.type === 'delta') {
         assistantMsg.content += event.content
         scrollToBottom()
-      } else if (event.type === 'done') {
+      } else if (event.type === 'done' || event.type === 'stopped') {
         assistantMsg.id = event.assistant_message_id
       }
-    })
+    }, { signal: controller.signal })
+
+    if (requestId === activeChatRequestId) {
+      activeChatController = null
+      activeServerRequestId = null
+      isStreaming.value = false
+      isStopping.value = false
+
+      if (!assistantMsg.content) {
+        const index = messages.value.indexOf(assistantMsg)
+        if (index !== -1) messages.value.splice(index, 1)
+      }
+    }
 
     // 4. 刷新会话列表（第一轮对话可能已生成标题）
     const sessionRes = await sessionByUserId(user.value.id)
     sessions.value = sessionRes.data
   } catch (error) {
-    // 后端不会存储发送失败的部分回复。重新加载当前会话，
-    // 以避免界面内容与持久化的历史记录不一致。
-    if (targetSessionId && currentSessionId.value === targetSessionId) {
+    const isCurrentRequest = requestId === activeChatRequestId
+    const isCancelled = controller.signal.aborted
+
+    // 断网、离页或失败不保存部分回复，此时以持久化历史为准。
+    if (isCurrentRequest && targetSessionId && currentSessionId.value === targetSessionId) {
       try {
-        await handleSessionClick(targetSessionId)
+        await loadSessionMessages(targetSessionId)
+        const sessionRes = await sessionByUserId(user.value.id)
+        sessions.value = sessionRes.data
       } catch {
         const index = messages.value.indexOf(assistantMsg)
         if (index !== -1) messages.value.splice(index, 1)
       }
     }
-    ElMessage.error(error.message || '发送消息失败')
+
+    if (isCurrentRequest) {
+      if (isCancelled) {
+        ElMessage.info('已停止生成')
+      } else {
+        ElMessage.error(error.message || '发送消息失败')
+      }
+    }
   } finally {
-    isStreaming.value = false
+    if (requestId === activeChatRequestId) {
+      activeChatController = null
+      activeServerRequestId = null
+      isStreaming.value = false
+      isStopping.value = false
+    }
   }
 }
+
+onBeforeUnmount(cancelForNavigation)
 
 const handleDeleteMessage = async (msg) => {
   ElMessageBox.confirm('确定要删除该消息吗？', '删除', {
@@ -226,11 +312,12 @@ const handleDeleteMessage = async (msg) => {
         :messages="messages"
         :current-session-id="currentSessionId"
         :is-streaming="isStreaming"
+        :is-stopping="isStopping"
         @send="handleSend"
+        @stop="handleStopGeneration"
         @delete-message="handleDeleteMessage"
       />
     </main>
-    <footer class="app-footer">Copyright © 2026-2026 · 校灵通</footer>
   </div>
 </template>
 
