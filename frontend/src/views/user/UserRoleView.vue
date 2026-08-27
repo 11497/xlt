@@ -64,4 +64,10 @@ body {
   width: 100%;
   margin: 15px 0;
 }
+
+@media (max-width: 768px) {
+  .container {
+    height: calc(100dvh - 76px);
+  }
+}
 </style>

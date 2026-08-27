@@ -553,4 +553,14 @@ const submitPassword = async () => {
   text-align: center;
   padding: 10px;
 }
+
+@media (max-width: 768px) {
+  .announcement-container { padding: 10px 8px 6px; }
+  .announcement-carousel { width: 100%; gap: 6px; }
+  .announcement-badge { padding: 4px 8px; }
+  .badge-text { display: none; }
+  .carousel-left-group { gap: 4px; }
+  .account-card { max-width: 100%; }
+  .attachment-item { min-width: 0; }
+}
 </style>
