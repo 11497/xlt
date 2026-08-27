@@ -4,6 +4,10 @@ import request from "@/utils/request.js";
 export const getAllAnnouncements = (page = 1, pageSize = 10) =>
   request.get("/announcement/all", { params: { page, page_size: pageSize } });
 
+// 查询最近公告及公告总数（管理员）
+export const getRecentAnnouncements = (limit = 5) =>
+  request.get("/announcement/recent", { params: { limit } });
+
 // 根据ID查询单个公告详情
 export const getAnnouncementById = (id) =>
   request.get(`/announcement/${id}`);
