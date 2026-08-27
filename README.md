@@ -369,7 +369,7 @@ npm run build
 Authorization: Bearer <access-token>
 ```
 
-普通业务接口的业务响应由 `Result` 包装：成功时 `code` 为 `1`，失败时 `code` 为 `0`，同时返回 `msg` 和 `data`。OAuth2 的 `/api/auth` 成功时直接返回 `access_token` 和 `token_type`；认证失败、请求参数校验失败等框架级错误使用 FastAPI 的标准 JSON 错误格式。`POST /api/message/chat` 建流前的业务错误返回 `Result`，成功建立流后则使用 `application/x-ndjson` 逐行输出 `start`、`delta`、`done` 或 `error` 事件，各事件的具体内容见下节。
+普通业务接口的业务响应由 `Result` 包装：成功时 `code` 为 `1`，失败时 `code` 为 `0`，同时返回 `msg` 和 `data`。OAuth2 的 `/api/auth` 成功时直接返回 `access_token` 和 `token_type`；认证失败、请求参数校验失败等框架级错误使用 FastAPI 的标准 JSON 错误格式。`POST /api/message/chat` 建流前的业务错误返回 `Result`，成功建立流后则使用 `application/x-ndjson` 逐行输出 `start`、`delta`、`done`、`stopped` 或 `error` 事件，各事件的具体内容见下节。
 
 ### 聊天流式响应
 
@@ -388,15 +388,16 @@ Authorization: Bearer <access-token>
 
 | 事件类型 | 字段 | 说明 |
 | --- | --- | --- |
-| `start` | `user_message_id` | 用户消息已保存，返回其数据库 ID |
+| `start` | `user_message_id`, `request_id` | 用户消息已保存；`request_id` 用于停止本次生成，无需继续生成时为 `null` |
 | `delta` | `content` | AI 本次生成的文本片段，可直接追加到当前回复 |
 | `done` | `assistant_message_id` | AI 回复生成完成并已保存，返回其数据库 ID |
+| `stopped` | `assistant_message_id` | 用户显式停止；已生成的非空回复已保存，无内容时 ID 为 `null` |
 | `error` | `message` | 生成过程失败；不保存不完整的 AI 回复 |
 
 示例响应：
 
 ```ndjson
-{"type":"start","user_message_id":101}
+{"type":"start","user_message_id":101,"request_id":"40cb2f0e-b79a-4c89-85e3-c80a17e22a35"}
 {"type":"delta","content":"学校图书馆"}
 {"type":"delta","content":"通常在晚上 22:00 关闭。"}
 {"type":"done","assistant_message_id":102}
@@ -414,7 +415,9 @@ curl -N http://127.0.0.1:8000/api/message/chat \
 
 浏览器端使用 `fetch()` 获取 `response.body`，通过 `ReadableStream` 和 `TextDecoder` 按行解析事件。流式消息对象必须保持 Vue 响应式，收到 `delta` 后将 `content` 追加到当前 AI 消息即可实时更新页面。
 
-会话权限或请求参数等在建立流之前发生的错误仍返回普通 JSON；流开始后的生成错误通过 `error` 事件返回。用户消息在生成前保存，AI 消息仅在完整生成后保存。
+会话权限或请求参数等在建立流之前发生的错误仍返回普通 JSON；流开始后的生成错误通过 `error` 事件返回。用户消息在生成前保存；AI 消息在完整生成后保存，或在用户显式停止时保存已生成的非空片段。
+
+生成过程中，前端的发送按钮会切换为“停止”。收到 `start.request_id` 后，停止按钮调用 `POST /api/message/chat/stop/{request_id}`；后端保存已生成的非空文本并发送 `stopped`，前端直接保留当前截断内容。如果这是“新建会话”的第一轮，后端仍会使用用户问题和已保留的截断回复生成会话标题。如尚未收到 `request_id`，或用户切换会话、新建会话、离开聊天页，前端会通过 `AbortController` 直接取消连接，这类异常中断不保存部分 AI 回复。
 
 ### 生成 Markdown 接口文档
 
@@ -433,7 +436,7 @@ uv sync --group dev
 uv run pytest -q
 ```
 
-当前测试覆盖会话和消息的资源归属、管理员权限、聊天 NDJSON 事件顺序、生成失败时的消息持久化、文本切片和密码校验。API 测试使用内存替身隔离 CRUD、检索和模型服务，默认不会连接或修改 MySQL、Elasticsearch、OSS、ChromaDB 和模型 API。
+当前测试覆盖会话和消息的资源归属、管理员权限、聊天 NDJSON 事件顺序、生成失败或取消时的消息持久化、文本切片和密码校验。API 测试使用内存替身隔离 CRUD、检索和模型服务，默认不会连接或修改 MySQL、Elasticsearch、OSS、ChromaDB 和模型 API。
 
 ## 混合检索流程
 

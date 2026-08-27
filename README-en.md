@@ -376,7 +376,7 @@ Regular-user registration, login, and authentication endpoints do not require au
 Authorization: Bearer <access-token>
 ```
 
-Business responses from regular application endpoints are wrapped in `Result`: `code` is `1` on success and `0` on failure, with `msg` and `data` included. A successful OAuth2 `/api/auth` request directly returns `access_token` and `token_type`; authentication failures, request validation failures, and other framework-level errors use FastAPI's standard JSON error format. For `POST /api/message/chat`, business errors detected before streaming begins return `Result`; once streaming starts, the endpoint emits newline-delimited `start`, `delta`, `done`, or `error` events using `application/x-ndjson`, as detailed in the next section.
+Business responses from regular application endpoints are wrapped in `Result`: `code` is `1` on success and `0` on failure, with `msg` and `data` included. A successful OAuth2 `/api/auth` request directly returns `access_token` and `token_type`; authentication failures, request validation failures, and other framework-level errors use FastAPI's standard JSON error format. For `POST /api/message/chat`, business errors detected before streaming begins return `Result`; once streaming starts, the endpoint emits newline-delimited `start`, `delta`, `done`, `stopped`, or `error` events using `application/x-ndjson`, as detailed in the next section.
 
 ### Streaming Chat Response
 
@@ -395,15 +395,16 @@ Each line in the response body is an independent JSON event:
 
 | Event type | Field | Description |
 | --- | --- | --- |
-| `start` | `user_message_id` | Confirms that the user message was saved and returns its database ID |
+| `start` | `user_message_id`, `request_id` | Confirms that the user message was saved; `request_id` identifies the active generation for stopping and is `null` when no continued generation is needed |
 | `delta` | `content` | Contains the latest AI-generated text fragment, which can be appended to the current response |
 | `done` | `assistant_message_id` | Indicates that generation completed, confirms that the assistant message was saved, and returns its database ID |
+| `stopped` | `assistant_message_id` | Indicates an explicit user stop; the non-empty generated fragment was saved, or the ID is `null` when no content was generated |
 | `error` | `message` | Indicates a generation failure; incomplete assistant responses are not saved |
 
 Example response:
 
 ```ndjson
-{"type":"start","user_message_id":101}
+{"type":"start","user_message_id":101,"request_id":"40cb2f0e-b79a-4c89-85e3-c80a17e22a35"}
 {"type":"delta","content":"The campus library"}
 {"type":"delta","content":" usually closes at 10:00 PM."}
 {"type":"done","assistant_message_id":102}
@@ -421,7 +422,9 @@ curl -N http://127.0.0.1:8000/api/message/chat \
 
 In the browser, use `fetch()` to access `response.body`, then parse events line by line with `ReadableStream` and `TextDecoder`. The streaming message object must remain reactive in Vue; append each `delta` event's `content` to the current assistant message to update the page in real time.
 
-Session authorization and request validation errors that occur before streaming begins are still returned as regular JSON responses. Errors after the stream starts are returned as `error` events. The user message is saved before generation, while the assistant message is saved only after the complete response has been generated.
+Session authorization and request validation errors that occur before streaming begins are still returned as regular JSON responses. Errors after the stream starts are returned as `error` events. The user message is saved before generation. An assistant message is saved after complete generation, or when the user explicitly stops and a non-empty generated fragment exists.
+
+While a response is being generated, the frontend changes the send button to a Stop button. After receiving `start.request_id`, the button calls `POST /api/message/chat/stop/{request_id}`. The backend saves the non-empty generated text and emits `stopped`, allowing the frontend to retain the truncated response. For the first turn of a "New conversation," the backend still generates a conversation title from the user question and the retained truncated response. Before a request ID is available, or when the user switches or creates a conversation or leaves the chat page, the frontend directly cancels the connection through `AbortController`; these abnormal interruptions do not save a partial assistant response.
 
 ### Generate Markdown API Documentation
 
@@ -440,7 +443,7 @@ uv sync --group dev
 uv run pytest -q
 ```
 
-The current suite covers session and message ownership, administrator authorization, chat NDJSON event ordering, message persistence after generation failures, text chunking, and password verification. API tests isolate CRUD, retrieval, and model services with in-memory substitutes, so they do not connect to or modify MySQL, Elasticsearch, OSS, ChromaDB, or model APIs by default.
+The current suite covers session and message ownership, administrator authorization, chat NDJSON event ordering, message persistence after generation failures or cancellations, text chunking, and password verification. API tests isolate CRUD, retrieval, and model services with in-memory substitutes, so they do not connect to or modify MySQL, Elasticsearch, OSS, ChromaDB, or model APIs by default.
 
 ## Hybrid Retrieval Flow
 

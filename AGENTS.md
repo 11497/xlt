@@ -34,8 +34,8 @@
 
 - AI 模型、服务地址、密钥读取和检索参数位于 `config/ai_config.py`；提示词正文位于 `config/prompts/`，不得重新内嵌到 Python 文件。
 - 提示词文件使用 UTF-8。修改时保留 `{conversation}`、`{user_input}`、`{conversation_history}`、`{user_question}` 等运行时占位符；普通花括号需要按 Python `str.format()` 规则转义。
-- `POST /api/message/chat` 必须保持 `application/x-ndjson` 流式协议，逐行发送 `start`、`delta`、`done` 或 `error` 事件，并保持 `frontend/src/api/message.js` 的解析逻辑同步。
-- 用户消息在生成前持久化；AI 消息只能在完整生成后持久化。失败、中断或取消的流不得留下不完整的 AI 历史记录。
+- `POST /api/message/chat` 必须保持 `application/x-ndjson` 流式协议，逐行发送 `start`、`delta`、`done`、`stopped` 或 `error` 事件，并保持 `frontend/src/api/message.js` 的解析逻辑同步。
+- 用户消息在生成前持久化；AI 消息在完整生成后持久化，或在用户通过停止接口显式中断时持久化已生成的非空片段。生成失败、断网或客户端直接取消的流不得留下不完整的 AI 历史记录。
 - ChromaDB 与 Elasticsearch 的切片 ID 必须保持相同的 `document_id_chunk_index` 格式，混合检索依赖该 ID 融合去重。
 - 文档上传和删除跨越 OSS、MySQL、ChromaDB 与 Elasticsearch。修改流程时必须明确处理顺序、部分成功、错误返回和补偿策略，不得把单端成功当作整体成功。
 
