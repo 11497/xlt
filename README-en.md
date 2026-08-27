@@ -67,6 +67,7 @@ Xiaolingtong is an intelligent Q&A and knowledge management system designed for 
 - **State management**: Pinia 4 (with persistence)
 - **HTTP client**: Axios; the chat endpoint uses Fetch Streams for streaming responses
 - **Markdown rendering**: markdown-it
+- **Responsive layout**: Supports desktop and mobile views, with drawer navigation and session lists on mobile
 
 ## Project Structure
 
