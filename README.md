@@ -34,6 +34,7 @@
   - [API 模块](#api-模块)
     - [聊天流式响应](#聊天流式响应)
     - [生成 Markdown 接口文档](#生成-markdown-接口文档)
+  - [自动化测试](#自动化测试)
   - [混合检索流程](#混合检索流程)
   - [开发与部署注意事项](#开发与部署注意事项)
 
@@ -422,6 +423,17 @@ uv run python scripts/generate_api_doc.py
 ```
 
 脚本从 FastAPI OpenAPI Schema 读取当前路由，并覆盖生成项目根目录的 `接口文档.md`。该文件提供路径、参数、请求体以及 OpenAPI 可推导的响应模型摘要；聊天流的媒体类型、事件字段与处理时序以本 README 的“聊天流式响应”一节为准。
+
+## 自动化测试
+
+首次运行前同步开发依赖，然后执行测试：
+
+```bash
+uv sync --group dev
+uv run pytest -q
+```
+
+当前测试覆盖会话和消息的资源归属、管理员权限、聊天 NDJSON 事件顺序、生成失败时的消息持久化、文本切片和密码校验。API 测试使用内存替身隔离 CRUD、检索和模型服务，默认不会连接或修改 MySQL、Elasticsearch、OSS、ChromaDB 和模型 API。
 
 ## 混合检索流程
 

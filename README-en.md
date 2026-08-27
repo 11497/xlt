@@ -34,6 +34,7 @@
   - [API Modules](#api-modules)
     - [Streaming Chat Response](#streaming-chat-response)
     - [Generate Markdown API Documentation](#generate-markdown-api-documentation)
+  - [Automated Tests](#automated-tests)
   - [Hybrid Retrieval Flow](#hybrid-retrieval-flow)
   - [Development and Deployment Notes](#development-and-deployment-notes)
 
@@ -429,6 +430,17 @@ uv run python scripts/generate_api_doc.py
 ```
 
 The script reads the current routes from the FastAPI OpenAPI schema and overwrites `接口文档.md` in the project root. That file provides paths, parameters, request bodies, and response-model summaries that can be inferred from OpenAPI. The chat stream's media type, event fields, and processing sequence are documented in the "Streaming Chat Response" section of this README.
+
+## Automated Tests
+
+Sync the development dependencies before the first run, then execute the test suite:
+
+```bash
+uv sync --group dev
+uv run pytest -q
+```
+
+The current suite covers session and message ownership, administrator authorization, chat NDJSON event ordering, message persistence after generation failures, text chunking, and password verification. API tests isolate CRUD, retrieval, and model services with in-memory substitutes, so they do not connect to or modify MySQL, Elasticsearch, OSS, ChromaDB, or model APIs by default.
 
 ## Hybrid Retrieval Flow
 
