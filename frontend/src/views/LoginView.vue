@@ -83,13 +83,14 @@ const clear = () => {
 
 <style scoped>
 #container {
-    padding: 10%;
-    height: 410px;
+    min-height: 100dvh;
+    padding: clamp(24px, 10vh, 96px) 16px;
     background-repeat: no-repeat;
     background-size: cover;
 }
 
 .login-form {
+    width: 100%;
     max-width: 400px;
     padding: 30px;
     margin: 0 auto;
@@ -110,5 +111,42 @@ const clear = () => {
 .button {
     margin-top: 30px;
     width: 120px;
+}
+
+@media (max-width: 480px) {
+    #container {
+        display: flex;
+        align-items: center;
+        padding: 16px;
+    }
+
+    .login-form {
+        padding: 24px 16px;
+    }
+
+    .login-form :deep(.el-form-item) {
+        display: block;
+    }
+
+    .login-form :deep(.el-form-item__label) {
+        width: auto !important;
+        height: 28px;
+        line-height: 28px;
+    }
+
+    .login-form :deep(.el-form-item__content) {
+        margin-left: 0 !important;
+    }
+
+    .login-form :deep(.el-form-item:last-child .el-form-item__content) {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+    }
+
+    .button {
+        width: 100%;
+        margin: 16px 0 0 !important;
+    }
 }
 </style>
