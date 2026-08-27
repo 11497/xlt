@@ -121,3 +121,22 @@ class AnnouncementCRUD:
             announcements = [Announcement.from_row(r) for r in rows]
 
         return announcements, total
+
+    @staticmethod
+    def get_recent(limit: int = 5) -> Tuple[List[Announcement], int]:
+        """查询最近发布的公告及公告总数。"""
+        sql_count = "SELECT COUNT(*) AS total FROM announcement"
+        sql_data = "SELECT * FROM announcement ORDER BY create_time DESC LIMIT %s"
+
+        with get_cursor() as cursor:
+            cursor.execute(sql_count)
+            count_row = cursor.fetchone()
+            if isinstance(count_row, dict):
+                total = count_row.get("total", count_row.get("COUNT(*)", 0))
+            else:
+                total = count_row[0] if count_row else 0
+
+            cursor.execute(sql_data, (limit,))
+            announcements = [Announcement.from_row(row) for row in cursor.fetchall()]
+
+        return announcements, total

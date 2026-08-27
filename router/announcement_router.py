@@ -53,6 +53,19 @@ async def get_all_announcements(
     })
 
 
+@router.get("/recent")
+async def get_recent_announcements(
+        limit: int = Query(5, ge=1, le=10, description="返回条数"),
+        _admin: User = Depends(require_admin)
+):
+    """查询最近发布的公告及公告总数，供管理首页展示。"""
+    announcements, total = AnnouncementCRUD.get_recent(limit=limit)
+    return Result().success(msg="查询成功", data={
+        "list": announcements,
+        "total": total
+    })
+
+
 @router.get("/{id}")
 async def get_announcement_by_id(id: int, _user: User = Depends(require_current_user)):
     """
