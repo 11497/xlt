@@ -1,5 +1,6 @@
 import json
 from datetime import datetime
+from functools import lru_cache
 from typing import List
 
 from fastapi import APIRouter, Depends
@@ -19,9 +20,17 @@ from model.user_model import User
 
 router = APIRouter(prefix="/api/message", tags=["message"])
 
-# 初始化服务
-hybrid_search_service = HybridSearchService()
-chat_service = ChatService()
+
+@lru_cache
+def get_hybrid_search_service() -> HybridSearchService:
+    """获取复用的混合检索服务实例。"""
+    return HybridSearchService()
+
+
+@lru_cache
+def get_chat_service() -> ChatService:
+    """获取复用的聊天服务实例。"""
+    return ChatService()
 
 
 def encode_stream_event(event: dict) -> str:
@@ -31,7 +40,11 @@ def encode_stream_event(event: dict) -> str:
     return json.dumps(event, ensure_ascii=False) + "\n"
 
 
-def retrieve_context_from_knowledge_bases(user_id: int, query: str) -> str:
+def retrieve_context_from_knowledge_bases(
+        user_id: int,
+        query: str,
+        search_service: HybridSearchService
+) -> str:
     """
     从用户可访问的知识库中检索相关上下文（使用混合检索 + Rerank）
     :param user_id: 用户ID
@@ -50,7 +63,7 @@ def retrieve_context_from_knowledge_bases(user_id: int, query: str) -> str:
     for kb_id in knowledge_base_ids:
         try:
             # 调用混合检索，返回已重排序的文档列表
-            results = hybrid_search_service.search(
+            results = search_service.search(
                 knowledge_base_id=kb_id,
                 query=query,
                 top_k=TOPK,      # 最终返回数量（重排后）
@@ -73,7 +86,9 @@ def retrieve_context_from_knowledge_bases(user_id: int, query: str) -> str:
 @router.post("/chat")
 async def chat(
         message: Message,
-        user: User = Depends(require_current_user)
+        user: User = Depends(require_current_user),
+        chat_service: ChatService = Depends(get_chat_service),
+        search_service: HybridSearchService = Depends(get_hybrid_search_service)
 ):
     """
     对话接口，第一轮对话后自动总结并修改会话名，非第一轮对话则合并历史对话
@@ -144,7 +159,7 @@ async def chat(
     messages.extend(history_messages)
 
     # RAG检索（使用重写后的问题）
-    context = retrieve_context_from_knowledge_bases(user.id, rewritten_query)
+    context = retrieve_context_from_knowledge_bases(user.id, rewritten_query, search_service)
 
     # 添加当前用户消息（可能包含上下文）
     if context:
