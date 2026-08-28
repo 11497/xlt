@@ -306,7 +306,7 @@ const handleManageRoles = (row) => {
         </template>
       </el-table-column>
       <!-- 关联角色列 -->
-      <el-table-column label="关联角色" width="150" align="center" fixed="right">
+      <el-table-column label="关联角色" width="150" align="center">
         <template #default="scope">
           <el-button type="info" size="small" @click="handleManageRoles(scope.row)">
             <el-icon><Service /></el-icon> 管理角色
