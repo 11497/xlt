@@ -3,10 +3,13 @@ import {ref, onMounted} from 'vue';
 import {userLogin} from "@/api/user.js";
 import {ElMessage} from "element-plus";
 import {useRouter} from "vue-router";
+import {ArrowRight, Lock, Reading, User} from '@element-plus/icons-vue';
+import campusLibrary from '@/assets/images/campus-library.png';
 
 let userForm = ref({username: "", password: ""});
 const loginFormRef = ref(null);
 const router = useRouter();
+const loginLoading = ref(false);
 
 // 表单校验规则
 const rules = {
@@ -34,11 +37,13 @@ const login = async () => {
     const valid = await loginFormRef.value.validate().catch(() => false);
     if (!valid) return;
 
-    const result = await userLogin({
-      username: userForm.value.username,
-      password: userForm.value.password
-    });
-    if (result.code) {
+    loginLoading.value = true;
+    try {
+      const result = await userLogin({
+        username: userForm.value.username,
+        password: userForm.value.password
+      });
+      if (result.code) {
         // 1. 提示信息
         ElMessage.success('登录成功');
 
@@ -47,106 +52,87 @@ const login = async () => {
 
         // 3. 跳转页面 - 首页
         await router.push({path: '/chat'});
-    } else {
+      } else {
         ElMessage.error(result.msg);
+      }
+    } finally {
+      loginLoading.value = false;
     }
-}
-
-// 重置
-const clear = () => {
-    userForm.value = {username: '', password: ''};
-    loginFormRef.value.resetFields();
 }
 </script>
 
 <template>
-    <div id="container">
-        <div class="login-form">
-            <el-form ref="loginFormRef" :model="userForm" :rules="rules" label-width="80px">
-                <p class="title">校灵通</p>
-                <el-form-item label="用户名" prop="username">
-                    <el-input v-model="userForm.username" placeholder="请输入用户名"></el-input>
-                </el-form-item>
-
-                <el-form-item label="密码" prop="password">
-                    <el-input type="password" v-model="userForm.password" placeholder="请输入密码" @keyup.enter="login"></el-input>
-                </el-form-item>
-
-                <el-form-item>
-                    <el-button class="button" type="primary" @click="login">登 录</el-button>
-                    <el-button class="button" type="info" @click="clear">重 置</el-button>
-                </el-form-item>
-            </el-form>
+    <main class="login-page">
+      <section class="login-visual" :style="{ backgroundImage: `url(${campusLibrary})` }" aria-label="校园图书馆">
+        <div class="visual-copy">
+          <h1>知识在校园里流动</h1>
+          <p>连接可信资料、校园公告与智能问答，让每一次查找都更有依据。</p>
         </div>
-    </div>
+      </section>
+      <section class="login-panel">
+        <div class="login-form">
+          <div class="login-brand">
+            <span class="login-brand-mark" aria-hidden="true"><el-icon><Reading /></el-icon></span>
+            <div><strong>校灵通</strong><span>校园知识工作台</span></div>
+          </div>
+          <div class="login-heading">
+            <h2>欢迎回来</h2>
+          </div>
+          <el-form ref="loginFormRef" :model="userForm" :rules="rules" label-position="top" @submit.prevent="login">
+            <el-form-item label="用户名" prop="username">
+              <el-input v-model="userForm.username" size="large" placeholder="请输入用户名" autocomplete="username" :prefix-icon="User" />
+            </el-form-item>
+            <el-form-item label="密码" prop="password">
+              <el-input v-model="userForm.password" size="large" type="password" placeholder="请输入密码" autocomplete="current-password" :prefix-icon="Lock" show-password @keyup.enter="login" />
+            </el-form-item>
+            <el-button class="login-button" type="primary" size="large" native-type="submit" :loading="loginLoading">
+              <span>{{ loginLoading ? '正在登录' : '进入工作台' }}</span><el-icon v-if="!loginLoading"><ArrowRight /></el-icon>
+            </el-button>
+          </el-form>
+          <p class="login-footnote">校园知识问答与管理服务</p>
+        </div>
+      </section>
+    </main>
 </template>
 
 <style scoped>
-#container {
-    min-height: 100dvh;
-    padding: clamp(24px, 10vh, 96px) 16px;
-    background-repeat: no-repeat;
-    background-size: cover;
+.login-page { min-height: 100dvh; display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(420px, .65fr); background: #fff; }
+.login-visual { position: relative; min-height: 100dvh; background-position: center; background-size: cover; }
+.login-visual::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgb(10 30 34 / 8%) 28%, rgb(8 28 29 / 76%) 100%); }
+.visual-copy { position: absolute; z-index: 1; left: clamp(28px, 6vw, 88px); right: clamp(28px, 8vw, 120px); bottom: clamp(40px, 9vh, 100px); max-width: 680px; color: #fff; }
+.visual-copy h1 { margin: 0 0 12px; font-size: clamp(34px, 4.2vw, 58px); line-height: 1.14; letter-spacing: 0; }
+.visual-copy p { max-width: 560px; margin: 0; color: rgb(255 255 255 / 86%); font-size: 16px; line-height: 1.8; }
+.login-panel { min-width: 0; padding: 48px clamp(32px, 5vw, 72px); display: flex; align-items: center; justify-content: center; }
+.login-form { width: 100%; max-width: 420px; }
+.login-brand { display: flex; align-items: center; gap: 12px; margin-bottom: clamp(48px, 10vh, 88px); }
+.login-brand-mark { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 6px; background: var(--color-primary); color: #fff; font-size: 21px; font-weight: 700; }
+.login-brand-mark :deep(.el-icon) { font-size: 24px; }
+.login-brand-mark :deep(svg) { color: #fff; fill: currentColor; }
+.login-brand div { display: flex; flex-direction: column; gap: 3px; }
+.login-brand strong { font-size: 20px; }
+.login-brand span { color: var(--color-text-secondary); font-size: 12px; }
+.login-heading { margin-bottom: 28px; }
+.login-heading h2 { margin: 0; font-size: 28px; font-weight: 650; }
+.login-form :deep(.el-form-item) { margin-bottom: 22px; }
+.login-form :deep(.el-form-item__label) { padding-bottom: 7px; color: #46525e; font-weight: 600; }
+.login-button { width: 100%; margin-top: 8px; }
+.login-button .el-icon { margin-left: 8px; }
+.login-footnote { margin: 28px 0 0; color: var(--color-text-muted); font-size: 12px; text-align: center; }
+
+@media (max-width: 900px) {
+  .login-page { grid-template-columns: minmax(280px, .8fr) minmax(390px, 1fr); }
+  .visual-copy h1 { font-size: 36px; }
 }
-
-.login-form {
-    width: 100%;
-    max-width: 400px;
-    padding: 30px;
-    margin: 0 auto;
-    border: 1px solid #e0e0e0;
-    border-radius: 10px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
-    background-color: white;
-}
-
-.title {
-    font-size: 30px;
-    font-family: '楷体';
-    text-align: center;
-    margin-bottom: 30px;
-    font-weight: bold;
-}
-
-.button {
-    margin-top: 30px;
-    width: 120px;
-}
-
-@media (max-width: 480px) {
-    #container {
-        display: flex;
-        align-items: center;
-        padding: 16px;
-    }
-
-    .login-form {
-        padding: 24px 16px;
-    }
-
-    .login-form :deep(.el-form-item) {
-        display: block;
-    }
-
-    .login-form :deep(.el-form-item__label) {
-        width: auto !important;
-        height: 28px;
-        line-height: 28px;
-    }
-
-    .login-form :deep(.el-form-item__content) {
-        margin-left: 0 !important;
-    }
-
-    .login-form :deep(.el-form-item:last-child .el-form-item__content) {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 12px;
-    }
-
-    .button {
-        width: 100%;
-        margin: 16px 0 0 !important;
-    }
+@media (max-width: 640px) {
+  .login-page { display: block; background: #fff; }
+  .login-visual { min-height: 190px; height: 26vh; background-position: center 45%; }
+  .login-visual::after { background: linear-gradient(180deg, rgb(8 28 29 / 5%), rgb(8 28 29 / 62%)); }
+  .visual-copy { left: 20px; right: 20px; bottom: 18px; }
+  .visual-copy p { display: none; }
+  .visual-copy h1 { margin: 0; font-size: 26px; }
+  .login-panel { min-height: 74vh; padding: 28px 20px 36px; align-items: flex-start; }
+  .login-brand { margin-bottom: 30px; }
+  .login-heading { margin-bottom: 22px; }
+  .login-heading h2 { font-size: 24px; }
 }
 </style>
