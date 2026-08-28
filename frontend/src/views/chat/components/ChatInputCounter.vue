@@ -54,9 +54,8 @@ watch(status, (currentStatus, previousStatus) => {
 .character-counter {
   position: absolute;
   right: 12px;
-  bottom: 0;
+  bottom: 5px;
   z-index: 1;
-  transform: translateY(50%);
   pointer-events: none;
   font-size: 12px;
   line-height: 16px;

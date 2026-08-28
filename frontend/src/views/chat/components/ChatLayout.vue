@@ -5,7 +5,8 @@ import { createSession, deleteSession, renameSession, sessionByUserId } from '@/
 import { chat, deleteMessagesAfter, deleteMessagesBySessionId, messageBySessionId, stopChat } from '@/api/message.js'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import router from '@/router/index.js'
-import { House, Menu, SwitchButton } from '@element-plus/icons-vue'
+import { House } from '@element-plus/icons-vue'
+import AppHeader from '@/components/AppHeader.vue'
 import SessionSidebar from './SessionSidebar.vue'
 import ChatPanel from './ChatPanel.vue'
 
@@ -289,21 +290,13 @@ const handleDeleteMessage = async (msg) => {
 
 <template>
   <div class="app-layout">
-    <header class="app-header">
-      <button class="mobile-menu-button" type="button" aria-label="打开会话列表" title="会话列表" @click="sidebarOpen = true">
-        <el-icon><Menu /></el-icon>
-      </button>
-      <div class="header-left">校灵通</div>
-      <div class="header-center"></div>
-      <div class="header-right">
-        <a href="javascript:0" @click="switchToMyPage" class="my-btn" aria-label="我的" title="我的">
-          <el-icon><House /></el-icon> 我的
-        </a>
-        <a href="javascript:0" @click="logout" class="logout-btn" aria-label="退出登录" title="退出登录">
-          <el-icon><SwitchButton/></el-icon> 退出登录 【{{ user?.username }}】
-        </a>
-      </div>
-    </header>
+    <AppHeader :username="user?.username" section="智能问答" @menu="sidebarOpen = true" @logout="logout">
+      <template #actions>
+        <button class="app-header-link" type="button" aria-label="进入个人工作台" title="个人工作台" @click="switchToMyPage">
+          <el-icon><House /></el-icon><span>个人工作台</span>
+        </button>
+      </template>
+    </AppHeader>
     <main class="app-main">
       <div class="mobile-sidebar-mask" :class="{ 'is-visible': sidebarOpen }" @click="sidebarOpen = false"></div>
       <SessionSidebar
@@ -330,32 +323,15 @@ const handleDeleteMessage = async (msg) => {
 </template>
 
 <style>
-/* 此处放入原文档中 .app-layout, .app-header, .app-main, .app-footer 相关的所有样式 */
-body { margin: 0; }
-.app-layout { height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
-.app-header { height: 60px; flex-shrink: 0; display: flex; align-items: center; gap: 16px; padding: 0 20px; background-image: linear-gradient(to right, #00547d, #007fa4, #00aaa0); }
-.header-left { color: white; font-size: 40px; font-family: 楷体, serif; line-height: 60px; font-weight: bolder; }
-.header-center { flex: 1; text-align: center; }
-.header-right { white-space: nowrap; }
+.app-layout { height: 100dvh; display: flex; flex-direction: column; overflow: hidden; background: var(--color-page); }
 .app-main { flex: 1; display: flex; overflow: hidden; }
-.app-footer { height: 40px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background-color: #f5f7fa; border-top: 1px solid #dcdfe6; }
-a { text-decoration: none; }
-.logout-btn { color: red; margin: 0 15px; font-size: 18px; }
-.my-btn { color: white; margin: 0 15px; font-size: 18px; }
 
 @media (max-width: 768px) {
   .app-layout { height: 100dvh; }
-  .app-header { height: 52px; gap: 10px; padding: 0 12px; }
-  .mobile-menu-button { display: inline-flex; width: 36px; height: 36px; padding: 0; align-items: center; justify-content: center; border: 0; background: transparent; color: #fff; font-size: 22px; cursor: pointer; }
-  .header-left { font-size: 28px; line-height: 52px; }
-  .header-center { display: none; }
-  .header-right { margin-left: auto; display: flex; align-items: center; }
-  .my-btn, .logout-btn { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; margin: 0 2px; font-size: 0; }
-  .my-btn .el-icon, .logout-btn .el-icon { font-size: 20px; }
   .app-main { position: relative; }
-  .main-left { position: fixed; z-index: 2002; top: 0; bottom: 0; left: 0; width: min(82vw, 300px) !important; transform: translateX(-100%); transition: transform 0.2s ease; box-shadow: 4px 0 16px rgb(0 0 0 / 18%); }
+  .main-left { position: fixed; z-index: 2002; top: var(--header-height); bottom: 0; left: 0; width: min(82vw, 300px) !important; transform: translateX(-100%); transition: transform 0.2s ease; box-shadow: var(--shadow-float); }
   .main-left.is-mobile-open { transform: translateX(0); }
-  .mobile-sidebar-mask { position: fixed; z-index: 2001; inset: 0; display: block; background: rgb(0 0 0 / 40%); opacity: 0; visibility: hidden; transition: opacity 0.2s ease, visibility 0.2s ease; }
+  .mobile-sidebar-mask { position: fixed; z-index: 2001; inset: var(--header-height) 0 0; display: block; background: rgb(12 24 31 / 38%); opacity: 0; visibility: hidden; transition: opacity 0.2s ease, visibility 0.2s ease; }
   .mobile-sidebar-mask.is-visible { opacity: 1; visibility: visible; }
 }
 </style>
