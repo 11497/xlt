@@ -1,5 +1,6 @@
 <script setup>
-import { Menu, Reading, SwitchButton } from '@element-plus/icons-vue'
+import { Menu, SwitchButton } from '@element-plus/icons-vue'
+import xltIcon from '@/assets/xlt-icon.svg'
 
 defineProps({
   username: { type: String, default: '' },
@@ -15,7 +16,7 @@ defineEmits(['menu', 'logout'])
       <el-icon><Menu /></el-icon>
     </button>
     <div class="app-brand" aria-label="校灵通校园知识工作台">
-      <span class="app-brand-mark" aria-hidden="true"><el-icon><Reading /></el-icon></span>
+      <img class="app-brand-mark" :src="xltIcon" alt="" />
       <span class="app-brand-copy">
         <strong>校灵通</strong>
         <small v-if="section">{{ section }}</small>

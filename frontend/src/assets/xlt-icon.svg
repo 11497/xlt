@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title">
+  <title id="title">校灵通</title>
+  <rect x="2" y="2" width="60" height="60" rx="14" fill="#147d73"/>
+  <path d="M12 22.5c7.4-2.2 14.7-.5 20 4.1v25c-5.3-4.6-12.6-6.3-20-4.1v-25Z" fill="none" stroke="#fff" stroke-linejoin="round" stroke-width="3.5"/>
+  <path d="M52 22.5c-7.4-2.2-14.7-.5-20 4.1v25c5.3-4.6 12.6-6.3 20-4.1v-25Z" fill="none" stroke="#fff" stroke-linejoin="round" stroke-width="3.5"/>
+  <path d="M18.5 30.5c3-.3 5.8.2 8.2 1.3M18.5 36.5c3-.3 5.8.2 8.2 1.3M45.5 31.2c-2.3-.1-4.5.4-6.4 1.4" fill="none" stroke="#d8f0ec" stroke-linecap="round" stroke-width="2.5"/>
+  <path d="M39 11.5h9a6 6 0 0 1 6 6v1a6 6 0 0 1-6 6h-2.5L41 28v-3.5h-2a6 6 0 0 1-6-6v-1a6 6 0 0 1 6-6Z" fill="#d99614" stroke="#147d73" stroke-linejoin="round" stroke-width="2.5"/>
+  <circle cx="41.5" cy="18" r="1.4" fill="#fff"/>
+  <circle cx="46.5" cy="18" r="1.4" fill="#fff"/>
+</svg>

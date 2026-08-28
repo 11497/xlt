@@ -3,8 +3,9 @@ import {ref, onMounted} from 'vue';
 import {userLogin} from "@/api/user.js";
 import {ElMessage} from "element-plus";
 import {useRouter} from "vue-router";
-import {ArrowRight, Lock, Reading, User} from '@element-plus/icons-vue';
+import {ArrowRight, Lock, User} from '@element-plus/icons-vue';
 import campusLibrary from '@/assets/images/campus-library.png';
+import xltIcon from '@/assets/xlt-icon.svg';
 
 let userForm = ref({username: "", password: ""});
 const loginFormRef = ref(null);
@@ -72,7 +73,7 @@ const login = async () => {
       <section class="login-panel">
         <div class="login-form">
           <div class="login-brand">
-            <span class="login-brand-mark" aria-hidden="true"><el-icon><Reading /></el-icon></span>
+            <img class="login-brand-mark" :src="xltIcon" alt="" />
             <div><strong>校灵通</strong><span>校园知识工作台</span></div>
           </div>
           <div class="login-heading">
@@ -105,9 +106,7 @@ const login = async () => {
 .login-panel { min-width: 0; padding: 48px clamp(32px, 5vw, 72px); display: flex; align-items: center; justify-content: center; }
 .login-form { width: 100%; max-width: 420px; }
 .login-brand { display: flex; align-items: center; gap: 12px; margin-bottom: clamp(48px, 10vh, 88px); }
-.login-brand-mark { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 6px; background: var(--color-primary); color: #fff; font-size: 21px; font-weight: 700; }
-.login-brand-mark :deep(.el-icon) { font-size: 24px; }
-.login-brand-mark :deep(svg) { color: #fff; fill: currentColor; }
+.login-brand-mark { width: 42px; height: 42px; flex: 0 0 42px; }
 .login-brand div { display: flex; flex-direction: column; gap: 3px; }
 .login-brand strong { font-size: 20px; }
 .login-brand span { color: var(--color-text-secondary); font-size: 12px; }
