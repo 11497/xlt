@@ -9,6 +9,7 @@ import {
 import {ElMessage, ElMessageBox} from "element-plus";
 import {InfoFilled, Download, Delete, Plus} from "@element-plus/icons-vue";
 import {UPLOAD_ACCEPT, validateUploadFile} from "@/utils/uploadValidation.js";
+import PageHeader from '@/components/PageHeader.vue';
 
 const MAX_TITLE_LENGTH = 255;
 
@@ -312,19 +313,20 @@ const handleSelectionChange = (rows) => {
 </script>
 
 <template>
+  <PageHeader title="公告管理" description="发布校园通知，维护置顶状态与公告附件" />
   <!-- 操作按钮区 -->
   <div class="container action-bar">
     <el-button type="primary" @click="openPublishDialog">
       <el-icon><Plus /></el-icon> 发布公告
     </el-button>
-    <el-button type="danger" @click="handleBatchDelete" :disabled="selectedRows.length === 0">
+    <el-button type="danger" plain @click="handleBatchDelete" :disabled="selectedRows.length === 0">
       <el-icon><Delete /></el-icon> 批量删除
     </el-button>
   </div>
 
   <!-- 表格部分 -->
   <div class="container">
-    <el-table :data="announcementList" border style="width: 100%" @selection-change="handleSelectionChange">
+    <el-table :data="announcementList" border style="width: 100%" empty-text="暂无公告" @selection-change="handleSelectionChange">
       <el-table-column type="selection" width="55" align="center" />
       <el-table-column label="序号" width="80" align="center">
         <template #default="scope">
@@ -333,10 +335,10 @@ const handleSelectionChange = (rows) => {
       </el-table-column>
       <el-table-column prop="title" label="标题" min-width="200" show-overflow-tooltip align="center"/>
       <el-table-column prop="is_top" label="是否置顶" width="120" align="center">
-        <template #default="scope">{{ scope.row.is_top ? '是' : '否' }}</template>
+        <template #default="scope"><el-tag v-if="scope.row.is_top" class="status-tag-accent" effect="plain">置顶</el-tag><el-tag v-else type="info" effect="plain">普通</el-tag></template>
       </el-table-column>
       <el-table-column prop="create_time" label="发布时间" width="180" align="center"/>
-      <el-table-column prop="update_time" label="修改时间" width="180" align="center"/>
+      <el-table-column prop="update_time" label="修改时间" width="180" align="center" class-name="mobile-secondary-column"/>
       <el-table-column label="操作" width="200" align="center">
         <template #default="scope">
           <el-button type="info" size="small" @click="showDetail(scope.row)">

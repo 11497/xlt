@@ -3,6 +3,7 @@ import { onMounted, ref } from "vue";
 import { ElMessage } from "element-plus";
 import { getMyRoles } from "@/api/role_user.js";
 import {getRoleById} from "@/api/role.js";
+import PageHeader from '@/components/PageHeader.vue';
 
 let roleIdList = ref([])
 let roleList = ref([]);
@@ -34,10 +35,11 @@ onMounted(async () => {
 </script>
 
 <template>
+  <PageHeader title="我的角色" description="查看当前账号在校园知识服务中的身份" />
   <!-- 固定大小的容器 -->
   <div class="container">
     <!-- height="100%" 使表格撑满容器并启用内部滚动 -->
-    <el-table :data="roleList" border style="width: 100%" height="100%">
+    <el-table :data="roleList" border style="width: 100%" height="100%" empty-text="暂无关联角色">
       <!-- 序号列：type="index" 自动生成从1开始的行号 -->
       <el-table-column type="index" label="序号" width="80" align="center" />
 
@@ -59,15 +61,13 @@ body {
 }
 
 .container {
-  /* 设置固定高度，可根据实际页面布局调整 */
-  height: 600px;
+  min-height: 360px;
   width: 100%;
-  margin: 15px 0;
 }
 
 @media (max-width: 768px) {
   .container {
-    height: calc(100dvh - 76px);
+    min-height: 280px;
   }
 }
 </style>

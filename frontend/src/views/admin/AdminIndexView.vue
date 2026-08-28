@@ -7,6 +7,7 @@ import {getAllRoles} from "@/api/role.js";
 import {getAllKnowledgeBases} from "@/api/knowledge_base.js";
 import {getAllSessions} from "@/api/session.js";
 import {getRecentAnnouncements} from "@/api/announcement.js";
+import PageHeader from '@/components/PageHeader.vue';
 
 const router = useRouter();
 const loading = ref(false);
@@ -87,17 +88,9 @@ onMounted(loadDashboard);
 
 <template>
   <div class="dashboard-page">
-    <header class="dashboard-header">
-      <h1>管理概览</h1>
-      <el-button
-        :icon="Refresh"
-        circle
-        :loading="loading"
-        aria-label="刷新首页数据"
-        title="刷新"
-        @click="loadDashboard"
-      />
-    </header>
+    <PageHeader title="管理概览" description="查看校园知识服务的核心数据与最近动态">
+      <template #actions><el-button :icon="Refresh" circle :loading="loading" aria-label="刷新首页数据" title="刷新" @click="loadDashboard" /></template>
+    </PageHeader>
 
     <el-result v-if="loadFailed && !loading" icon="warning" title="首页数据加载失败">
       <template #extra>
@@ -144,7 +137,7 @@ onMounted(loadDashboard);
             @click="navigateTo('admin-announcement')"
           >
             <span class="announcement-main">
-              <el-tag v-if="announcement.is_top" size="small" type="danger" effect="plain">置顶</el-tag>
+              <el-tag v-if="announcement.is_top" size="small" class="status-tag-accent" effect="plain">置顶</el-tag>
               <span class="announcement-title">{{ announcement.title }}</span>
             </span>
             <time class="announcement-time" :datetime="announcement.create_time">
@@ -169,12 +162,6 @@ onMounted(loadDashboard);
   display: flex;
   align-items: center;
   justify-content: space-between;
-}
-
-.dashboard-header {
-  min-height: 48px;
-  margin-bottom: 18px;
-  border-bottom: 1px solid #dcdfe6;
 }
 
 h1,
@@ -220,7 +207,7 @@ h2 { font-size: 16px; }
 
 .metric-item:focus-visible,
 .announcement-item:focus-visible {
-  outline: 2px solid #409eff;
+  outline: 2px solid var(--color-primary);
   outline-offset: -2px;
 }
 
@@ -232,8 +219,8 @@ h2 { font-size: 16px; }
   align-items: center;
   justify-content: center;
   border-radius: 6px;
-  background: #ecf5ff;
-  color: #337ecc;
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
 }
 
 .metric-icon :deep(svg) {

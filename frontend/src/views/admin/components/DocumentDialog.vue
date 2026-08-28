@@ -138,7 +138,7 @@ defineExpose({ open });
     </div>
 
     <!-- 数据表格 -->
-    <el-table :data="documentList" border style="width: 100%" v-loading="loading">
+    <el-table :data="documentList" border style="width: 100%" v-loading="loading" empty-text="暂无文档">
       <!-- 1. 序号 -->
       <el-table-column label="序号" width="80" align="center">
         <template #default="{ $index }">

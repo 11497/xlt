@@ -236,7 +236,7 @@ const renderMarkdown = (content) => {
 }
 
 .markdown-body :deep(a) {
-  color: #409eff;
+  color: var(--color-primary);
   text-decoration: none;
 }
 

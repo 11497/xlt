@@ -4,6 +4,8 @@ import {deleteSession, getAllSessions} from "@/api/session.js";
 import {ElMessage, ElMessageBox} from "element-plus";
 import {InfoFilled} from "@element-plus/icons-vue";
 import SessionMessageDialog from "@/views/user/components/SessionMessageDialog.vue";
+import {Delete} from '@element-plus/icons-vue';
+import PageHeader from '@/components/PageHeader.vue';
 
 let sessionList = ref([]);
 
@@ -96,16 +98,17 @@ const showMessage = (row) => {
 </script>
 
 <template>
+  <PageHeader title="会话管理" description="查看校园问答会话及其消息记录" />
   <!-- 操作按钮区域 -->
   <div class="container action-bar">
-    <el-button type="danger" :disabled="selectedRows.length === 0" @click="handleDelete">
-      删除
+    <el-button type="danger" plain :disabled="selectedRows.length === 0" @click="handleDelete">
+      <el-icon><Delete /></el-icon>批量删除
     </el-button>
   </div>
 
   <!-- 表格部分 -->
   <div class="container">
-    <el-table :data="sessionList" border style="width: 100%" @selection-change="handleSelectionChange">
+    <el-table :data="sessionList" border style="width: 100%" empty-text="暂无会话" @selection-change="handleSelectionChange">
       <el-table-column type="selection" width="55" align="center"/>
       <el-table-column label="序号" width="80" align="center">
         <template #default="scope">
@@ -114,7 +117,7 @@ const showMessage = (row) => {
       </el-table-column>
       <el-table-column prop="name" label="会话名称" min-width="200" show-overflow-tooltip align="center"/>
       <el-table-column prop="create_time" label="创建时间" width="250" align="center"/>
-      <el-table-column prop="update_time" label="修改时间" width="250" align="center"/>
+      <el-table-column prop="update_time" label="修改时间" width="250" align="center" class-name="mobile-secondary-column"/>
       <el-table-column label="操作" width="200" align="center">
         <template #default="scope">
           <el-button type="info" size="small" @click="showMessage(scope.row)">

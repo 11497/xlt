@@ -5,6 +5,7 @@ import {InfoFilled, Delete, Plus, User, Notebook} from "@element-plus/icons-vue"
 import {createRole, deleteRole, getAllRoles, updateRole} from "@/api/role.js";
 import RoleUserDialog from "@/views/admin/components/RoleUserDialog.vue";
 import RoleKnowledgeBaseDialog from "@/views/admin/components/RoleKnowledgeBaseDialog.vue";
+import PageHeader from '@/components/PageHeader.vue';
 
 // 列表相关状态
 let userList = ref([]);
@@ -171,19 +172,20 @@ const handleRelationKb = (row) => {
 </script>
 
 <template>
+  <PageHeader title="角色管理" description="配置校园身份角色及其用户、知识库关联" />
   <!-- 操作按钮区 -->
   <div class="container action-bar">
     <el-button type="primary" @click="handleAddRole">
       <el-icon><Plus /></el-icon> 新增角色
     </el-button>
-    <el-button type="danger" @click="handleBatchDelete" :disabled="selectedRows.length === 0">
+    <el-button type="danger" plain @click="handleBatchDelete" :disabled="selectedRows.length === 0">
       <el-icon><Delete /></el-icon> 批量删除
     </el-button>
   </div>
 
   <!-- 表格部分 -->
   <div class="container">
-    <el-table :data="userList" border style="width: 100%" @selection-change="handleSelectionChange">
+    <el-table :data="userList" border style="width: 100%" empty-text="暂无角色" @selection-change="handleSelectionChange">
       <!-- 复选框列 -->
       <el-table-column type="selection" width="55" align="center" />
       <!-- 序号列 -->

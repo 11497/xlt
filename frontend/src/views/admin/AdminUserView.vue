@@ -4,6 +4,7 @@ import {ElMessage, ElMessageBox} from "element-plus";
 import {InfoFilled, Delete, Plus, RefreshRight, Service} from "@element-plus/icons-vue";
 import {deleteUser, getAllUsers, resetPassword, setAdminStatus, updateUsername, userRegister} from "@/api/user.js";
 import UserRoleDialog from "@/views/admin/components/UserRoleDialog.vue";
+import PageHeader from '@/components/PageHeader.vue';
 
 // 列表相关状态
 let userList = ref([]);
@@ -255,19 +256,20 @@ const handleManageRoles = (row) => {
 </script>
 
 <template>
+  <PageHeader title="用户管理" description="维护校园账号、管理员身份与角色关系" />
   <!-- 操作按钮区 -->
   <div class="container action-bar">
     <el-button type="primary" @click="handleAddUser">
       <el-icon><Plus /></el-icon> 新增用户
     </el-button>
-    <el-button type="danger" @click="handleBatchDelete" :disabled="selectedRows.length === 0">
+    <el-button type="danger" plain @click="handleBatchDelete" :disabled="selectedRows.length === 0">
       <el-icon><Delete /></el-icon> 批量删除
     </el-button>
   </div>
 
   <!-- 表格部分 -->
   <div class="container">
-    <el-table :data="userList" border style="width: 100%" @selection-change="handleSelectionChange">
+    <el-table :data="userList" border style="width: 100%" empty-text="暂无用户" @selection-change="handleSelectionChange">
       <!-- 复选框列 -->
       <el-table-column type="selection" width="55" align="center" />
       <!-- 序号列 -->
@@ -278,7 +280,7 @@ const handleManageRoles = (row) => {
       </el-table-column>
       <el-table-column prop="username" label="用户名" width="200" show-overflow-tooltip align="center"/>
       <el-table-column prop="is_admin" label="是否管理员" width="120" align="center">
-        <template #default="scope">{{ scope.row.is_admin ? '是' : '否' }}</template>
+        <template #default="scope"><el-tag v-if="scope.row.is_admin" class="status-tag-admin" effect="plain">管理员</el-tag><el-tag v-else type="info" effect="plain">普通用户</el-tag></template>
       </el-table-column>
       <!-- 重置密码列 -->
       <el-table-column label="重置密码" width="120" align="center">

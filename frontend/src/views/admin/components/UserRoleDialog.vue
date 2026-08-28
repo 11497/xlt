@@ -137,12 +137,12 @@ const handleClose = () => { emit('update:visible', false); };
       <el-button type="primary" @click="handleAddRelation">
         <el-icon><Plus /></el-icon> 增加关联
       </el-button>
-      <el-button type="danger" @click="handleBatchDelete" :disabled="selectedRows.length === 0">
+      <el-button type="danger" plain @click="handleBatchDelete" :disabled="selectedRows.length === 0">
         <el-icon><Delete /></el-icon> 批量取消关联
       </el-button>
     </div>
 
-    <el-table :data="roleList" border style="width: 100%; margin-top: 10px;" @selection-change="handleSelectionChange">
+    <el-table :data="roleList" border style="width: 100%; margin-top: 10px;" empty-text="暂无关联角色" @selection-change="handleSelectionChange">
       <el-table-column type="selection" width="55" align="center" />
       <el-table-column label="序号" width="80" align="center">
         <template #default="scope">
@@ -190,6 +190,7 @@ const handleClose = () => { emit('update:visible', false); };
     <el-table
       :data="searchResults"
       border
+      empty-text="搜索后选择需要关联的角色"
       style="width: 100%; margin-top: 10px;"
       @selection-change="handleSearchSelectionChange"
       max-height="250"

@@ -5,9 +5,17 @@ import { getAllAnnouncements } from "@/api/announcement.js";
 import { getAnnouncementAttachments, downloadAnnouncementAttachment } from "@/api/announcement_attachment.js";
 import { ElMessage } from 'element-plus';
 import {updatePassword} from "@/api/user.js";
-import { Download, Bell, ArrowRight, ArrowLeft } from "@element-plus/icons-vue";
+import { Download, Bell, ArrowRight, ArrowLeft, ChatLineSquare, Notebook, Message, Key, UserFilled } from "@element-plus/icons-vue";
+import {useRouter} from 'vue-router';
+import PageHeader from '@/components/PageHeader.vue';
 
 const { user } = useCurrentUser();
+const router = useRouter();
+const quickLinks = [
+  {label: '开始智能问答', description: '从校园知识库查找答案', icon: ChatLineSquare, path: '/chat'},
+  {label: '浏览知识库', description: '查看当前可访问的资料', icon: Notebook, path: '/user/knowledgeBase'},
+  {label: '查看校园公告', description: '关注最新通知与附件', icon: Message, path: '/user/announcement'}
+];
 
 const topAnnouncements = ref([]);
 const currentAnnouncementIndex = ref(0);
@@ -197,68 +205,43 @@ const submitPassword = async () => {
 </script>
 
 <template>
-  <div class="container">
-    <el-container>
-      <!-- 顶部公告 -->
-      <el-header class="announcement-header">
-        <div class="announcement-wrapper">
-          <div class="announcement-container">
-            <div class="announcement-carousel">
-              <div class="carousel-left-group">
-                <div class="announcement-badge">
-                  <el-icon class="badge-icon"><Bell /></el-icon>
-                  <span class="badge-text">置顶</span>
-                </div>
-                <el-icon class="carousel-btn" @click="goToPrev"><ArrowLeft /></el-icon>
-              </div>
-              
-              <a href="javascript:0" class="announcement-link" @click="showTopAnnouncementDetail">
-                <span class="announcement-title">
-                  {{ currentAnnouncement?.title || '暂无置顶公告' }}
-                </span>
-              </a>
-              
-              <el-icon class="carousel-btn" @click="goToNext"><ArrowRight /></el-icon>
-            </div>
-          </div>
+  <div class="personal-dashboard">
+    <PageHeader title="个人工作台" description="集中查看身份、校园通知与常用知识入口" />
 
-          <div class="carousel-indicators" v-if="topAnnouncements.length > 1">
-            <span
-              v-for="(_, index) in topAnnouncements"
-              :key="index"
-              class="indicator-dot"
-              :class="{ active: index === currentAnnouncementIndex }"
-              @click="goToIndex(index)"
-            ></span>
-          </div>
+    <section class="identity-panel">
+      <div class="identity-avatar"><el-icon><UserFilled /></el-icon></div>
+      <div class="identity-copy">
+        <span>欢迎回来</span>
+        <h2>{{ user?.username || '校园用户' }}</h2>
+        <div class="identity-tags">
+          <el-tag :class="user?.is_admin ? 'status-tag-admin' : ''" effect="plain">{{ user?.is_admin ? '管理员' : '普通用户' }}</el-tag>
+          <el-tag type="info" effect="plain">校园知识服务成员</el-tag>
+          <span class="identity-id">账号 ID {{ user?.id ?? '-' }}</span>
         </div>
-      </el-header>
+      </div>
+      <el-button plain @click="openPwdDialog"><el-icon><Key /></el-icon>修改密码</el-button>
+    </section>
 
-      <el-main>
-        <el-card shadow="hover" class="account-card">
-          <template #header>
-            <div class="card-header">
-              <span>账号信息</span>
-            </div>
-          </template>
+    <section class="notice-strip">
+      <div class="notice-label"><el-icon><Bell /></el-icon><span>置顶公告</span></div>
+      <button class="notice-title" type="button" @click="showTopAnnouncementDetail">{{ currentAnnouncement?.title || '暂无置顶公告' }}</button>
+      <div v-if="topAnnouncements.length > 1" class="notice-controls">
+        <button type="button" aria-label="上一条公告" title="上一条" @click="goToPrev"><el-icon><ArrowLeft /></el-icon></button>
+        <span>{{ currentAnnouncementIndex + 1 }} / {{ topAnnouncements.length }}</span>
+        <button type="button" aria-label="下一条公告" title="下一条" @click="goToNext"><el-icon><ArrowRight /></el-icon></button>
+      </div>
+    </section>
 
-          <!-- 使用 el-descriptions 替代 el-form 展示只读信息更语义化 -->
-          <el-descriptions :column="1" border label-class-name="desc-label">
-            <el-descriptions-item label="用户ID">
-              {{ user?.id ?? '-' }}
-            </el-descriptions-item>
-            <el-descriptions-item label="用户名">
-              {{ user?.username ?? '-' }}
-            </el-descriptions-item>
-            <el-descriptions-item label="操作">
-              <el-button type="primary" @click="openPwdDialog">
-                更改密码
-              </el-button>
-            </el-descriptions-item>
-          </el-descriptions>
-        </el-card>
-      </el-main>
-    </el-container>
+    <section class="quick-section">
+      <h2>常用入口</h2>
+      <div class="quick-grid">
+        <button v-for="item in quickLinks" :key="item.path" type="button" @click="router.push(item.path)">
+          <span class="quick-icon"><el-icon><component :is="item.icon" /></el-icon></span>
+          <span class="quick-copy"><strong>{{ item.label }}</strong><small>{{ item.description }}</small></span>
+          <el-icon class="quick-arrow"><ArrowRight /></el-icon>
+        </button>
+      </div>
+    </section>
 
     <!-- 修改密码弹窗 -->
     <el-dialog
@@ -359,148 +342,32 @@ const submitPassword = async () => {
 </template>
 
 <style scoped>
-.container {
-  margin: 15px 0;
-}
-
-.announcement-header {
-  background: linear-gradient(135deg, #40d2ff, #259feb);
-  padding: 0;
-  display: flex;
-  align-items: center;
-  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.3);
-}
-
-.announcement-wrapper {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.announcement-container {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 12px 20px 8px;
-}
-
-.announcement-carousel {
-  width: 50%;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.carousel-left-group {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
-}
-
-.announcement-badge {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  background-color: rgba(255, 255, 255, 0.95);
-  padding: 4px 12px;
-  border-radius: 20px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.badge-icon {
-  font-size: 18px;
-  color: #409eff;
-}
-
-.badge-text {
-  font-size: 13px;
-  font-weight: bold;
-  color: #409eff;
-}
-
-.carousel-btn {
-  font-size: 20px;
-  color: #ffffff;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  flex-shrink: 0;
-  padding: 4px;
-  border-radius: 50%;
-}
-
-.carousel-btn:hover {
-  color: #e0f7fa;
-  background-color: rgba(255, 255, 255, 0.2);
-}
-
-.announcement-link {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  text-decoration: none;
-  transition: all 0.3s ease;
-  cursor: pointer;
-  min-width: 0;
-}
-
-.announcement-title {
-  font-size: 16px;
-  color: #ffffff;
-  font-weight: 500;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-  transition: all 0.3s ease;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.announcement-link:hover .announcement-title {
-  color: #e0f7fa;
-  text-decoration: underline;
-}
-
-.carousel-indicators {
-  display: flex;
-  gap: 6px;
-  justify-content: center;
-  padding-bottom: 8px;
-}
-
-.indicator-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background-color: rgba(255, 255, 255, 0.5);
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.indicator-dot.active {
-  background-color: #ffffff;
-  transform: scale(1.2);
-}
-
-.indicator-dot:hover {
-  background-color: rgba(255, 255, 255, 0.8);
-}
-
-.account-card {
-  max-width: 600px;
-  margin: 0 auto; /* 中置效果 */
-}
-
-.card-header {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: bold;
-  font-size: 16px;
-}
+.personal-dashboard { width: 100%; }
+.identity-panel { min-height: 132px; padding: 24px; display: flex; align-items: center; gap: 18px; background: #fff; border: 1px solid var(--color-border); border-radius: 6px; }
+.identity-avatar { width: 58px; height: 58px; flex: 0 0 58px; display: grid; place-items: center; border-radius: 6px; background: var(--color-primary-soft); color: var(--color-primary); font-size: 28px; }
+.identity-copy { min-width: 0; flex: 1; }
+.identity-copy > span { color: var(--color-text-secondary); font-size: 13px; }
+.identity-copy h2 { margin: 4px 0 10px; overflow: hidden; font-size: 22px; text-overflow: ellipsis; white-space: nowrap; }
+.identity-tags { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.identity-id { color: var(--color-text-muted); font-size: 12px; }
+.notice-strip { min-height: 54px; margin-top: 16px; padding: 8px 12px; display: flex; align-items: center; gap: 12px; background: #fffdf8; border: 1px solid #eee1c3; border-radius: 6px; }
+.notice-label { flex: 0 0 auto; display: flex; align-items: center; gap: 6px; color: #91630d; font-size: 13px; font-weight: 600; }
+.notice-title { min-width: 0; flex: 1; padding: 8px; overflow: hidden; border: 0; background: transparent; color: #46525e; text-align: left; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
+.notice-title:hover { color: var(--color-primary); }
+.notice-controls { flex: 0 0 auto; display: flex; align-items: center; gap: 5px; color: var(--color-text-muted); font-size: 11px; }
+.notice-controls button { width: 34px; height: 34px; display: grid; place-items: center; border: 0; border-radius: 4px; background: transparent; color: var(--color-text-secondary); cursor: pointer; }
+.notice-controls button:hover { background: #f4ecd9; }
+.quick-section { margin-top: 26px; }
+.quick-section > h2 { margin: 0 0 12px; font-size: 16px; }
+.quick-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border: 1px solid var(--color-border); border-radius: 6px; overflow: hidden; }
+.quick-grid > button { min-width: 0; min-height: 88px; padding: 16px; display: flex; align-items: center; gap: 12px; border: 0; border-right: 1px solid var(--color-border); background: #fff; color: inherit; text-align: left; cursor: pointer; }
+.quick-grid > button:last-child { border-right: 0; }
+.quick-grid > button:hover { background: #f5faf9; }
+.quick-icon { width: 38px; height: 38px; flex: 0 0 38px; display: grid; place-items: center; border-radius: 6px; background: var(--color-primary-soft); color: var(--color-primary); font-size: 19px; }
+.quick-copy { min-width: 0; display: flex; flex: 1; flex-direction: column; gap: 5px; }
+.quick-copy strong { font-size: 14px; }
+.quick-copy small { overflow: hidden; color: var(--color-text-secondary); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.quick-arrow { flex: 0 0 auto; color: var(--color-text-muted); }
 
 /* 公告详情弹窗样式 */
 .dialog-content-scroll {
@@ -555,12 +422,16 @@ const submitPassword = async () => {
 }
 
 @media (max-width: 768px) {
-  .announcement-container { padding: 10px 8px 6px; }
-  .announcement-carousel { width: 100%; gap: 6px; }
-  .announcement-badge { padding: 4px 8px; }
-  .badge-text { display: none; }
-  .carousel-left-group { gap: 4px; }
-  .account-card { max-width: 100%; }
+  .identity-panel { padding: 18px 14px; align-items: flex-start; flex-wrap: wrap; }
+  .identity-avatar { width: 48px; height: 48px; flex-basis: 48px; font-size: 22px; }
+  .identity-copy { width: calc(100% - 66px); }
+  .identity-panel > .el-button { margin-left: 66px; }
+  .notice-strip { gap: 6px; }
+  .notice-label span { display: none; }
+  .notice-controls span { display: none; }
+  .quick-grid { grid-template-columns: 1fr; }
+  .quick-grid > button { min-height: 76px; border-right: 0; border-bottom: 1px solid var(--color-border); }
+  .quick-grid > button:last-child { border-bottom: 0; }
   .attachment-item { min-width: 0; }
 }
 </style>

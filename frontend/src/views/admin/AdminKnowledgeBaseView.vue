@@ -10,6 +10,7 @@ import {
 } from "@/api/knowledge_base.js";
 import DocumentDialog from "@/views/admin/components/DocumentDialog.vue";
 import KnowledgeBaseRoleDialog from "@/views/admin/components/KnowledgeBaseRoleDialog.vue";
+import PageHeader from '@/components/PageHeader.vue';
 
 // 列表相关状态
 let knowledgeBaseList = ref([]);
@@ -195,19 +196,20 @@ const handleManageRoles = (row) => {
 </script>
 
 <template>
+  <PageHeader title="知识库管理" description="维护知识空间、文档内容及角色访问范围" />
   <!-- 操作按钮区 -->
   <div class="container action-bar">
     <el-button type="primary" @click="openCreateDialog">
       <el-icon><Plus /></el-icon> 创建知识库
     </el-button>
-    <el-button type="danger" @click="handleBatchDelete" :disabled="selectedRows.length === 0">
+    <el-button type="danger" plain @click="handleBatchDelete" :disabled="selectedRows.length === 0">
       <el-icon><Delete /></el-icon> 批量删除
     </el-button>
   </div>
 
   <!-- 表格部分 -->
   <div class="container">
-    <el-table :data="knowledgeBaseList" border style="width: 100%" @selection-change="handleSelectionChange">
+    <el-table :data="knowledgeBaseList" border style="width: 100%" empty-text="暂无知识库" @selection-change="handleSelectionChange">
       <el-table-column type="selection" width="55" align="center" />
       <el-table-column label="序号" width="80" align="center">
         <template #default="scope">

@@ -4,6 +4,7 @@ import {getAllAnnouncements} from "@/api/announcement.js";
 import {getAnnouncementAttachments, downloadAnnouncementAttachment} from "@/api/announcement_attachment.js";
 import {ElMessage} from "element-plus";
 import {InfoFilled, Download} from "@element-plus/icons-vue";
+import PageHeader from '@/components/PageHeader.vue';
 
 let announcementList = ref([]);
 
@@ -70,9 +71,10 @@ const handleCurrentChange = async () => {
 </script>
 
 <template>
+  <PageHeader title="校园公告" description="查看校园通知、置顶信息与相关附件" />
   <!-- 表格部分 -->
   <div class="container">
-    <el-table :data="announcementList" border style="width: 100%">
+    <el-table :data="announcementList" border style="width: 100%" empty-text="暂无公告">
       <el-table-column label="序号" width="80" align="center">
         <template #default="scope">
           {{ (currentPage - 1) * pageSize + scope.$index + 1 }}
@@ -80,10 +82,10 @@ const handleCurrentChange = async () => {
       </el-table-column>
       <el-table-column prop="title" label="标题" min-width="200" show-overflow-tooltip align="center"/>
       <el-table-column prop="is_top" label="是否置顶" width="120" align="center">
-        <template #default="scope">{{ scope.row.is_top ? '是' : '否' }}</template>
+        <template #default="scope"><el-tag v-if="scope.row.is_top" class="status-tag-accent" effect="plain">置顶</el-tag><el-tag v-else type="info" effect="plain">普通</el-tag></template>
       </el-table-column>
       <el-table-column prop="create_time" label="发布时间" width="180" align="center"/>
-      <el-table-column prop="update_time" label="修改时间" width="180" align="center"/>
+      <el-table-column prop="update_time" label="修改时间" width="180" align="center" class-name="mobile-secondary-column"/>
       <el-table-column label="操作" width="200" align="center">
         <template #default="scope">
           <el-button type="info" size="small" @click="showDetail(scope.row)">

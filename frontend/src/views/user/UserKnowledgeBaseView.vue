@@ -5,6 +5,7 @@ import {InfoFilled} from "@element-plus/icons-vue";
 import {getKnowledgeBases} from "@/api/user_knowledge_base.js";
 import DocumentDialog from "@/views/user/components/DocumentDialog.vue";
 import {getKnowledgeBaseById} from "@/api/knowledge_base.js";
+import PageHeader from '@/components/PageHeader.vue';
 
 let knowledgeBaseList = ref([]);
 let knowledgeBaseIdList = ref([]);
@@ -24,6 +25,7 @@ const getKnowledgeBase = async () => {
   const res = await getKnowledgeBases(currentPage.value, pageSize.value);
   if (res.code === 1) {
     knowledgeBaseIdList.value = res.data.list;
+    knowledgeBaseList.value = [];
 
     for (let kbId of knowledgeBaseIdList.value) {
       const kb = await getKnowledgeBaseById(kbId);
@@ -52,9 +54,10 @@ const handleCurrentChange = async () => {
 </script>
 
 <template>
+  <PageHeader title="我的知识库" description="浏览当前角色可访问的校园知识内容" />
   <!-- 表格部分 -->
   <div class="container">
-    <el-table :data="knowledgeBaseList" border style="width: 100%">
+    <el-table :data="knowledgeBaseList" border style="width: 100%" empty-text="暂无可访问的知识库">
       <el-table-column label="序号" width="80" align="center">
         <template #default="scope">
           {{ (currentPage - 1) * pageSize + scope.$index + 1 }}

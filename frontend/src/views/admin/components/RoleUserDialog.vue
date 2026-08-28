@@ -143,13 +143,13 @@ const handleClose = () => {
       <el-button type="primary" @click="handleAddRelation">
         <el-icon><Plus /></el-icon> 增加关联
       </el-button>
-      <el-button type="danger" @click="handleBatchDelete" :disabled="selectedRows.length === 0">
+      <el-button type="danger" plain @click="handleBatchDelete" :disabled="selectedRows.length === 0">
         <el-icon><Delete /></el-icon> 批量删除关联
       </el-button>
     </div>
 
     <!-- 表格 -->
-    <el-table :data="userList" border style="width: 100%; margin-top: 10px;" @selection-change="handleSelectionChange">
+    <el-table :data="userList" border style="width: 100%; margin-top: 10px;" empty-text="暂无关联用户" @selection-change="handleSelectionChange">
       <el-table-column type="selection" width="55" align="center" />
       <el-table-column label="序号" width="80" align="center">
         <template #default="scope">
@@ -203,6 +203,7 @@ const handleClose = () => {
     <el-table
         :data="searchResults"
         border
+        empty-text="搜索后选择需要关联的用户"
         style="width: 100%; margin-top: 10px;"
         @selection-change="handleSearchSelectionChange"
         max-height="250"
