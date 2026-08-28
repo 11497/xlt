@@ -62,6 +62,9 @@ a { color: var(--color-primary); }
 .el-table--border .el-table__cell { border-right: 0; }
 .el-table th.el-table__cell { height: 46px; color: #46525e; font-weight: 600; }
 .el-table td.el-table__cell { padding: 9px 0; }
+.content-width-table { width: min(100%, var(--table-content-width)); }
+.content-width-pagination { width: min(100%, var(--table-content-width)); }
+.content-width-pagination .el-pagination { width: 100%; }
 .el-pagination { justify-content: flex-end; }
 .el-pagination.is-background .el-pager li.is-active { background: var(--color-primary); }
 .el-tag { border-radius: var(--radius-sm); font-weight: 500; }

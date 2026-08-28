@@ -57,13 +57,19 @@ const handleCurrentChange = async () => {
   <PageHeader title="我的知识库" description="浏览当前角色可访问的校园知识内容" />
   <!-- 表格部分 -->
   <div class="container">
-    <el-table :data="knowledgeBaseList" border style="width: 100%" empty-text="暂无可访问的知识库">
+    <el-table
+      :data="knowledgeBaseList"
+      border
+      class="content-width-table"
+      style="--table-content-width: 520px"
+      empty-text="暂无可访问的知识库"
+    >
       <el-table-column label="序号" width="80" align="center">
         <template #default="scope">
           {{ (currentPage - 1) * pageSize + scope.$index + 1 }}
         </template>
       </el-table-column>
-      <el-table-column prop="name" label="名字" width="200" show-overflow-tooltip align="center"/>
+      <el-table-column prop="name" label="名字" min-width="240" show-overflow-tooltip align="center"/>
       <el-table-column label="操作" width="200" align="center">
         <template #default="scope">
           <el-button type="info" size="small" @click="openDocDialog(scope.row.id, scope.row.name)">
@@ -75,7 +81,7 @@ const handleCurrentChange = async () => {
   </div>
 
   <!-- 分页部分 -->
-  <div class="container">
+  <div class="container content-width-pagination" style="--table-content-width: 520px">
     <el-pagination
         v-model:current-page="currentPage"
         v-model:page-size="pageSize"
