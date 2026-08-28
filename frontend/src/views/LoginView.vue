@@ -120,17 +120,12 @@ const login = async () => {
 .login-footnote { margin: 28px 0 0; color: var(--color-text-muted); font-size: 12px; text-align: center; }
 
 @media (max-width: 900px) {
-  .login-page { grid-template-columns: minmax(280px, .8fr) minmax(390px, 1fr); }
-  .visual-copy h1 { font-size: 36px; }
+  .login-page { display: block; }
+  .login-visual { display: none; }
+  .login-panel { min-height: 100dvh; padding: 40px 28px; }
 }
 @media (max-width: 640px) {
-  .login-page { display: block; background: #fff; }
-  .login-visual { min-height: 190px; height: 26vh; background-position: center 45%; }
-  .login-visual::after { background: linear-gradient(180deg, rgb(8 28 29 / 5%), rgb(8 28 29 / 62%)); }
-  .visual-copy { left: 20px; right: 20px; bottom: 18px; }
-  .visual-copy p { display: none; }
-  .visual-copy h1 { margin: 0; font-size: 26px; }
-  .login-panel { min-height: 74vh; padding: 28px 20px 36px; align-items: flex-start; }
+  .login-panel { padding: 28px 20px 36px; }
   .login-brand { margin-bottom: 30px; }
   .login-heading { margin-bottom: 22px; }
   .login-heading h2 { font-size: 24px; }
