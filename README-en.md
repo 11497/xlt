@@ -22,6 +22,7 @@
     - [4. Session Management](#4-session-management)
     - [5. Announcement System](#5-announcement-system)
     - [6. Admin Overview](#6-admin-overview)
+    - [7. Campus Knowledge Workspace](#7-campus-knowledge-workspace)
   - [Database Design](#database-design)
   - [Quick Start](#quick-start)
     - [Prerequisites](#prerequisites)
@@ -69,6 +70,7 @@ Xiaolingtong is an intelligent Q&A and knowledge management system designed for 
 - **HTTP client**: Axios; the chat endpoint uses Fetch Streams for streaming responses
 - **Markdown rendering**: markdown-it
 - **Responsive layout**: Supports desktop and mobile views, with drawer navigation and session lists on mobile
+- **UI system**: Uses shared campus-workspace design tokens, Element Plus theme variables, and layout components
 
 ## Project Structure
 
@@ -190,6 +192,14 @@ By default, ChromaDB persistence data is written to `chroma_db/` in the project 
 
 - Summarizes user, role, knowledge base, session, and announcement counts
 - Shows recently published announcements with links to the corresponding management pages
+
+### 7. Campus Knowledge Workspace
+
+- The user, administration, and chat views share a consistent header; the user and administration views share the sidebar and page-title hierarchy, while chat uses a dedicated session sidebar
+- The login page uses a locally stored AI-generated campus-library visual asset and provides input icons, password visibility, and a loading state
+- The personal workspace brings together account identity, pinned announcements, common entry points, and password changes
+- The chat view provides selected-session states, identity markers, streaming feedback, a stable composer, and refined Markdown reading styles
+- Management lists share action bars, status tags, empty states, tables, pagination, and dialogs; mobile keeps drawer navigation and touch-friendly controls
 
 ## Database Design
 
