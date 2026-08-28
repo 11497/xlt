@@ -269,7 +269,14 @@ const handleManageRoles = (row) => {
 
   <!-- 表格部分 -->
   <div class="container">
-    <el-table :data="userList" border style="width: 100%" empty-text="暂无用户" @selection-change="handleSelectionChange">
+    <el-table
+      :data="userList"
+      border
+      class="content-width-table"
+      style="--table-content-width: 928px"
+      empty-text="暂无用户"
+      @selection-change="handleSelectionChange"
+    >
       <!-- 复选框列 -->
       <el-table-column type="selection" width="55" align="center" />
       <!-- 序号列 -->
@@ -310,7 +317,7 @@ const handleManageRoles = (row) => {
   </div>
 
   <!-- 分页部分 -->
-  <div class="container">
+  <div class="container content-width-pagination" style="--table-content-width: 928px">
     <el-pagination
         v-model:current-page="currentPage"
         v-model:page-size="pageSize"

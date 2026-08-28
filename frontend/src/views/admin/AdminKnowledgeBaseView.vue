@@ -209,7 +209,14 @@ const handleManageRoles = (row) => {
 
   <!-- 表格部分 -->
   <div class="container">
-    <el-table :data="knowledgeBaseList" border style="width: 100%" empty-text="暂无知识库" @selection-change="handleSelectionChange">
+    <el-table
+      :data="knowledgeBaseList"
+      border
+      class="content-width-table"
+      style="--table-content-width: 940px"
+      empty-text="暂无知识库"
+      @selection-change="handleSelectionChange"
+    >
       <el-table-column type="selection" width="55" align="center" />
       <el-table-column label="序号" width="80" align="center">
         <template #default="scope">
@@ -243,7 +250,7 @@ const handleManageRoles = (row) => {
   </div>
 
   <!-- 分页部分 -->
-  <div class="container">
+  <div class="container content-width-pagination" style="--table-content-width: 940px">
     <el-pagination
         v-model:current-page="currentPage"
         v-model:page-size="pageSize"

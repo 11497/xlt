@@ -185,7 +185,14 @@ const handleRelationKb = (row) => {
 
   <!-- 表格部分 -->
   <div class="container">
-    <el-table :data="userList" border style="width: 100%" empty-text="暂无角色" @selection-change="handleSelectionChange">
+    <el-table
+      :data="userList"
+      border
+      class="content-width-table"
+      style="--table-content-width: 988px"
+      empty-text="暂无角色"
+      @selection-change="handleSelectionChange"
+    >
       <!-- 复选框列 -->
       <el-table-column type="selection" width="55" align="center" />
       <!-- 序号列 -->
@@ -222,7 +229,7 @@ const handleRelationKb = (row) => {
   </div>
 
   <!-- 分页部分 -->
-  <div class="container">
+  <div class="container content-width-pagination" style="--table-content-width: 988px">
     <el-pagination
         v-model:current-page="currentPage"
         v-model:page-size="pageSize"
