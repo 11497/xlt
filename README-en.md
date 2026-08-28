@@ -135,6 +135,9 @@ xlt/
 │   │   ├── hooks/          # Custom hooks
 │   │   ├── utils/          # Utility functions
 │   │   └── assets/         # Static assets
+│   │       ├── images/     # Page images
+│   │       ├── responsive.css  # Global theme and responsive styles
+│   │       └── xlt-icon.svg    # SVG brand icon
 │   ├── vite.config.js      # Vite configuration
 │   └── package.json
 ├── main.py                  # Application entry point
@@ -197,6 +200,7 @@ By default, ChromaDB persistence data is written to `chroma_db/` in the project 
 
 - The user, administration, and chat views share a consistent header; the user and administration views share the sidebar and page-title hierarchy, while chat uses a dedicated session sidebar
 - The login page uses a locally stored AI-generated campus-library visual asset and provides input icons, password visibility, and a loading state
+- The login page, application header, and browser tab consistently use the local SVG brand icon at `frontend/src/assets/xlt-icon.svg`
 - The personal workspace brings together account identity, pinned announcements, common entry points, and password changes
 - The chat view provides selected-session states, identity markers, streaming feedback, a stable composer, and refined Markdown reading styles
 - Management lists share action bars, status tags, empty states, tables, pagination, and dialogs; mobile keeps drawer navigation and touch-friendly controls
