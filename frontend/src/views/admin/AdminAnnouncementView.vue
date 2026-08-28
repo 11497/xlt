@@ -326,7 +326,14 @@ const handleSelectionChange = (rows) => {
 
   <!-- 表格部分 -->
   <div class="container">
-    <el-table :data="announcementList" border style="width: 100%" empty-text="暂无公告" @selection-change="handleSelectionChange">
+    <el-table
+      :data="announcementList"
+      border
+      class="content-width-table"
+      style="--table-content-width: 1015px"
+      empty-text="暂无公告"
+      @selection-change="handleSelectionChange"
+    >
       <el-table-column type="selection" width="55" align="center" />
       <el-table-column label="序号" width="80" align="center">
         <template #default="scope">
@@ -350,7 +357,7 @@ const handleSelectionChange = (rows) => {
   </div>
 
   <!-- 分页部分 -->
-  <div class="container">
+  <div class="container content-width-pagination" style="--table-content-width: 1015px">
     <el-pagination
         v-model:current-page="currentPage"
         v-model:page-size="pageSize"

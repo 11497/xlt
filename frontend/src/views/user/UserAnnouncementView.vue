@@ -74,7 +74,13 @@ const handleCurrentChange = async () => {
   <PageHeader title="校园公告" description="查看校园通知、置顶信息与相关附件" />
   <!-- 表格部分 -->
   <div class="container">
-    <el-table :data="announcementList" border style="width: 100%" empty-text="暂无公告">
+    <el-table
+      :data="announcementList"
+      border
+      class="content-width-table"
+      style="--table-content-width: 960px"
+      empty-text="暂无公告"
+    >
       <el-table-column label="序号" width="80" align="center">
         <template #default="scope">
           {{ (currentPage - 1) * pageSize + scope.$index + 1 }}
@@ -97,7 +103,7 @@ const handleCurrentChange = async () => {
   </div>
 
   <!-- 分页部分 -->
-  <div class="container">
+  <div class="container content-width-pagination" style="--table-content-width: 960px">
     <el-pagination
         v-model:current-page="currentPage"
         v-model:page-size="pageSize"
