@@ -17,7 +17,7 @@ create table user (
 create table session (
     id int auto_increment primary key comment '会话id',
     user_id int not null comment '用户id',
-    name varchar(255) not null default '新建会话' comment '会话名称',
+    name varchar(30) not null default '新建会话' comment '会话名称',
     create_time datetime default current_timestamp comment '创建时间',
     update_time datetime not null default current_timestamp comment '更新时间',
     constraint fk_session_user
@@ -58,11 +58,13 @@ create table role_user (
 create table role_knowledge_base (
     role_id int comment '角色id',
     knowledge_base_id int comment '知识库id',
+    permission tinyint not null default 0 comment '权限：0=只读，1=读写',
     primary key (role_id, knowledge_base_id),
     constraint fk_role_knowledge_base_role
         foreign key (role_id) references role(id) on delete restrict,
     constraint fk_role_knowledge_base_knowledge_base
-        foreign key (knowledge_base_id) references knowledge_base(id) on delete restrict
+        foreign key (knowledge_base_id) references knowledge_base(id) on delete restrict,
+    constraint chk_role_knowledge_base_permission check (permission in (0, 1))
 ) comment '角色知识库关联';
 
 create table document (
@@ -113,9 +115,9 @@ values ('图书馆'),
        ('教职工'),
        ('学生');
 
-insert into role_knowledge_base (role_id, knowledge_base_id)
-values (1, 1),
-       (3, 3);
+insert into role_knowledge_base (role_id, knowledge_base_id, permission)
+values (1, 1, 0),
+       (3, 3, 0);
 
 insert into announcement (title, content, is_top)
 values ('测试公告', '这是一条测试公告', 0),
