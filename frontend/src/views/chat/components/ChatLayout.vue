@@ -97,7 +97,7 @@ const handleRename = (session) => {
     inputValidator: (value) => {
       const name = value?.trim() || ''
       if (!name) return '会话名称不能为空'
-      if (Array.from(name).length > 20) return '会话名称不能超过 20 个字符'
+      if (Array.from(name).length > 30) return '会话名称不能超过 30 个字符'
       return true
     }
   }).then(async ({ value }) => {

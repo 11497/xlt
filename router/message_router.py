@@ -19,6 +19,7 @@ from crud.session_crud import SessionCRUD
 from crud.user_knowledge_base_crud import UserKnowledgeBaseCRUD
 from model.message_model import Message
 from model.result import Result
+from model.session_model import DEFAULT_SESSION_NAME, normalize_session_name
 from model.user_model import User
 
 router = APIRouter(prefix="/api/message", tags=["message"])
@@ -226,10 +227,11 @@ async def chat(
                 ai_message_id = MessageCRUD.create(ai_message)
 
             try:
-                if response.strip() and is_first_round and session.name == "新建会话":
+                if response.strip() and is_first_round and session.name == DEFAULT_SESSION_NAME:
                     conversation = [HumanMessage(content=message.content), AIMessage(content=response)]
                     summary = await chat_service.summarize_conversation(conversation)
-                    SessionCRUD.update_session_name(message.session_id, summary)
+                    normalized_summary = normalize_session_name(summary)
+                    SessionCRUD.update_session_name(message.session_id, normalized_summary)
 
                 SessionCRUD.update_session_update_time(message.session_id)
             except Exception as exc:

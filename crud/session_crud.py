@@ -1,6 +1,10 @@
 from typing import List, Optional, Tuple
 from util.db_util import get_cursor
-from model.session_model import Session
+from model.session_model import (
+    Session,
+    normalize_session_name,
+    validate_session_name,
+)
 from datetime import datetime
 
 
@@ -13,9 +17,10 @@ class SessionCRUD:
         :param session: 会话对象
         :return: 新插入记录的 id
         """
+        name = validate_session_name(session.name)
         sql = "INSERT INTO session (user_id, name) VALUES (%s, %s)"
         with get_cursor() as cursor:
-            cursor.execute(sql, (session.user_id, session.name))
+            cursor.execute(sql, (session.user_id, name))
             return cursor.lastrowid
 
     @staticmethod
@@ -57,13 +62,15 @@ class SessionCRUD:
             return [Session.from_row(row) for row in rows]
 
     @staticmethod
-    def update_session_name(session_id: int, name: str) -> bool:
+    def update_session_name(session_id: int, name: str, normalize: bool = False) -> bool:
         """
         更新会话名称
         :param session_id: 会话ID
         :param name: 新的会话名
+        :param normalize: 是否按 AI 标题规则规范化名称
         :return: 是否成功更新了记录
         """
+        name = normalize_session_name(name) if normalize else validate_session_name(name)
         sql = "UPDATE session SET name = %s WHERE id = %s"
         with get_cursor() as cursor:
             affected = cursor.execute(sql, (name, session_id))
