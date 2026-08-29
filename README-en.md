@@ -117,6 +117,7 @@ xlt/
 │   └── generate_argon2_password.py # Plaintext-to-Argon2id password conversion script
 ├── sql/                     # Database scripts
 │   ├── db.sql              # Non-destructive schema and initial data
+│   ├── migrations/          # Incremental migrations for existing databases
 │   └── reset-dev.sql       # Development-only database cleanup script
 ├── util/                    # Utilities
 │   ├── db_util.py          # Database utilities
@@ -176,7 +177,9 @@ By default, ChromaDB persistence data is written to `chroma_db/` in the project 
 - Role management (Xinmang, faculty and staff, students, etc.)
 - User-role associations
 - Role-knowledge base associations (access is calculated through the `user -> role -> knowledge_base` relationship)
-- Two permission levels: administrator and regular user
+- Role-knowledge base permissions: `0` is read-only and `1` is read-write; users with multiple roles receive the maximum permission
+- Regular users with either permission can view, download, list, and retrieve documents; only read-write users can upload or delete documents
+- Administrators have full access; creating, renaming, and deleting knowledge bases remains administrator-only
 
 ### 4. Session Management
 
@@ -303,6 +306,15 @@ SOURCE sql/db.sql;
 
 `sql/db.sql` is intended only for the first initialization of an empty environment. It does not actively delete existing databases, tables, or data, but it is not idempotent: its table creation and seed-data statements cannot be rerun against an initialized database. The database account executing the script must be allowed to create databases and tables and insert data. Apply later schema changes through incremental migrations.
 
+For an existing database, make a backup first, then run these incremental migrations in order:
+
+```text
+SOURCE sql/migrations/001_add_role_knowledge_base_permission.sql;
+SOURCE sql/migrations/002_constrain_session_name.sql;
+```
+
+Migration `001` adds the permission field to the role-knowledge base association table. Migration `002` cleans up historical session names before tightening the column constraint to 1-30 characters. AI-generated session titles still target 2-20 characters.
+
 To clear and rebuild the local development database, run these commands in order:
 
 ```text
@@ -363,12 +375,13 @@ Build output is written to `frontend/dist/`.
 - Username: 4-15 characters
 - Password: 6-20 characters
 - Role and knowledge base names: 1-15 characters
-- Session name: 1-20 characters
+- Session name: 1-30 characters (AI-generated titles still target 2-20 characters)
 - Announcement title: 1-255 characters; announcement content must not be empty
 - Chat input (frontend UI only): limited to 2,000 characters, with exactly 2,000 characters accepted; oversized typed or pasted content is truncated automatically. Counting uses Unicode grapheme clusters when `Intl.Segmenter` is available and falls back to Unicode code points otherwise
 - Administrator status: `0` or `1`
 - Announcement pin value: `0` or `1`
 - Message role: `user` or `assistant`
+- Role-knowledge base permission: `0` (read-only) or `1` (read-write)
 
 Entity IDs and association IDs must be positive integers. Validation of name uniqueness, associated object existence, access permissions, uploaded file contents, and related constraints is handled jointly by the routers, CRUD layer, and database.
 
