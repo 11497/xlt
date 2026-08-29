@@ -8,30 +8,24 @@ from util.db_util import get_cursor
 class RoleKnowledgeBaseCRUD:
 
     @staticmethod
-    def batch_assign_roles_to_knowledge_base(knowledge_base_id: int, role_ids: List[int]) -> bool:
+    def batch_assign_roles_to_knowledge_base(knowledge_base_id: int, bindings: List[dict]) -> bool:
         """
         批量分配角色到指定知识库
         :param knowledge_base_id: 知识库ID
-        :param role_ids: 角色ID列表
+        :param bindings: 包含 role_id 和 permission 的绑定列表
         :return: 是否成功分配
         """
-        if not role_ids:
-            return True  # 空列表视为成功操作
+        if not bindings:
+            return True
 
-        # 构造批量插入SQL
-        sql = "INSERT IGNORE INTO role_knowledge_base (role_id, knowledge_base_id) VALUES "
-        values_placeholders = []
-        params = []
-
-        for role_id in role_ids:
-            values_placeholders.append("(%s, %s)")
-            params.extend([role_id, knowledge_base_id])
-
-        sql += ",".join(values_placeholders)
+        sql = ("INSERT INTO role_knowledge_base (role_id, knowledge_base_id, permission) "
+               "VALUES (%s, %s, %s) "
+               "ON DUPLICATE KEY UPDATE permission = VALUES(permission)")
+        params = [(item["role_id"], knowledge_base_id, item["permission"]) for item in bindings]
 
         with get_cursor() as cursor:
-            affected = cursor.execute(sql, params)
-            return affected > 0  # 插入操作总是返回True表示执行成功
+            cursor.executemany(sql, params)
+            return True
 
     @staticmethod
     def batch_remove_roles_from_knowledge_base(knowledge_base_id: int, role_ids: List[int]) -> bool:
@@ -48,8 +42,8 @@ class RoleKnowledgeBaseCRUD:
         sql = f"DELETE FROM role_knowledge_base WHERE knowledge_base_id = %s AND role_id IN ({placeholders})"
         with get_cursor() as cursor:
             params = [knowledge_base_id] + role_ids
-            affected = cursor.execute(sql, params)
-            return affected > 0  # 删除操作返回行数大于0，表示成功删除
+            cursor.execute(sql, params)
+            return True
 
     @staticmethod
     def get_roles_by_knowledge_base(knowledge_base_id: int) -> List[int]:
@@ -85,10 +79,17 @@ class RoleKnowledgeBaseCRUD:
         :param knowledge_base_id: 知识库ID
         :return: 是否成功分配
         """
-        sql = "INSERT IGNORE INTO role_knowledge_base (role_id, knowledge_base_id) VALUES (%s, %s)"
+        return RoleKnowledgeBaseCRUD.upsert_binding(role_id, knowledge_base_id, 0)
+
+    @staticmethod
+    def upsert_binding(role_id: int, knowledge_base_id: int, permission: int) -> bool:
+        """新增绑定或更新已有绑定的权限。"""
+        sql = ("INSERT INTO role_knowledge_base (role_id, knowledge_base_id, permission) "
+               "VALUES (%s, %s, %s) "
+               "ON DUPLICATE KEY UPDATE permission = VALUES(permission)")
         with get_cursor() as cursor:
-            affected = cursor.execute(sql, (role_id, knowledge_base_id))
-            return affected > 0
+            cursor.execute(sql, (role_id, knowledge_base_id, permission))
+            return True
 
     @staticmethod
     def remove_knowledge_base_from_role(role_id: int, knowledge_base_id: int) -> bool:
@@ -100,8 +101,8 @@ class RoleKnowledgeBaseCRUD:
         """
         sql = "DELETE FROM role_knowledge_base WHERE role_id = %s AND knowledge_base_id = %s"
         with get_cursor() as cursor:
-            affected = cursor.execute(sql, (role_id, knowledge_base_id))
-            return affected > 0
+            cursor.execute(sql, (role_id, knowledge_base_id))
+            return True
 
     @staticmethod
     def delete_by_role(role_id: int) -> bool:
@@ -112,8 +113,8 @@ class RoleKnowledgeBaseCRUD:
         """
         sql = "DELETE FROM role_knowledge_base WHERE role_id = %s"
         with get_cursor() as cursor:
-            affected = cursor.execute(sql, (role_id,))
-            return affected > 0
+            cursor.execute(sql, (role_id,))
+            return True
 
     @staticmethod
     def delete_by_knowledge_base(knowledge_base_id: int) -> bool:
@@ -124,8 +125,8 @@ class RoleKnowledgeBaseCRUD:
         """
         sql = "DELETE FROM role_knowledge_base WHERE knowledge_base_id = %s"
         with get_cursor() as cursor:
-            affected = cursor.execute(sql, (knowledge_base_id,))
-            return affected > 0
+            cursor.execute(sql, (knowledge_base_id,))
+            return True
 
     @staticmethod
     def get_page_knowledge_base_by_role(
@@ -145,7 +146,7 @@ class RoleKnowledgeBaseCRUD:
         sql_count = ("SELECT COUNT(*) AS total FROM role_knowledge_base rkb "
                      "JOIN knowledge_base kb ON rkb.knowledge_base_id = kb.id "
                      "WHERE rkb.role_id = %s")
-        sql_data = ("SELECT kb.* FROM role_knowledge_base rkb "
+        sql_data = ("SELECT kb.id, kb.name, rkb.permission FROM role_knowledge_base rkb "
                     "JOIN knowledge_base kb ON rkb.knowledge_base_id = kb.id "
                     "WHERE rkb.role_id = %s "
                     "LIMIT %s OFFSET %s")
@@ -160,7 +161,10 @@ class RoleKnowledgeBaseCRUD:
 
             cursor.execute(sql_data, (role_id, page_size, offset))
             rows = cursor.fetchall()
-            knowledge_bases = [KnowledgeBase.from_row(r) for r in rows]
+            knowledge_bases = [
+                {"id": r["id"], "name": r["name"], "permission": r["permission"]}
+                for r in rows
+            ]
 
         return knowledge_bases, total
 
@@ -182,7 +186,7 @@ class RoleKnowledgeBaseCRUD:
         sql_count = ("SELECT COUNT(*) AS total FROM role_knowledge_base rkb "
                      "JOIN role r ON rkb.role_id = r.id "
                      "WHERE rkb.knowledge_base_id = %s")
-        sql_data = ("SELECT r.* FROM role_knowledge_base rkb "
+        sql_data = ("SELECT r.id, r.name, rkb.permission FROM role_knowledge_base rkb "
                     "JOIN role r ON rkb.role_id = r.id "
                     "WHERE rkb.knowledge_base_id = %s "
                     "LIMIT %s OFFSET %s")
@@ -197,6 +201,9 @@ class RoleKnowledgeBaseCRUD:
 
             cursor.execute(sql_data, (knowledge_base_id, page_size, offset))
             rows = cursor.fetchall()
-            roles = [Role.from_row(r) for r in rows]
+            roles = [
+                {"id": r["id"], "name": r["name"], "permission": r["permission"]}
+                for r in rows
+            ]
 
         return roles, total

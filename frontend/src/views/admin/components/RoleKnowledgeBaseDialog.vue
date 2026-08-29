@@ -23,13 +23,15 @@ const pageSize = ref(5);
 const total = ref(0);
 const background = ref(true);
 const selectedRows = ref([]);
+const permissionUpdating = ref(false);
+const newPermission = ref(0);
 
 // 获取关联知识库列表
 const getRoleKnowledgeBase = async () => {
   const res = await getKnowledgeBaseByRole(props.roleId, currentPage.value, pageSize.value);
 
   if (res.code === 1) {
-    knowledgeBaseList.value = res.data.list;
+    knowledgeBaseList.value = res.data.list.map(row => ({ ...row, editingPermission: row.permission }));
     total.value = res.data.total;
     currentPage.value = res.data.page;
     pageSize.value = res.data.page_size;
@@ -86,11 +88,13 @@ const addDialogVisible = ref(false);
 const searchKeyword = ref('');
 const searchResults = ref([]);
 const selectedKnowledge = ref([]);
+const submitting = ref(false);
 
 const handleAddRelation = () => {
   searchKeyword.value = '';
   searchResults.value = [];
   selectedKnowledge.value = [];
+  newPermission.value = 0;
   addDialogVisible.value = true;
 }
 
@@ -106,35 +110,62 @@ const handleSearch = async () => {
   } else {
     ElMessage.error(res.msg);
   }
-  console.log(searchResults.value)
 }
 
 const handleSearchSelectionChange = (rows) => {
   selectedKnowledge.value = rows;
 }
 
+const handlePermissionChange = async (row, value) => {
+  if (permissionUpdating.value) return;
+  permissionUpdating.value = true;
+  try {
+    const res = await assignKnowledgeBaseToRole(props.roleId, row.id, value);
+    if (res.code === 1) {
+      row.permission = value;
+      row.editingPermission = value;
+      ElMessage.success('权限修改成功');
+    } else {
+      row.editingPermission = row.permission;
+      ElMessage.error(res.msg || '权限修改失败');
+    }
+  } catch {
+    row.editingPermission = row.permission;
+    ElMessage.error('权限修改失败，请稍后重试');
+  } finally { permissionUpdating.value = false; }
+}
+
 const handleCreateRelation = async () => {
+  if (submitting.value) return;
   if (selectedKnowledge.value.length === 0) {
     ElMessage.warning('请先搜索并选择知识库');
     return;
   }
   const knowledgeBaseIds = selectedKnowledge.value.map(item => item.id);
 
-  let allSuccess = true;
-  for (const knowledgeId of knowledgeBaseIds) {
-    const res = await assignKnowledgeBaseToRole(props.roleId, knowledgeId);
-
-    if (res.code !== 1) {
-      ElMessage.error(`关联知识库ID ${knowledgeId} 失败: ${res.msg}`);
-      allSuccess = false;
+  submitting.value = true;
+  let successCount = 0;
+  try {
+    for (const knowledgeId of knowledgeBaseIds) {
+      try {
+        const res = await assignKnowledgeBaseToRole(props.roleId, knowledgeId, newPermission.value);
+        if (res.code === 1) successCount++;
+        else ElMessage.error(`关联知识库ID ${knowledgeId} 失败：${res.msg || '请求失败'}`);
+      } catch {
+        ElMessage.error(`关联知识库ID ${knowledgeId} 失败：网络请求异常`);
+      }
     }
+    const failedCount = knowledgeBaseIds.length - successCount;
+    if (failedCount === 0) {
+      ElMessage.success(`成功关联 ${successCount} 个知识库`);
+      addDialogVisible.value = false;
+    } else {
+      ElMessage.warning(`成功 ${successCount} 个，失败 ${failedCount} 个，请重试失败项`);
+    }
+    await getRoleKnowledgeBase();
+  } finally {
+    submitting.value = false;
   }
-
-  if (allSuccess) {
-    ElMessage.success('全部关联成功');
-  }
-  addDialogVisible.value = false;
-  await getRoleKnowledgeBase();
 }
 
 const handleClose = () => {
@@ -169,6 +200,11 @@ const handleClose = () => {
         </template>
       </el-table-column>
       <el-table-column prop="name" label="知识库名" align="center" />
+      <el-table-column label="权限" width="130" align="center"><template #default="{ row }">
+        <el-select v-model="row.editingPermission" size="small" :disabled="permissionUpdating" @change="value => handlePermissionChange(row, value)">
+          <el-option label="只读" :value="0" /><el-option label="读写" :value="1" />
+        </el-select>
+      </template></el-table-column>
     </el-table>
 
     <!-- 分页 -->
@@ -204,6 +240,9 @@ const handleClose = () => {
           <el-button type="primary" @click="handleSearch">搜索</el-button>
         </div>
       </el-form-item>
+      <el-form-item label="关联权限">
+        <el-radio-group v-model="newPermission"><el-radio :value="0">只读</el-radio><el-radio :value="1">读写</el-radio></el-radio-group>
+      </el-form-item>
     </el-form>
 
     <!-- 搜索结果列表 -->
@@ -228,7 +267,7 @@ const handleClose = () => {
 
     <template #footer>
       <el-button @click="addDialogVisible = false">取消</el-button>
-      <el-button type="primary" @click="handleCreateRelation">创建关联</el-button>
+      <el-button type="primary" :loading="submitting" :disabled="submitting" @click="handleCreateRelation">创建关联</el-button>
     </template>
   </el-dialog>
 </template>

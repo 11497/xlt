@@ -138,8 +138,7 @@ async def get_by_id(id: int, user: User = Depends(require_current_user)):
 
     # 检查当前用户是否有访问权限
     if user.is_admin == 0:
-        knowledge_base_ids = UserKnowledgeBaseCRUD.get_knowledge_bases_by_user(user.id)
-        if knowledge_base.id not in knowledge_base_ids:
+        if not UserKnowledgeBaseCRUD.has_read_permission(user.id, knowledge_base.id):
             return result.error(msg="您没有权限访问该知识库")
 
     return result.success(msg="查询成功", data=knowledge_base)

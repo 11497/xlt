@@ -4,7 +4,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, UploadFile, File, Form, Query
 
 from ai.ingestion_service import IngestionService
-from authentication.user_auth import require_admin, require_current_user
+from authentication.user_auth import require_current_user
 from config.file_config import ALLOWED_FILE_TYPES, MAX_FILE_SIZE, EXPIRES
 from crud.document_crud import DocumentCRUD
 from crud.knowledge_base_crud import KnowledgeBaseCRUD
@@ -51,13 +51,13 @@ async def validate_file(file: UploadFile) -> Optional[str]:
 async def upload_document(
         knowledge_base_id: int = Form(...),
         file: UploadFile = File(...),
-        _admin: User = Depends(require_admin)
+        user: User = Depends(require_current_user)
 ):
     """
     上传文档到知识库
     :param knowledge_base_id: 知识库ID
     :param file: 上传的文件对象
-    :param _admin: 管理员用户对象
+    :param user: 当前用户对象
     :return: 上传结果
     """
     result = Result()
@@ -66,6 +66,8 @@ async def upload_document(
     knowledge_base = KnowledgeBaseCRUD.get_by_id(knowledge_base_id)
     if not knowledge_base:
         return result.error(msg="知识库不存在")
+    if user.is_admin == 0 and not UserKnowledgeBaseCRUD.has_write_permission(user.id, knowledge_base_id):
+        return result.error(msg="用户没有权限修改该知识库")
 
     # 验证文件
     error_msg = await validate_file(file)
@@ -149,8 +151,7 @@ async def download_document(
 
     # 验证用户是否有权限访问该知识库
     if user.is_admin == 0:
-        knowledge_bases = UserKnowledgeBaseCRUD.get_knowledge_bases_by_user(user.id)
-        if document.knowledge_base_id not in [kb for kb in knowledge_bases]:
+        if not UserKnowledgeBaseCRUD.has_read_permission(user.id, document.knowledge_base_id):
             return result.error(msg="用户没有权限访问该知识库")
 
     # 生成预签名URL用于下载
@@ -173,12 +174,12 @@ async def download_document(
 @router.delete("/{document_id}")
 async def delete_document(
         document_id: int,
-        _admin: User = Depends(require_admin)
+        user: User = Depends(require_current_user)
 ):
     """
     删除文档
     :param document_id: 文档ID
-    :param _admin: 管理员用户对象
+    :param user: 当前用户对象
     :return: 删除结果
     """
     result = Result()
@@ -187,6 +188,8 @@ async def delete_document(
     document = DocumentCRUD.get_by_id(document_id)
     if not document:
         return result.error(msg="文档不存在")
+    if user.is_admin == 0 and not UserKnowledgeBaseCRUD.has_write_permission(user.id, document.knowledge_base_id):
+        return result.error(msg="用户没有权限修改该知识库")
 
     # 1. 从OSS删除文件
     try:
@@ -231,11 +234,10 @@ async def get_documents_by_knowledge_base(
     """
     result = Result()
 
-    # 验证用户是否有权限访问该知识库
-    if user.is_admin == 0:
-        knowledge_bases = UserKnowledgeBaseCRUD.get_knowledge_bases_by_user(user.id)
-        if knowledge_base_id not in [kb for kb in knowledge_bases]:
-            return result.error(msg="用户没有权限访问该知识库")
+    if not KnowledgeBaseCRUD.get_by_id(knowledge_base_id):
+        return result.error(msg="知识库不存在")
+    if user.is_admin == 0 and not UserKnowledgeBaseCRUD.has_read_permission(user.id, knowledge_base_id):
+        return result.error(msg="用户没有权限访问该知识库")
 
 
     documents, total = DocumentCRUD.get_page_by_knowledge_base(
@@ -269,9 +271,6 @@ async def get_document_by_id(
     if not document:
         return result.error(msg="文档不存在")
 
-    # 验证用户是否有权限访问该知识库
-    if user.is_admin == 0:
-        knowledge_bases = UserKnowledgeBaseCRUD.get_knowledge_bases_by_user(user.id)
-        if document.knowledge_base_id not in [kb for kb in knowledge_bases]:
-            return result.error(msg="用户没有权限访问该知识库")
+    if user.is_admin == 0 and not UserKnowledgeBaseCRUD.has_read_permission(user.id, document.knowledge_base_id):
+        return result.error(msg="用户没有权限访问该知识库")
     return result.success(msg="查询成功", data=document)

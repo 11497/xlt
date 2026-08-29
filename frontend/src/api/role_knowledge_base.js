@@ -1,8 +1,11 @@
 import request from "@/utils/request.js";
 
-// 批量为知识库分配角色
-export const batchAssignRoleToKnowledgeBase = (knowledgeBaseId, roleIds) =>
-    request.post(`/role_knowledge_base/assign?knowledge_base_id=${knowledgeBaseId}`, roleIds);
+// 批量为知识库分配角色，并设置每条关联的权限
+export const batchAssignRoleToKnowledgeBase = (knowledgeBaseId, bindings) =>
+    request.post('/role_knowledge_base/assign', {
+        knowledge_base_id: knowledgeBaseId,
+        bindings
+    });
 
 // 批量从指定知识库中删除角色
 export const batchRemoveRolesFromKnowledgeBase = (knowledgeBaseId, roleIds) =>
@@ -16,9 +19,11 @@ export const getKnowledgeBaseByRole = (roleId, page = 1, pageSize = 10) =>
 export const getRolesByKnowledgeBase = (knowledgeBaseId, page = 1, pageSize = 10) =>
     request.get(`/role_knowledge_base/knowledge_base/${knowledgeBaseId}/roles?page=${page}&page_size=${pageSize}`);
 
-// 为指定角色分配单个知识库
-export const assignKnowledgeBaseToRole = (roleId, knowledgeBaseId) =>
-    request.post(`/role_knowledge_base/assign_single?role_id=${roleId}&knowledge_base_id=${knowledgeBaseId}`);
+// 为指定角色分配单个知识库，并设置权限
+export const assignKnowledgeBaseToRole = (roleId, knowledgeBaseId, permission = 0) =>
+    request.post('/role_knowledge_base/assign_single', null, {
+        params: { role_id: roleId, knowledge_base_id: knowledgeBaseId, permission }
+    });
 
 // 从指定角色中移除单个知识库
 export const removeKnowledgeBaseFromRole = (roleId, knowledgeBaseId) =>

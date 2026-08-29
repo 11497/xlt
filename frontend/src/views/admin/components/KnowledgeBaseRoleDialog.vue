@@ -5,7 +5,8 @@ import { Delete, Plus } from "@element-plus/icons-vue";
 import {
   batchAssignRoleToKnowledgeBase,
   batchRemoveRolesFromKnowledgeBase,
-  getRolesByKnowledgeBase
+  getRolesByKnowledgeBase,
+  assignKnowledgeBaseToRole
 } from "@/api/role_knowledge_base.js";
 import {searchRole} from "@/api/role.js";
 
@@ -24,12 +25,13 @@ const pageSize = ref(5);
 const total = ref(0);
 const background = ref(true);
 const selectedRows = ref([]);
+const permissionUpdating = ref(false);
 
 // 获取知识库已关联的角色列表
 const getKnowledgeBaseRoles = async () => {
   const res = await getRolesByKnowledgeBase(props.knowledgeBaseId, currentPage.value, pageSize.value);
   if (res.code === 1) {
-    roleList.value = res.data.list;
+    roleList.value = res.data.list.map(row => ({ ...row, editingPermission: row.permission }));
     total.value = res.data.total;
     currentPage.value = res.data.page;
     pageSize.value = res.data.page_size;
@@ -76,11 +78,14 @@ const addDialogVisible = ref(false);
 const searchKeyword = ref('');
 const searchResults = ref([]);
 const selectedRoles = ref([]);
+const newPermission = ref(0);
+const submitting = ref(false);
 
 const handleAddRelation = () => {
   searchKeyword.value = '';
   searchResults.value = [];
   selectedRoles.value = [];
+  newPermission.value = 0;
   addDialogVisible.value = true;
 };
 
@@ -100,29 +105,47 @@ const handleSearch = async () => {
 
 const handleSearchSelectionChange = (rows) => { selectedRoles.value = rows; };
 
+const handlePermissionChange = async (row, value) => {
+  if (permissionUpdating.value) return;
+  permissionUpdating.value = true;
+  try {
+    const res = await assignKnowledgeBaseToRole(row.id, props.knowledgeBaseId, value);
+    if (res.code === 1) {
+      row.permission = value;
+      row.editingPermission = value;
+      ElMessage.success('权限修改成功');
+    } else {
+      row.editingPermission = row.permission;
+      ElMessage.error(res.msg || '权限修改失败');
+    }
+  } catch {
+    row.editingPermission = row.permission;
+    ElMessage.error('权限修改失败，请稍后重试');
+  } finally { permissionUpdating.value = false; }
+};
+
 const handleCreateRelation = async () => {
   if (selectedRoles.value.length === 0) {
     ElMessage.warning('请先搜索并选择角色');
     return;
   }
 
-  const roleIds = selectedRoles.value.map(role => role.id);
-  let successCount = 0;
-  for (const roleId of roleIds) {
-    const res = await batchAssignRoleToKnowledgeBase(props.knowledgeBaseId, [roleId]);
-    if (res.code === 1) {
-      successCount ++;
-    } else {
-      ElMessage.error(res.msg || `关联角色ID ${roleId} 失败`);
+  const bindings = selectedRoles.value.map(role => ({ role_id: role.id, permission: newPermission.value }));
+  submitting.value = true;
+  try {
+    const res = await batchAssignRoleToKnowledgeBase(props.knowledgeBaseId, bindings);
+    if (res.code !== 1) {
+      ElMessage.error(res.msg || '关联角色失败');
+      return;
     }
+    ElMessage.success(`成功关联 ${bindings.length} 个角色`);
+    addDialogVisible.value = false;
+    await getKnowledgeBaseRoles();
+  } catch {
+    ElMessage.error('关联角色失败，请稍后重试');
+  } finally {
+    submitting.value = false;
   }
-
-  if (successCount > 0) {
-    ElMessage.success(`成功关联 ${successCount} 个角色`);
-  }
-
-  addDialogVisible.value = false;
-  await getKnowledgeBaseRoles();
 };
 
 const handleClose = () => { emit('update:visible', false); };
@@ -151,6 +174,11 @@ const handleClose = () => { emit('update:visible', false); };
         <template #default>{{ props.knowledgeBaseName }}</template>
       </el-table-column>
       <el-table-column prop="name" label="角色名" align="center" />
+      <el-table-column label="权限" width="130" align="center"><template #default="{ row }">
+        <el-select v-model="row.editingPermission" size="small" :disabled="permissionUpdating" @change="value => handlePermissionChange(row, value)">
+          <el-option label="只读" :value="0" /><el-option label="读写" :value="1" />
+        </el-select>
+      </template></el-table-column>
     </el-table>
 
     <div style="margin-top: 15px;">
@@ -183,6 +211,9 @@ const handleClose = () => { emit('update:visible', false); };
           <el-button type="primary" @click="handleSearch">搜索</el-button>
         </div>
       </el-form-item>
+      <el-form-item label="关联权限">
+        <el-radio-group v-model="newPermission"><el-radio :value="0">只读</el-radio><el-radio :value="1">读写</el-radio></el-radio-group>
+      </el-form-item>
     </el-form>
 
     <el-table
@@ -205,7 +236,7 @@ const handleClose = () => { emit('update:visible', false); };
 
     <template #footer>
       <el-button @click="addDialogVisible = false">取消</el-button>
-      <el-button type="primary" @click="handleCreateRelation">创建关联</el-button>
+      <el-button type="primary" :loading="submitting" :disabled="submitting" @click="handleCreateRelation">创建关联</el-button>
     </template>
   </el-dialog>
 </template>
