@@ -11,7 +11,7 @@ from typing import Any
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-OUTPUT_FILE = PROJECT_ROOT / "接口文档.md"
+OUTPUT_FILE = PROJECT_ROOT / "docs" / "接口文档.md"
 
 # 直接运行脚本时，确保可以导入项目入口 `main.py` 及其依赖包。
 sys.path.insert(0, str(PROJECT_ROOT))
@@ -193,6 +193,7 @@ def build_markdown(openapi_schema: dict[str, Any]) -> str:
         f"OpenAPI 版本：`{openapi_schema.get('openapi', '')}`",
         "",
         "本文档由 `scripts/generate_api_doc.py` 自动生成，请勿手动编辑。",
+        "聊天流式协议和 NDJSON 事件说明见 [API 与聊天协议](API与聊天协议.md)。",
         "",
         "## 接口列表",
         "",
