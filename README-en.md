@@ -125,9 +125,13 @@ xlt/
 │   ├── jwt_util.py         # JWT utilities
 │   ├── password_util.py    # Argon2id password hashing and verification utilities
 │   └── oss_util.py         # OSS utilities
+├── tests/                   # Test configuration and tests
+│   └── conftest.py          # Pytest configuration
 ├── frontend/                # Frontend project
+│   ├── public/              # Static assets served without bundling
 │   ├── src/
 │   │   ├── api/            # API wrappers
+│   │   ├── components/      # Shared components
 │   │   ├── views/          # Page views
 │   │   │   ├── admin/      # Administrator pages
 │   │   │   ├── chat/       # Chat pages
@@ -135,16 +139,20 @@ xlt/
 │   │   ├── router/         # Router configuration
 │   │   ├── hooks/          # Custom hooks
 │   │   ├── utils/          # Utility functions
-│   │   └── assets/         # Static assets
-│   │       ├── images/     # Page images
-│   │       ├── responsive.css  # Global theme and responsive styles
-│   │       └── xlt-icon.svg    # SVG brand icon
+│   │   ├── App.vue          # Root component
+│   │   ├── assets/          # Static assets
+│   │   │   ├── images/     # Page images
+│   │   │   ├── responsive.css  # Global theme and responsive styles
+│   │   │   └── xlt-icon.svg    # SVG brand icon
+│   │   └── main.js          # Frontend entry point
 │   ├── vite.config.js      # Vite configuration
 │   └── package.json
 ├── main.py                  # Application entry point
+├── start.bat                # One-click Windows startup script
 ├── .env.example             # Environment variable template (no real credentials)
 ├── AGENTS.md                # Project working agreements for coding agents
 ├── pyproject.toml           # Python project configuration
+├── uv.lock                  # Locked backend dependency versions
 ├── 接口文档.md              # Auto-generated API documentation
 ├── README.md                # Chinese documentation
 └── README-en.md             # English documentation
@@ -348,6 +356,10 @@ npm run dev
 ```
 
 By default, the Vite development server runs at <http://127.0.0.1:5173> and proxies frontend `/api` requests to `http://127.0.0.1:8000`.
+
+#### One-Click Startup on Windows
+
+After installing dependencies and configuring the environment, double-click `start.bat` in the project root to open separate windows for the backend and frontend. The script passes the `--host` option to Vite so that the frontend development server listens on the local network address.
 
 Production build:
 

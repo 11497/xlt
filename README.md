@@ -123,9 +123,13 @@ xlt/
 │   ├── jwt_util.py         # JWT 工具
 │   ├── password_util.py    # Argon2id 密码哈希与验证工具
 │   └── oss_util.py         # OSS 工具
+├── tests/                   # 测试配置与测试代码
+│   └── conftest.py          # Pytest 测试配置
 ├── frontend/                # 前端项目
+│   ├── public/              # 无需构建处理的静态资源
 │   ├── src/
 │   │   ├── api/            # API 接口封装
+│   │   ├── components/      # 通用组件
 │   │   ├── views/          # 页面视图
 │   │   │   ├── admin/      # 管理员页面
 │   │   │   ├── chat/       # 聊天页面
@@ -133,16 +137,20 @@ xlt/
 │   │   ├── router/         # 路由配置
 │   │   ├── hooks/          # 自定义 Hooks
 │   │   ├── utils/          # 工具函数
-│   │   └── assets/         # 静态资源
-│   │       ├── images/     # 页面图片
-│   │       ├── responsive.css  # 全局主题与响应式样式
-│   │       └── xlt-icon.svg    # SVG 品牌图标
+│   │   ├── App.vue          # 根组件
+│   │   ├── assets/          # 静态资源
+│   │   │   ├── images/     # 页面图片
+│   │   │   ├── responsive.css  # 全局主题与响应式样式
+│   │   │   └── xlt-icon.svg    # SVG 品牌图标
+│   │   └── main.js          # 前端入口
 │   ├── vite.config.js      # Vite 配置
 │   └── package.json
 ├── main.py                  # 应用入口
+├── start.bat                # Windows 前后端一键启动脚本
 ├── .env.example             # 环境变量模板（不含真实凭证）
 ├── AGENTS.md                # 编码代理的项目工作约定
 ├── pyproject.toml           # Python 项目配置
+├── uv.lock                  # 后端依赖锁定文件
 ├── 接口文档.md              # 自动生成的接口文档
 ├── README.md                # 中文说明文档
 └── README-en.md             # 英文说明文档
@@ -339,6 +347,10 @@ npm run dev
 ```
 
 Vite 开发服务器默认运行在 <http://127.0.0.1:5173>，并将前端的 `/api` 请求代理到 `http://127.0.0.1:8000`。
+
+#### Windows 一键启动
+
+完成依赖安装和环境配置后，在项目根目录双击 `start.bat`，即可分别打开窗口启动后端和前端。脚本会为 Vite 传入 `--host` 参数，使前端开发服务器监听本机网络地址。
 
 生产构建：
 
