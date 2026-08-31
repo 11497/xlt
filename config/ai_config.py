@@ -34,7 +34,7 @@ CHAT_CONFIG = {
 }
 
 UTILITY_CONFIG = {
-    "CHAT_MODEL": "Qwen/Qwen3-8B",
+    "CHAT_MODEL": "deepseek-ai/DeepSeek-V3.2",
     "TEMPERATURE": 0.0,
     "MAX_TOKENS": 512,
     "TOP_P": 1.0,
