@@ -7,8 +7,17 @@
 - AI、向量化和精排服务均通过 `config/ai_config.py` 配置，业务代码不得硬编码模型供应商、服务地址或密钥。
 - 集成验证可能依赖数据库、检索服务、对象存储和模型服务；未经明确授权，不连接或修改真实外部服务。
 - ChromaDB 本地数据位于根目录 `chroma_db/`，不得提交。
-- 先阅读相关模块及 `README.md`，沿用现有分层和命名，不进行与当前任务无关的重构。
-- 所有文本文件使用 UTF-8；代码注释、接口消息和项目文档默认使用中文，英文 README 与中文 README 保持语义一致。
+- 先阅读根目录 `README.md` 和与任务相关的 `docs/` 文档，再阅读相关代码，沿用现有分层和命名，不进行与当前任务无关的重构。
+- 所有文本文件使用 UTF-8；代码注释、接口消息和项目文档默认使用中文。
+
+## 文档导航
+
+- `README.md`：项目概览、最短启动步骤、默认账号和文档索引，适合快速了解项目。
+- `docs/架构与功能.md`：项目结构、技术栈细节、核心功能、数据库概览和混合检索流程。
+- `docs/配置与数据库.md`：环境变量、AI 配置、提示词约定、数据库初始化和增量迁移。
+- `docs/API与聊天协议.md`：接口模块、鉴权约定、聊天 NDJSON 协议和接口文档生成方式。
+- `docs/开发与部署.md`：测试、文件限制、安全要求、部署和外部服务一致性注意事项。
+- `docs/接口文档.md`：由 `scripts/generate_api_doc.py` 生成的 OpenAPI 接口摘要，不得手动编辑。
 
 ## 常用命令
 
@@ -49,9 +58,11 @@
 
 ## 文档与生成文件
 
-- 路由、请求模型或公开响应变化后运行 `uv run python scripts/generate_api_doc.py`，提交同步更新的 `接口文档.md`。
-- `接口文档.md` 由 `scripts/generate_api_doc.py` 生成，不得手动编辑。
-- 用户可见功能、配置、启动步骤或部署要求变化时同步更新 `README.md` 和 `README-en.md`。
+- 路由、请求模型或公开响应变化后运行 `uv run python scripts/generate_api_doc.py`，提交同步更新的 `docs/接口文档.md`。
+- `docs/接口文档.md` 由 `scripts/generate_api_doc.py` 生成，不得手动编辑。
+- 用户可见功能、配置、启动步骤或部署要求变化时，更新 `README.md` 及对应的 `docs/` 专题文档，并同步检查 README 的文档索引。
+- 修改路由、请求模型或公开响应后，运行 `uv run python scripts/generate_api_doc.py` 更新 `docs/接口文档.md`；该文件是生成文件，禁止手动编辑。
+- 文档结构变化时同步检查 `AGENTS.md` 的文档导航、README 的链接和相关专题文档中的交叉引用；项目当前只维护中文 `README.md`，不新增或恢复英文 README。
 - 不提交 `frontend/dist/`、`chroma_db/`、`.venv/`、`__pycache__/`、IDE 配置或其他本地生成内容。
 
 ## 安全与破坏性操作
@@ -68,6 +79,7 @@
 - 修改前端 JS/Vue 或构建配置后运行 `npm run build`。若环境缺少依赖，明确报告未运行原因。
 - 修改提示词后验证四个模板均能以 UTF-8 加载，并验证所有 `.format(...)` 占位符可正常替换。
 - 修改路由、鉴权、数据模型或前后端契约时，除静态检查外还应说明尚未覆盖的 MySQL、Elasticsearch、OSS 或模型 API 集成风险。
+- 修改 Markdown 文档后检查相对链接、UTF-8 编码和 `git diff --check`；修改 API 文档生成脚本或接口契约后确认 `docs/接口文档.md` 已重新生成。
 - 提交前运行 `git diff --check`，并检查 `git status --short`，避免夹带无关文件。
 
 ## Git 约定
