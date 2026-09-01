@@ -1,9 +1,9 @@
-<script setup>
-import { computed, ref, nextTick } from 'vue'
+﻿<script setup>
+import {computed, nextTick, ref} from 'vue'
 import MarkdownIt from 'markdown-it'
-import { ElMessage } from 'element-plus'
-import { ChatDotRound, Delete, Position, UserFilled, VideoPause } from '@element-plus/icons-vue'
-import { countCharacters, truncateCharacters } from '@/utils/characterCount.js'
+import {ElMessage} from 'element-plus'
+import {ChatDotRound, Delete, Position, UserFilled, VideoPause} from '@element-plus/icons-vue'
+import {countCharacters, truncateCharacters} from '@/utils/characterCount.js'
 import ChatInputCounter from './ChatInputCounter.vue'
 
 const md = new MarkdownIt({ html: false, breaks: true, linkify: true, typographer: true })
@@ -179,7 +179,7 @@ const handleSend = () => {
 .message-role { margin-bottom: 5px; color: var(--color-text-muted); font-size: 12px; }
 .message-bubble { max-width: 100%; padding: 11px 15px; border-radius: 6px; color: var(--color-text); font-size: 14px; line-height: 1.75; overflow-wrap: anywhere; }
 .is-assistant .message-bubble { padding: 2px 0; background: transparent; }
-.is-user .message-bubble { background: var(--color-primary); color: #fff; }
+.is-user .message-bubble { background: var(--color-primary); color: #fff; white-space: pre-wrap; word-break: break-word; }
 .message-delete-btn { width: 30px; height: 30px; margin-top: 3px; padding: 0; display: grid; place-items: center; opacity: 0; border: 0; border-radius: 4px; background: transparent; color: var(--color-text-muted); cursor: pointer; transition: opacity .15s, background-color .15s, color .15s; }
 .message-row:hover .message-delete-btn, .message-delete-btn:focus-visible { opacity: 1; }
 .message-delete-btn:hover { background: #fff0f0; color: var(--color-danger); }
