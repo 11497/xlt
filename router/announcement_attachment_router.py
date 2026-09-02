@@ -9,6 +9,8 @@ from crud.announcement_crud import AnnouncementCRUD
 from model.announcement_attachment_model import AnnouncementAttachment
 from model.result import Result
 from model.user_model import User
+from uuid import uuid4
+
 from util.oss_util import OSSUtil
 
 router = APIRouter(prefix="/api/announcement_attachment", tags=["announcement_attachment"])
@@ -43,6 +45,17 @@ async def validate_file(file: UploadFile) -> Optional[str]:
     return None
 
 
+def _build_object_key(announcement_id: int, filename: str) -> str:
+    """
+    生成公告附件 OSS 对象 key：UUID 保证唯一，避免同名覆盖；
+    原始文件名仅用于展示和下载。
+    :param announcement_id: 公告ID
+    :param filename: 原始文件名
+    :return: OSS 对象 key
+    """
+    return f"announcement/{announcement_id}/{uuid4().hex}_{filename}"
+
+
 @router.post("/upload")
 async def upload_attachment(
         announcement_id: int = Form(...),
@@ -68,8 +81,8 @@ async def upload_attachment(
     if error_msg:
         return result.error(msg=error_msg)
 
-    # 生成OSS存储路径
-    storage_path = f"announcement/{announcement_id}/{file.filename}"
+    # 生成 OSS 对象 key（UUID，避免同名覆盖）
+    storage_path = _build_object_key(announcement_id, file.filename)
 
     # 读取文件内容
     content = await file.read()
@@ -87,7 +100,16 @@ async def upload_attachment(
         filename=file.filename,
         storage_path=storage_path
     )
-    attachment_id = AnnouncementAttachmentCRUD.create(attachment)
+    # 保存到数据库；失败时补偿删除刚上传的 OSS 对象，避免孤儿文件
+    try:
+        attachment_id = AnnouncementAttachmentCRUD.create(attachment)
+    except Exception as e:
+        try:
+            async with OSSUtil() as oss_client:
+                await oss_client.delete_file(storage_path)
+        except Exception as cleanup_error:
+            print(f"[ERROR] 清理孤儿 OSS 对象失败：{storage_path} -> {cleanup_error}")
+        return result.error(msg=f"保存附件记录失败：{str(e)}")
 
     return result.success(msg="上传成功", data={"id": attachment_id, "filename": file.filename})
 
