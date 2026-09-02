@@ -13,11 +13,11 @@ export const downloadAnnouncementAttachment = async (id) => {
     const res = await request.get(`/announcement_attachment/download/${id}`);
     // 假设 request 的响应拦截器返回的是完整 Result 对象
     if (res.code === 1) {
-      const { download_url, filename } = res.data;
-      // 创建隐藏的 <a> 标签，模拟点击下载
+      const { download_url } = res.data;
+      // 下载文件名由预签名 URL 的 response-content-disposition 控制
       const link = document.createElement('a');
       link.href = download_url;
-      link.download = filename || 'attachment'; // 指定下载文件名
+      link.rel = 'noopener';
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
