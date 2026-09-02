@@ -135,7 +135,7 @@ const handleCurrentChange = async () => {
     <!-- 中间可滚动内容区域 -->
     <div class="dialog-content-scroll">
       <!-- 假设公告内容有 content 字段，若无请替换为实际字段名 -->
-      <div v-html="currentAnnouncement?.content || '暂无内容'" class="content-body"></div>
+      <div class="content-body">{{ currentAnnouncement?.content || '暂无内容' }}</div>
     </div>
 
     <!-- 底部附件区域 -->
@@ -178,6 +178,10 @@ const handleCurrentChange = async () => {
   padding: 10px 0;
   line-height: 1.6;
   color: #333;
+}
+.content-body {
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 /* 底部附件区 */
