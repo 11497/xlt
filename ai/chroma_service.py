@@ -1,4 +1,5 @@
-from typing import List
+﻿from typing import List
+
 from pathlib import Path
 
 import chromadb
@@ -53,7 +54,7 @@ class ChromaService:
         embeddings: List[List[float]]
     ) -> None:
         """
-        向指定知识库添加文档的向量
+        向指定知识库写入文档的向量（幂等 upsert，重复写入自动覆盖）
         :param knowledge_base_id: 知识库ID
         :param document_id: 文档ID
         :param chunks: 文本片段列表
@@ -74,7 +75,9 @@ class ChromaService:
             for i in range(len(chunks))
         ]
 
-        collection.add(
+        # 使用 upsert 而非 add：同一 chunk_id 重复写入自动覆盖，天然幂等，
+        # 支持索引重试和对账补写。
+        collection.upsert(
             ids=ids,
             embeddings=embeddings,
             documents=chunks,
@@ -101,25 +104,37 @@ class ChromaService:
             n_results=n_results
         )
 
-    def delete_document_embeddings(self, knowledge_base_id: int, document_id: int) -> None:
+    def delete_document_embeddings(self, knowledge_base_id: int, document_id: int) -> bool:
         """
-        删除指定文档的所有向量
+        删除指定文档的所有向量（幂等，不存在的 ID 不报错）
         :param knowledge_base_id: 知识库ID
         :param document_id: 文档ID
+        :return: 是否执行成功
         """
-        collection = self.get_or_create_collection(knowledge_base_id)
-        collection.delete(where={"document_id": document_id})
+        try:
+            collection = self.get_or_create_collection(knowledge_base_id)
+            collection.delete(where={"document_id": document_id})
+            return True
+        except Exception as e:
+            print(f"[ERROR] Chroma delete failed for doc {document_id}: {e}")
+            return False
 
-    def delete_knowledge_base(self, knowledge_base_id: int) -> None:
+    def delete_knowledge_base(self, knowledge_base_id: int) -> bool:
         """
-        删除整个知识库的所有向量
+        删除整个知识库的所有向量（幂等）
         :param knowledge_base_id: 知识库ID
+        :return: 是否执行成功
         """
-        collection_name = self._get_collection_name(knowledge_base_id)
-        # 先获取所有集合名称，判断目标集合是否存在
-        existing_collections = [col.name for col in self.client.list_collections()]
-        if collection_name in existing_collections:
-            self.client.delete_collection(collection_name)
+        try:
+            collection_name = self._get_collection_name(knowledge_base_id)
+            # 先获取所有集合名称，判断目标集合是否存在
+            existing_collections = [col.name for col in self.client.list_collections()]
+            if collection_name in existing_collections:
+                self.client.delete_collection(collection_name)
+            return True
+        except Exception as e:
+            print(f"[ERROR] Chroma delete collection failed for kb {knowledge_base_id}: {e}")
+            return False
 
     def get_document_chunk_count(self, knowledge_base_id: int, document_id: int) -> int:
         """
@@ -128,6 +143,10 @@ class ChromaService:
         :param document_id: 文档ID
         :return: 片段数量
         """
-        collection = self.get_or_create_collection(knowledge_base_id)
-        result = collection.get(where={"document_id": document_id})
-        return len(result["ids"]) if result["ids"] else 0
+        try:
+            collection = self.get_or_create_collection(knowledge_base_id)
+            result = collection.get(where={"document_id": document_id})
+            return len(result["ids"]) if result["ids"] else 0
+        except Exception as e:
+            print(f"[ERROR] Chroma chunk count failed for doc {document_id}: {e}")
+            return -1

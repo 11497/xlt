@@ -1,4 +1,4 @@
-from typing import List, Dict, Any
+﻿from typing import List, Dict, Any
 
 from ai.embedding import EmbeddingService
 from ai.chroma_service import ChromaService
@@ -22,10 +22,14 @@ class IngestionService:
         """
         将文档切片同时写入 Chroma 和 ES
 
+        写入均为幂等操作（Chroma upsert / ES _id=chunk_id），
+        因此本方法可安全重试：已成功的一端重复写入无副作用，
+        失败的一端会在重试时补齐，最终收敛到两端一致。
+
         :param knowledge_base_id: 知识库ID
         :param document_id: 文档ID
         :param chunks: 文本切片列表
-        :return: 入库结果摘要
+        :return: 入库结果摘要（status: success/partial/failed 及各端结果）
         """
         if not chunks:
             return {"status": "skipped", "reason": "empty_chunks"}
@@ -89,35 +93,25 @@ class IngestionService:
         print(f"[Ingest] doc={document_id}, chunks={len(chunks)}, status={status}")
         return result
 
-    def delete_document(self, knowledge_base_id: int, document_id: int) -> None:
+    def delete_document(self, knowledge_base_id: int, document_id: int) -> Dict[str, bool]:
         """
-        同步删除双端数据
+        同步删除双端数据（幂等），逐端记录结果
+        :param knowledge_base_id: 知识库ID
+        :param document_id: 文档ID
+        :return: {"chroma": bool, "es": bool}
         """
-        self.chroma_service.delete_document_embeddings(knowledge_base_id, document_id)
+        chroma_ok = self.chroma_service.delete_document_embeddings(knowledge_base_id, document_id)
+        es_ok = self.es_service.delete_document(knowledge_base_id, document_id)
+        print(f"[Delete] doc={document_id}, chroma={chroma_ok}, es={es_ok}")
+        return {"chroma": chroma_ok, "es": es_ok}
 
-        # ES 按 doc_id 删除
-        index_name = f"kb_{knowledge_base_id}"
-        if self.es_service.client.indices.exists(index=index_name):
-            self.es_service.client.delete_by_query(
-                index=index_name,
-                query={"term": {"doc_id": str(document_id)}}
-            )
-        print(f"[Delete] doc={document_id} removed from both stores")
-
-
-    def delete_knowledge_base(self, knowledge_base_id: int) -> None:
+    def delete_knowledge_base(self, knowledge_base_id: int) -> Dict[str, bool]:
         """
-        同步删除双端（Chroma + ES）中整个知识库的数据
+        同步删除双端（Chroma + ES）中整个知识库的数据（幂等）
+        :param knowledge_base_id: 知识库ID
+        :return: {"chroma": bool, "es": bool}
         """
-        # 删除 Chroma 集合
-        self.chroma_service.delete_knowledge_base(knowledge_base_id)
-
-        # 删除 Elasticsearch 索引
-        index_name = f"kb_{knowledge_base_id}"
-        if self.es_service.client.indices.exists(index=index_name):
-            self.es_service.client.indices.delete(index=index_name)
-            print(f"[Delete] ES index {index_name} removed")
-        else:
-            print(f"[Delete] ES index {index_name} does not exist, skip")
-
-        print(f"[Delete] Knowledge base {knowledge_base_id} removed from both stores")
+        chroma_ok = self.chroma_service.delete_knowledge_base(knowledge_base_id)
+        es_ok = self.es_service.delete_knowledge_base(knowledge_base_id)
+        print(f"[Delete] kb={knowledge_base_id}, chroma={chroma_ok}, es={es_ok}")
+        return {"chroma": chroma_ok, "es": es_ok}
