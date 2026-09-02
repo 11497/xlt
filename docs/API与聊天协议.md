@@ -11,7 +11,7 @@
 | 知识库           | `/api/knowledge_base`          | 知识库管理                       |
 | 角色知识库       | `/api/role_knowledge_base`     | 角色与知识库关联                 |
 | 用户可访问知识库 | `/api/user_knowledge_base`     | 查询用户访问范围                 |
-| 文档             | `/api/document`                | 上传、下载、索引和删除           |
+| 文档             | `/api/document`                | 上传（异步索引）、状态查询、重新索引、下载和删除 |
 | 会话             | `/api/session`                 | 创建、查询、改名和删除           |
 | 消息             | `/api/message`                 | RAG 问答和消息管理               |
 | 公告             | `/api/announcement`            | 发布、查询和置顶                 |

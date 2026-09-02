@@ -1,8 +1,6 @@
 from fastapi import APIRouter, Depends, Query
 
-from ai.ingestion_service import IngestionService
 from authentication.user_auth import require_admin, require_current_user
-from crud.document_crud import DocumentCRUD
 from crud.knowledge_base_crud import KnowledgeBaseCRUD
 from crud.role_knowledge_base_crud import RoleKnowledgeBaseCRUD
 from crud.user_knowledge_base_crud import UserKnowledgeBaseCRUD
@@ -104,22 +102,31 @@ async def delete_knowledge_base(id: int, _admin: User = Depends(require_admin)):
     if roles:
         return result.error(msg="知识库下有绑定的角色，不能删除")
 
-    # 1. 删除向量索引（Chroma + ES）
-    try:
-        ingestion_service = IngestionService()
-        ingestion_service.delete_knowledge_base(id)
-    except Exception as e:
-        return result.error(msg=f"删除向量索引失败：{str(e)}")
+    # 异步删除：入队 delete_kb 任务，由 Worker 清理 Chroma/ES 及文档记录后，再删除知识库记录
+    from crud.document_task_crud import DocumentTaskCRUD
+    from model.document_task_model import DocumentTask
+    import json
 
-    # 2. 删除知识库下的所有文档记录（MySQL）
-    DocumentCRUD.delete_by_knowledge_base_id(id)
+    # 检查是否已有进行中的删除任务
+    existing_tasks = DocumentTaskCRUD.get_tasks_by_knowledge_base(id, task_type="delete_kb")
+    if existing_tasks and any(t.status in ("pending", "processing") for t in existing_tasks):
+        return result.error(msg="该知识库已有删除任务进行中")
 
-    # 3. 删除知识库记录
-    delete_result = KnowledgeBaseCRUD.delete(id)
-    if not delete_result:
-        return result.error(msg="删除知识库失败")
+    # 检查是否还有进行中的文档索引/删除任务，避免与删除知识库产生竞态
+    active_doc_tasks = DocumentTaskCRUD.get_tasks_by_knowledge_base(id)
+    if any(t.task_type != "delete_kb" and t.status in ("pending", "processing") for t in active_doc_tasks):
+        return result.error(msg="该知识库下仍有文档任务进行中，请稍后再删除")
 
-    return result.success(msg="删除知识库成功")
+    payload = json.dumps({"kb_id": id}, ensure_ascii=False)
+    task = DocumentTask(
+        task_type="delete_kb",
+        document_id=0,  # 无具体文档，占位
+        knowledge_base_id=id,
+        payload=payload
+    )
+    DocumentTaskCRUD.create(task)
+
+    return result.success(msg="删除任务已提交，正在清理知识库数据")
 
 @router.get("/{id}")
 async def get_by_id(id: int, user: User = Depends(require_current_user)):

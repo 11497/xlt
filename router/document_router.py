@@ -1,18 +1,21 @@
+﻿import json
 from datetime import datetime
 from typing import Optional
+from uuid import uuid4
 
-from fastapi import APIRouter, Depends, UploadFile, File, Form, Query
+from fastapi import APIRouter, Depends, UploadFile, File, Form, Query, Response, status as http_status
 
-from ai.ingestion_service import IngestionService
-from authentication.user_auth import require_current_user
+from authentication.user_auth import require_current_user, require_admin
 from config.file_config import ALLOWED_FILE_TYPES, MAX_FILE_SIZE, EXPIRES
 from crud.document_crud import DocumentCRUD
+from crud.document_task_crud import DocumentTaskCRUD
 from crud.knowledge_base_crud import KnowledgeBaseCRUD
 from crud.user_knowledge_base_crud import UserKnowledgeBaseCRUD
 from model.document_model import Document
+from model.document_task_model import DocumentTask
 from model.result import Result
 from model.user_model import User
-from util.file_util import read_file_content, chunk_text_by_sentence
+from util.db_util import get_connection
 from util.oss_util import OSSUtil
 
 router = APIRouter(prefix="/api/document", tags=["document"])
@@ -47,18 +50,61 @@ async def validate_file(file: UploadFile) -> Optional[str]:
     return None
 
 
-@router.post("/upload")
+def _build_object_key(knowledge_base_id: int, filename: str) -> str:
+    """
+    生成 OSS 对象 key：UUID 保证唯一，避免同名覆盖；文件名仅用于控制台辨认。
+    :param knowledge_base_id: 知识库ID
+    :param filename: 原始文件名
+    :return: OSS 对象 key
+    """
+    return f"knowledge_base/{knowledge_base_id}/{uuid4().hex}_{filename}"
+
+
+def _create_document_and_task(
+        knowledge_base_id: int,
+        filename: str,
+        object_key: str
+) -> int:
+    """
+    原子创建文档记录（pending）和索引任务，单事务提交。
+    :param knowledge_base_id: 知识库ID
+    :param filename: 原始文件名
+    :param object_key: OSS 对象 key
+    :return: 文档ID
+    :raises: 事务失败时抛出异常（由调用方补偿删除 OSS 对象）
+    """
+    payload = json.dumps({"object_key": object_key, "filename": filename}, ensure_ascii=False)
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        try:
+            cursor.execute(
+                "INSERT INTO document (knowledge_base_id, filename, storage_path, status) "
+                "VALUES (%s, %s, %s, 'pending')",
+                (knowledge_base_id, filename, object_key)
+            )
+            document_id = cursor.lastrowid
+            cursor.execute(
+                "INSERT INTO document_task (task_type, document_id, knowledge_base_id, status, payload) "
+                "VALUES ('index', %s, %s, 'pending', %s)",
+                (document_id, knowledge_base_id, payload)
+            )
+            return document_id
+        finally:
+            cursor.close()
+
+
+@router.post("/upload", status_code=http_status.HTTP_202_ACCEPTED)
 async def upload_document(
         knowledge_base_id: int = Form(...),
         file: UploadFile = File(...),
         user: User = Depends(require_current_user)
 ):
     """
-    上传文档到知识库
+    上传文档到知识库（异步索引）
     :param knowledge_base_id: 知识库ID
     :param file: 上传的文件对象
     :param user: 当前用户对象
-    :return: 上传结果
+    :return: 上传结果，status 为 pending（待后台 Worker 索引）
     """
     result = Result()
 
@@ -74,61 +120,37 @@ async def upload_document(
     if error_msg:
         return result.error(msg=error_msg)
 
-    # 生成OSS存储路径
-    storage_path = f"knowledge_base/{knowledge_base_id}/{file.filename}"
+    # 生成 OSS 对象 key（UUID，避免同名覆盖）
+    object_key = _build_object_key(knowledge_base_id, file.filename)
 
-    # 读取文件内容
+    # 读取文件内容并上传到 OSS
     content = await file.read()
-
-    # 上传到OSS
     try:
         async with OSSUtil() as oss_client:
-            await oss_client.upload_file(storage_path, content)
+            await oss_client.upload_file(object_key, content)
     except Exception as e:
         return result.error(msg=f"文件上传失败：{str(e)}")
 
-    # 保存到数据库
-    document = Document(
-        knowledge_base_id=knowledge_base_id,
-        filename=file.filename,
-        storage_path=storage_path,
-        create_time=datetime.now(),
-        update_time=datetime.now()
+    # 原子创建文档记录 + 索引任务（单事务）
+    try:
+        document_id = _create_document_and_task(knowledge_base_id, file.filename, object_key)
+    except Exception as e:
+        # 事务失败：补偿删除刚上传的 OSS 对象，避免孤儿文件
+        try:
+            async with OSSUtil() as oss_client:
+                await oss_client.delete_file(object_key)
+        except Exception as cleanup_e:
+            print(f"[ERROR] 清理孤儿 OSS 对象失败：{object_key} -> {cleanup_e}")
+        return result.error(msg=f"保存文档记录失败：{str(e)}")
+
+    return result.success(
+        msg="上传成功，正在后台索引",
+        data={
+            "id": document_id,
+            "filename": file.filename,
+            "status": "pending"
+        }
     )
-    document_id = DocumentCRUD.create(document)
-
-    # 读取文件内容并分块
-    await file.seek(0)
-    content = await read_file_content(file)
-    chunks = chunk_text_by_sentence(content)
-
-    # === 使用 IngestionService 统一入库（双写 Chroma + ES） ===
-    ingestion_service = IngestionService()
-    ingest_result = ingestion_service.ingest_document(
-        knowledge_base_id=knowledge_base_id,
-        document_id=document_id,
-        chunks=chunks
-    )
-
-    # 根据入库结果返回响应
-    if ingest_result["status"] == "failed":
-        # 注意：文档已存入数据库和OSS，但索引完全失败，建议记录错误并考虑后续补偿
-        return result.error(msg="文档索引入库失败，请检查系统日志")
-    elif ingest_result["status"] == "partial":
-        # 部分成功（例如Chroma成功但ES失败），仍可认为上传完成，但给出警告
-        return result.success(
-            msg="文件上传成功，但部分索引写入失败",
-            data={
-                "id": document_id,
-                "filename": file.filename,
-                "warning": "部分索引写入失败，请稍后重试或联系管理员"
-            }
-        )
-    else:  # success
-        return result.success(
-            msg="上传成功",
-            data={"id": document_id, "filename": file.filename}
-        )
 
 
 @router.get("/download/{document_id}")
@@ -171,16 +193,91 @@ async def download_document(
         return result.error(msg=f"下载链接生成失败：{str(e)}")
 
 
+@router.get("/status/{document_id}")
+async def get_document_status(
+        document_id: int,
+        user: User = Depends(require_current_user)
+):
+    """
+    查询文档索引状态（前端轮询用）
+    :param document_id: 文档ID
+    :param user: 当前用户对象
+    :return: 文档状态信息
+    """
+    result = Result()
+
+    document = DocumentCRUD.get_by_id(document_id)
+    if not document:
+        return result.error(msg="文档不存在")
+
+    if user.is_admin == 0 and not UserKnowledgeBaseCRUD.has_read_permission(user.id, document.knowledge_base_id):
+        return result.error(msg="用户没有权限访问该知识库")
+
+    return result.success(msg="查询成功", data={
+        "id": document.id,
+        "status": document.status,
+        "error_message": document.error_message,
+        "retry_count": document.retry_count,
+        "chunk_count": document.chunk_count
+    })
+
+
+@router.post("/reindex/{document_id}")
+async def reindex_document(
+        document_id: int,
+        user: User = Depends(require_current_user)
+):
+    """
+    重新索引文档（用于 failed 或需重建索引的文档）
+    :param document_id: 文档ID
+    :param user: 当前用户对象
+    :return: 重新索引任务提交结果
+    """
+    result = Result()
+
+    document = DocumentCRUD.get_by_id(document_id)
+    if not document:
+        return result.error(msg="文档不存在")
+    if user.is_admin == 0 and not UserKnowledgeBaseCRUD.has_write_permission(user.id, document.knowledge_base_id):
+        return result.error(msg="用户没有权限修改该知识库")
+
+    # 检查是否有进行中的任务，避免重复入队
+    existing = DocumentTaskCRUD.get_by_document_id(document_id, task_type="index")
+    if existing and any(t.status in ("pending", "processing") for t in existing):
+        return result.error(msg="该文档已有索引任务进行中，请稍后")
+
+    # 重置文档状态并重新入队
+    DocumentCRUD.update_status(
+        document_id, "pending",
+        error_message=None,
+        retry_count=0,
+        chunk_count=None
+    )
+    payload = json.dumps({"object_key": document.storage_path, "filename": document.filename}, ensure_ascii=False)
+    task = DocumentTask(
+        task_type="index",
+        document_id=document_id,
+        knowledge_base_id=document.knowledge_base_id,
+        payload=payload
+    )
+    DocumentTaskCRUD.create(task)
+
+    return result.success(msg="已重新提交索引任务", data={
+        "id": document_id,
+        "status": "pending"
+    })
+
+
 @router.delete("/{document_id}")
 async def delete_document(
         document_id: int,
         user: User = Depends(require_current_user)
 ):
     """
-    删除文档
+    删除文档（异步：OSS/Chroma/ES/MySQL 四端清理由 Worker 执行）
     :param document_id: 文档ID
     :param user: 当前用户对象
-    :return: 删除结果
+    :return: 删除结果（异步提交）
     """
     result = Result()
 
@@ -191,30 +288,34 @@ async def delete_document(
     if user.is_admin == 0 and not UserKnowledgeBaseCRUD.has_write_permission(user.id, document.knowledge_base_id):
         return result.error(msg="用户没有权限修改该知识库")
 
-    # 1. 从OSS删除文件
+    # 若已在删除中，避免重复入队
+    if document.status == "deleting":
+        return result.error(msg="该文档正在删除中，请稍后")
+
+    # 原子：标记文档 deleting + 入队删除任务
+    payload = json.dumps({"object_key": document.storage_path, "filename": document.filename}, ensure_ascii=False)
     try:
-        async with OSSUtil() as oss_client:
-            await oss_client.delete_file(document.storage_path)
+        with get_connection() as conn:
+            cursor = conn.cursor()
+            try:
+                cursor.execute(
+                    "UPDATE document SET status = 'deleting', update_time = NOW() WHERE id = %s",
+                    (document_id,)
+                )
+                cursor.execute(
+                    "INSERT INTO document_task (task_type, document_id, knowledge_base_id, status, payload) "
+                    "VALUES ('delete', %s, %s, 'pending', %s)",
+                    (document_id, document.knowledge_base_id, payload)
+                )
+            finally:
+                cursor.close()
     except Exception as e:
-        return result.error(msg=f"文件删除失败：{str(e)}")
+        return result.error(msg=f"提交删除任务失败：{str(e)}")
 
-    # 2. 从 Chroma 和 Elasticsearch 删除向量/索引（双端同步）
-    try:
-        ingestion_service = IngestionService()
-        ingestion_service.delete_document(
-            knowledge_base_id=document.knowledge_base_id,
-            document_id=document_id
-        )
-    except Exception as e:
-        # 索引删除失败，但 OSS 文件已删除；可记录日志并提示，也可决定是否回滚
-        return result.error(msg=f"文档索引删除失败：{str(e)}")
-
-    # 3. 从数据库删除记录
-    delete_result = DocumentCRUD.delete(document_id)
-    if not delete_result:
-        return result.error(msg="数据库记录删除失败")
-
-    return result.success(msg="删除成功")
+    return result.success(msg="删除任务已提交，正在清理", data={
+        "id": document_id,
+        "status": "deleting"
+    })
 
 
 @router.get("/knowledge_base/{knowledge_base_id}")
@@ -238,7 +339,6 @@ async def get_documents_by_knowledge_base(
         return result.error(msg="知识库不存在")
     if user.is_admin == 0 and not UserKnowledgeBaseCRUD.has_read_permission(user.id, knowledge_base_id):
         return result.error(msg="用户没有权限访问该知识库")
-
 
     documents, total = DocumentCRUD.get_page_by_knowledge_base(
         knowledge_base_id=knowledge_base_id,
