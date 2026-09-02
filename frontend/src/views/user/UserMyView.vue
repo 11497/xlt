@@ -310,7 +310,7 @@ const submitPassword = async () => {
       </template>
 
       <div class="dialog-content-scroll">
-        <div v-html="detailAnnouncement?.content || '暂无内容'" class="content-body"></div>
+        <div class="content-body">{{ detailAnnouncement?.content || '暂无内容' }}</div>
       </div>
 
       <div class="dialog-footer-attachments">
@@ -376,6 +376,10 @@ const submitPassword = async () => {
   padding: 10px 0;
   line-height: 1.6;
   color: #333;
+}
+.content-body {
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .dialog-footer-attachments {
