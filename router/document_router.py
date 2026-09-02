@@ -179,7 +179,11 @@ async def download_document(
     # 生成预签名URL用于下载
     try:
         async with OSSUtil() as oss_client:
-            url_result = await oss_client.generate_presigned_url(document.storage_path, expires=EXPIRES)
+            url_result = await oss_client.generate_presigned_url(
+                document.storage_path,
+                expires=EXPIRES,
+                download_filename=document.filename
+            )
 
             return result.success(
                 msg="下载链接生成成功",
