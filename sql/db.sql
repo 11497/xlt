@@ -116,7 +116,7 @@ create table announcement_attachment (
     id int auto_increment primary key comment '公告附件id',
     announcement_id int not null comment '公告id',
     filename varchar(255) not null comment '附件文件名',
-    storage_path varchar(500) not null comment '附件存储路径',
+    storage_path varchar(500) not null comment 'OSS对象key，使用UUID避免同名覆盖',
     upload_time datetime not null default current_timestamp comment '上传时间',
     constraint fk_announcement_attachment_announcement
         foreign key (announcement_id) references announcement(id) on delete restrict
