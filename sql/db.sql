@@ -70,13 +70,38 @@ create table role_knowledge_base (
 create table document (
     id int auto_increment primary key comment '文档id',
     knowledge_base_id int not null comment '知识库id',
-    filename varchar(255) not null comment '文档文件名',
-    storage_path varchar(500) not null comment '文档存储路径',
+    filename varchar(255) not null comment '文档文件名（原始文件名，仅用于展示和下载）',
+    storage_path varchar(500) not null comment 'OSS对象key，使用UUID避免同名覆盖',
+    status varchar(20) not null default 'pending' comment '状态：pending=待索引, indexing=索引中, ready=可用, failed=索引失败, deleting=删除中',
+    error_message text null comment '最近一次失败原因',
+    retry_count int not null default 0 comment '索引重试次数',
+    chunk_count int null comment '实际写入的切片数',
     create_time datetime not null default current_timestamp comment '创建时间',
     update_time datetime not null default current_timestamp comment '更新时间',
+    key idx_document_status (status),
+    key idx_document_kb_status (knowledge_base_id, status),
     constraint fk_document_knowledge_base
         foreign key (knowledge_base_id) references knowledge_base(id) on delete restrict
 ) comment '文档';
+
+create table document_task (
+    id bigint unsigned auto_increment primary key comment '任务id',
+    task_type varchar(20) not null comment '任务类型：index=索引, delete=删除',
+    document_id int not null comment '文档id',
+    knowledge_base_id int not null comment '知识库id',
+    status varchar(20) not null default 'pending' comment '状态：pending=待处理, processing=处理中, done=完成, failed=失败',
+    payload text null comment '任务参数（JSON），如 object_key、文件名',
+    error_message text null comment '失败原因',
+    retry_count int not null default 0 comment '已重试次数',
+    max_retries int not null default 5 comment '最大重试次数',
+    next_retry_at datetime null comment '下次重试时间（指数退避）',
+    result_json text null comment '各存储删除/写入结果记录（OSS/Chroma/ES）',
+    create_time datetime not null default current_timestamp comment '创建时间',
+    update_time datetime not null default current_timestamp on update current_timestamp comment '更新时间',
+    key idx_task_status_retry (status, next_retry_at),
+    key idx_task_document (document_id),
+    key idx_task_kb (knowledge_base_id)
+) comment '文档索引/删除异步任务';
 
 create table announcement (
     id int auto_increment primary key comment '公告id',

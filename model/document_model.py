@@ -1,4 +1,4 @@
-from datetime import datetime
+﻿from datetime import datetime
 from typing import Optional
 
 from pydantic import BaseModel, Field
@@ -12,6 +12,10 @@ class Document(BaseModel):
     create_time: datetime
     update_time: datetime
     id: Optional[int] = Field(default=None, ge=1)  # 新建时 id 为 None，查询时自动填充
+    status: str = Field(default="pending", max_length=20)
+    error_message: Optional[str] = None
+    retry_count: int = Field(default=0, ge=0)
+    chunk_count: Optional[int] = Field(default=None, ge=0)
 
     def to_dict(self) -> dict:
         return self.model_dump()

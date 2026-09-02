@@ -1,4 +1,5 @@
-from typing import List, Optional, Tuple
+﻿from typing import List, Optional, Tuple
+
 from util.db_util import get_cursor
 from model.document_model import Document
 
@@ -8,13 +9,19 @@ class DocumentCRUD:
     @staticmethod
     def create(document: Document) -> int:
         """
-        新增文档
+        新增文档（初始状态为 pending）
         :param document: 文档对象
         :return: 新插入记录的 id
         """
-        sql = "INSERT INTO document (knowledge_base_id, filename, storage_path) VALUES (%s, %s, %s)"
+        sql = ("INSERT INTO document (knowledge_base_id, filename, storage_path, status) "
+               "VALUES (%s, %s, %s, %s)")
         with get_cursor() as cursor:
-            cursor.execute(sql, (document.knowledge_base_id, document.filename, document.storage_path))
+            cursor.execute(sql, (
+                document.knowledge_base_id,
+                document.filename,
+                document.storage_path,
+                document.status or "pending"
+            ))
             return cursor.lastrowid
 
     @staticmethod
@@ -70,6 +77,20 @@ class DocumentCRUD:
             return [Document.from_row(r) for r in rows]
 
     @staticmethod
+    def get_by_status(status: str, limit: int = 100) -> List[Document]:
+        """
+        按状态查询文档
+        :param status: 文档状态
+        :param limit: 返回数量上限
+        :return: 文档对象列表
+        """
+        sql = "SELECT * FROM document WHERE status = %s ORDER BY id ASC LIMIT %s"
+        with get_cursor() as cursor:
+            cursor.execute(sql, (status, limit))
+            rows = cursor.fetchall()
+            return [Document.from_row(r) for r in rows]
+
+    @staticmethod
     def update(document_id: int, filename: str, storage_path: str) -> bool:
         """
         根据 ID 更新文档文件名和存储路径
@@ -83,6 +104,40 @@ class DocumentCRUD:
         sql = "UPDATE document SET filename = %s, storage_path = %s, update_time = NOW() WHERE id = %s"
         with get_cursor() as cursor:
             affected = cursor.execute(sql, (filename, storage_path, document_id))
+            return affected > 0
+
+    @staticmethod
+    def update_status(
+            document_id: int,
+            status: str,
+            error_message: Optional[str] = None,
+            retry_count: Optional[int] = None,
+            chunk_count: Optional[int] = None
+    ) -> bool:
+        """
+        更新文档状态
+        :param document_id: 文档ID
+        :param status: 目标状态
+        :param error_message: 失败原因（可选）
+        :param retry_count: 重试次数（可选）
+        :param chunk_count: 切片数（可选）
+        :return: 是否更新成功
+        """
+        sets = ["status = %s", "update_time = NOW()"]
+        params: list = [status]
+        if error_message is not None:
+            sets.append("error_message = %s")
+            params.append(error_message)
+        if retry_count is not None:
+            sets.append("retry_count = %s")
+            params.append(retry_count)
+        if chunk_count is not None:
+            sets.append("chunk_count = %s")
+            params.append(chunk_count)
+        params.append(document_id)
+        sql = f"UPDATE document SET {', '.join(sets)} WHERE id = %s"
+        with get_cursor() as cursor:
+            affected = cursor.execute(sql, tuple(params))
             return affected > 0
 
     @staticmethod
