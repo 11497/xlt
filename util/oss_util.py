@@ -91,20 +91,27 @@ class OSSUtil:
 
     async def delete_file(self, object_key: str) -> dict:
         """
-        删除文件
+        删除文件（幂等）
         :param object_key: 对象键
-        :return: 包含status_code、request_id的结果字典
+        :return: 包含status_code、request_id、deleted的结果字典；
+                 对象不存在时返回 status_code=404、deleted=False，不抛异常
         """
-        result = await self._client.delete_object(
-            oss.DeleteObjectRequest(
-                bucket=self._bucket,
-                key=object_key,
+        try:
+            result = await self._client.delete_object(
+                oss.DeleteObjectRequest(
+                    bucket=self._bucket,
+                    key=object_key,
+                )
             )
-        )
-        return {
-            "status_code": result.status_code,
-            "request_id": result.request_id,
-        }
+            return {
+                "status_code": result.status_code,
+                "request_id": result.request_id,
+                "deleted": True,
+            }
+        except oss.exceptions.OperationError as e:
+            if hasattr(e, 'status_code') and e.status_code == 404:
+                return {"status_code": 404, "request_id": None, "deleted": False}
+            raise
 
     async def get_file(self, object_key: str) -> dict:
         """
@@ -177,6 +184,57 @@ class OSSUtil:
             "expires": expires,
             "method": result.method,
         }
+
+    async def list_objects(self, prefix: str, marker: Optional[str] = None, max_keys: int = 1000) -> dict:
+        """
+        按前缀列出对象（分页，配合 marker 遍历全部）
+        :param prefix: 对象名前缀
+        :param marker: 分页游标（上一页的 next_marker）
+        :param max_keys: 单次最大返回数量
+        :return: 包含 contents(list of dict key)、next_marker、is_truncated 的结果字典
+        """
+        result = await self._client.list_objects(
+            oss.ListObjectsRequest(
+                bucket=self._bucket,
+                prefix=prefix,
+                marker=marker,
+                max_keys=max_keys,
+            )
+        )
+        contents = [
+            {"key": obj.key, "size": obj.size, "last_modified": obj.last_modified}
+            for obj in (result.contents or [])
+        ]
+        return {
+            "contents": contents,
+            "next_marker": result.next_marker,
+            "is_truncated": bool(result.is_truncated),
+        }
+
+    async def list_all_objects(self, prefix: str) -> list:
+        """
+        列出前缀下全部对象 key（自动翻页）
+        :param prefix: 对象名前缀
+        :return: 对象 key 列表
+        """
+        keys: list[str] = []
+        marker = None
+        while True:
+            page = await self.list_objects(prefix=prefix, marker=marker)
+            keys.extend(item["key"] for item in page["contents"])
+            if not page["is_truncated"] or not page["next_marker"]:
+                break
+            marker = page["next_marker"]
+        return keys
+
+    async def object_exists(self, object_key: str) -> bool:
+        """
+        判断对象是否存在（对账用）
+        :param object_key: 对象键
+        :return: 是否存在
+        """
+        result = await self.get_file(object_key)
+        return bool(result.get("exists"))
 
     async def __aenter__(self):
         return self
