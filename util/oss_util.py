@@ -1,11 +1,35 @@
 import mimetypes
 from datetime import timedelta
+from urllib.parse import quote
 from typing import Optional, Union
 
 import alibabacloud_oss_v2 as oss
 import alibabacloud_oss_v2.aio as oss_aio
 
 from config.oss_config import OSS_CONFIG, DOC_CONTENT_TYPES
+
+
+def _build_download_content_disposition(filename: str) -> str:
+    """构造下载响应头，避免浏览器使用带 UUID 的 OSS 对象名"""
+    safe_name = (
+        filename
+        .replace("\\", "_")
+        .replace('"', "'")
+        .replace("\r", " ")
+        .replace("\n", " ")
+    )
+
+    # filename 提供旧浏览器兜底值；filename* 按 RFC 5987 支持中文文件名
+    ascii_name = safe_name.encode("ascii", "ignore").decode("ascii").strip()
+    if not ascii_name:
+        ext = "." + safe_name.rsplit(".", 1)[-1] if "." in safe_name else ""
+        ascii_name = "document" + ext
+
+    utf8_name = quote(safe_name, safe="")
+    return (
+        f'attachment; filename="{ascii_name}"; '
+        f"filename*=UTF-8''{utf8_name}"
+    )
 
 
 class OSSUtil:
@@ -161,21 +185,30 @@ class OSSUtil:
         return result
 
     async def generate_presigned_url(
-            self, object_key: str, expires: int = 300
+            self,
+            object_key: str,
+            expires: int = 300,
+            download_filename: Optional[str] = None
     ) -> dict:
         """
         生成预签名URL，用于在阻止公共访问的Bucket中实现临时预览/下载
         :param object_key: 对象键
         :param expires: URL有效期（秒），默认1小时
+        :param download_filename: 浏览器保存时使用的文件名
         :return: 包含url和expires的字典
         """
         # 将整数秒数转换为 timedelta 对象
         expires_delta = timedelta(seconds=expires)
 
+        request_kwargs = {}
+        if download_filename:
+            request_kwargs["response_content_disposition"] = _build_download_content_disposition(download_filename)
+
         result = await self._client.presign(
             oss.GetObjectRequest(
                 bucket=self._bucket,
                 key=object_key,
+                **request_kwargs,
             ),
             expires=expires_delta,  # 使用 timedelta 类型
         )
