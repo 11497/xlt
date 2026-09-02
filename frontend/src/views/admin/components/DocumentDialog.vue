@@ -1,7 +1,7 @@
-<script setup>
-import { ref, reactive } from 'vue';
-import { Delete, Upload } from '@element-plus/icons-vue';
-import { getDocumentListByKnowledgeBase, deleteDocument, uploadDocument } from '@/api/document.js';
+﻿<script setup>
+import { ref, reactive, onBeforeUnmount } from 'vue';
+import { Delete, Upload, Refresh } from '@element-plus/icons-vue';
+import { getDocumentListByKnowledgeBase, deleteDocument, uploadDocument, getDocumentStatus, reindexDocument } from '@/api/document.js';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { UPLOAD_ACCEPT, validateUploadFile } from '@/utils/uploadValidation.js';
 
@@ -22,6 +22,26 @@ const pagination = reactive({
   knowledgeBaseId: null
 });
 
+// 状态轮询定时器
+let pollTimer = null;
+
+// 状态文案与标签类型映射
+const STATUS_META = {
+  pending: { text: '待索引', type: 'warning' },
+  indexing: { text: '索引中', type: 'warning' },
+  ready: { text: '可用', type: 'success' },
+  failed: { text: '失败', type: 'danger' },
+  deleting: { text: '删除中', type: 'info' },
+};
+const statusMeta = (status) => STATUS_META[status] || { text: status || '未知', type: 'info' };
+
+// 停止轮询
+const stopPolling = () => {
+  if (pollTimer) {
+    clearTimeout(pollTimer);
+    pollTimer = null;
+  }
+};
 
 // 打开弹窗并加载数据
 const open = (kbId, kbName = '') => {
@@ -30,12 +50,28 @@ const open = (kbId, kbName = '') => {
   currentKbName.value = kbName;
   dialogVisible.value = true;
   fetchDocuments();
+  startPolling();
+};
+
+// 开始轮询进行中的文档状态
+const startPolling = () => {
+  stopPolling();
+  pollTimer = setTimeout(async () => {
+    if (!dialogVisible.value) { stopPolling(); return; }
+    const hasActive = documentList.value.some((d) => ['pending', 'indexing', 'deleting'].includes(d.status));
+    if (hasActive) {
+      await fetchDocuments(true);
+      pollTimer = setTimeout(startPolling, 1500);
+    } else {
+      stopPolling();
+    }
+  }, 1500);
 };
 
 // 获取文档列表
-const fetchDocuments = async () => {
+const fetchDocuments = async (silent = false) => {
   if (!pagination.knowledgeBaseId) return;
-  loading.value = true;
+  if (!silent) loading.value = true;
   try {
     const res = await getDocumentListByKnowledgeBase(
         pagination.knowledgeBaseId,
@@ -45,6 +81,12 @@ const fetchDocuments = async () => {
     if (res.code === 1) {
       documentList.value = res.data.list || [];
       pagination.total = res.data.total || 0;
+      // 更新后继续轮询（如果有进行中任务）
+      if (documentList.value.some((d) => ['pending', 'indexing', 'deleting'].includes(d.status))) {
+        startPolling();
+      } else {
+        stopPolling();
+      }
     } else {
       ElMessage.error(res.msg || '获取文档列表失败');
     }
@@ -58,6 +100,7 @@ const fetchDocuments = async () => {
 
 // 处理删除文档
 const handleDelete = (row) => {
+  if (row.status === 'deleting') { ElMessage.warning('该文档正在删除中'); return; }
   ElMessageBox.confirm(
       `确定要删除文档「${row.filename}」吗？此操作不可恢复。`,
       '删除确认',
@@ -70,8 +113,9 @@ const handleDelete = (row) => {
     try {
       const res = await deleteDocument(row.id);
       if (res.code === 1) {
-        ElMessage.success('删除成功');
+        ElMessage.success('删除任务已提交');
         await fetchDocuments();
+        startPolling();
       } else {
         ElMessage.error(res.msg || '删除失败');
       }
@@ -79,6 +123,23 @@ const handleDelete = (row) => {
       ElMessage.error(error);
     }
   }).catch(() => {});
+};
+
+// 重新索引（failed 文档）
+const handleReindex = async (row) => {
+  try {
+    const res = await reindexDocument(row.id);
+    if (res.code === 1) {
+      ElMessage.success('已重新提交索引任务');
+      await fetchDocuments();
+      startPolling();
+    } else {
+      ElMessage.error(res.msg || '重新索引失败');
+    }
+  } catch (error) {
+    console.error(error);
+    ElMessage.error('重新索引失败，请稍后重试');
+  }
 };
 
 // 自定义上传请求
@@ -90,8 +151,9 @@ const handleUploadRequest = async (options) => {
   try {
     const res = await uploadDocument(formData);
     if (res.code === 1) {
-      ElMessage.success('上传成功');
+      ElMessage.success('上传成功，正在后台索引');
       await fetchDocuments();
+      startPolling();
     } else {
       ElMessage.error(res.msg || '上传失败');
     }
@@ -111,6 +173,9 @@ const beforeUpload = (file) => {
   return true;
 };
 
+// 关闭时停止轮询
+onBeforeUnmount(stopPolling);
+
 // 暴露 open 方法供父组件调用
 defineExpose({ open });
 </script>
@@ -121,6 +186,7 @@ defineExpose({ open });
       :title="`知识库文档列表 - ${currentKbName}`"
       width="900px"
       destroy-on-close
+      @closed="stopPolling"
   >
     <!-- 上传按钮区域 -->
     <div class="upload-bar">
@@ -149,25 +215,42 @@ defineExpose({ open });
       <!-- 2. 文档名 -->
       <el-table-column prop="filename" label="文档名" min-width="200" show-overflow-tooltip />
 
-      <!-- 3. 创建时间 -->
-      <el-table-column prop="create_time" label="创建时间" width="180" align="center">
+      <!-- 3. 状态 -->
+      <el-table-column label="状态" width="110" align="center">
+        <template #default="{ row }">
+          <el-tag :type="statusMeta(row.status).type" size="small">
+            {{ statusMeta(row.status).text }}
+          </el-tag>
+        </template>
+      </el-table-column>
+
+      <!-- 4. 创建时间 -->
+      <el-table-column prop="create_time" label="创建时间" width="160" align="center">
         <template #default="{ row }">
           {{ row.create_time }}
         </template>
       </el-table-column>
 
-      <!-- 4. 修改时间 -->
-      <el-table-column prop="update_time" label="修改时间" width="180" align="center">
+      <!-- 5. 修改时间 -->
+      <el-table-column prop="update_time" label="修改时间" width="160" align="center">
         <template #default="{ row }">
           {{ row.update_time }}
         </template>
       </el-table-column>
 
-      <!-- 5. 删除按钮 -->
-      <el-table-column label="操作" width="120" align="center" fixed="right">
+      <!-- 6. 操作 -->
+      <el-table-column label="操作" width="150" align="center" fixed="right">
         <template #default="{ row }">
-          <el-button type="danger" link @click="handleDelete(row)">
+          <el-button type="danger" link :disabled="row.status === 'deleting'" @click="handleDelete(row)">
             <el-icon><Delete /></el-icon> 删除
+          </el-button>
+          <el-button
+              v-if="row.status === 'failed'"
+              type="warning"
+              link
+              @click="handleReindex(row)"
+          >
+            <el-icon><Refresh /></el-icon> 重试
           </el-button>
         </template>
       </el-table-column>

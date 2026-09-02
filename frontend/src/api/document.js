@@ -1,7 +1,7 @@
-import request from "@/utils/request.js";
+﻿import request from "@/utils/request.js";
 import {ElMessage} from "element-plus";
 
-// 上传文档
+// 上传文档（异步索引，返回 status: pending）
 export const uploadDocument = (formData) =>
   request.post("/document/upload", formData, {
     headers: { "Content-Type": "multipart/form-data" },
@@ -29,8 +29,14 @@ export const downloadDocument = async (id) => {
   }
 };
 
-// 删除文档
+// 删除文档（异步：提交删除任务）
 export const deleteDocument = (id) => request.delete(`/document/${id}`);
+
+// 查询文档索引状态（前端轮询用）
+export const getDocumentStatus = (id) => request.get(`/document/status/${id}`);
+
+// 重新索引文档（failed 或需重建索引）
+export const reindexDocument = (id) => request.post(`/document/reindex/${id}`);
 
 // 按知识库分页查询文档列表
 export const getDocumentListByKnowledgeBase = (knowledgeBaseId, page = 1, pageSize = 10) =>
