@@ -1,4 +1,4 @@
-from typing import List, Dict, Any
+﻿from typing import List, Dict, Any
 
 from util.db_util import get_cursor
 
@@ -17,7 +17,7 @@ class UserKnowledgeBaseCRUD:
         SELECT rkb.knowledge_base_id
         FROM role_user ru
         JOIN role_knowledge_base rkb ON ru.role_id = rkb.role_id
-        WHERE ru.user_id = %s
+        WHERE ru.user_id = %s AND ru.is_deleted = 0 AND rkb.is_deleted = 0
         GROUP BY rkb.knowledge_base_id
         """
         with get_cursor() as cursor:
@@ -39,7 +39,7 @@ class UserKnowledgeBaseCRUD:
         SELECT MAX(rkb.permission) AS permission
         FROM role_user ru
         JOIN role_knowledge_base rkb ON ru.role_id = rkb.role_id
-        WHERE ru.user_id = %s AND rkb.knowledge_base_id = %s
+        WHERE ru.user_id = %s AND ru.is_deleted = 0 AND rkb.is_deleted = 0 AND rkb.knowledge_base_id = %s
         """
         with get_cursor() as cursor:
             cursor.execute(sql, (user_id, knowledge_base_id))
@@ -58,7 +58,7 @@ class UserKnowledgeBaseCRUD:
         SELECT ru.user_id, MAX(rkb.permission) AS permission
         FROM role_knowledge_base rkb
         JOIN role_user ru ON rkb.role_id = ru.role_id
-        WHERE rkb.knowledge_base_id = %s
+        WHERE rkb.knowledge_base_id = %s AND rkb.is_deleted = 0 AND ru.is_deleted = 0
         GROUP BY ru.user_id
         """
         with get_cursor() as cursor:
@@ -87,7 +87,7 @@ class UserKnowledgeBaseCRUD:
                         SELECT rkb.knowledge_base_id
                         FROM role_user ru
                         JOIN role_knowledge_base rkb ON ru.role_id = rkb.role_id
-                        WHERE ru.user_id = %s
+                        WHERE ru.user_id = %s AND ru.is_deleted = 0 AND rkb.is_deleted = 0
                         GROUP BY rkb.knowledge_base_id
                     ) accessible_kbs
                     """
@@ -96,7 +96,7 @@ class UserKnowledgeBaseCRUD:
                    SELECT rkb.knowledge_base_id, MAX(rkb.permission) AS permission
                    FROM role_user ru
                             JOIN role_knowledge_base rkb ON ru.role_id = rkb.role_id
-                   WHERE ru.user_id = %s
+                   WHERE ru.user_id = %s AND ru.is_deleted = 0 AND rkb.is_deleted = 0
                    GROUP BY rkb.knowledge_base_id
                    LIMIT %s OFFSET %s \
                    """
@@ -129,7 +129,7 @@ class UserKnowledgeBaseCRUD:
                         SELECT ru.user_id
                         FROM role_knowledge_base rkb
                         JOIN role_user ru ON rkb.role_id = ru.role_id
-                        WHERE rkb.knowledge_base_id = %s
+                        WHERE rkb.knowledge_base_id = %s AND rkb.is_deleted = 0 AND ru.is_deleted = 0
                         GROUP BY ru.user_id
                     ) accessible_users
                     """
@@ -138,7 +138,7 @@ class UserKnowledgeBaseCRUD:
                    SELECT ru.user_id, MAX(rkb.permission) AS permission
                    FROM role_knowledge_base rkb
                             JOIN role_user ru ON rkb.role_id = ru.role_id
-                   WHERE rkb.knowledge_base_id = %s
+                   WHERE rkb.knowledge_base_id = %s AND rkb.is_deleted = 0 AND ru.is_deleted = 0
                    GROUP BY ru.user_id
                    LIMIT %s OFFSET %s \
                    """

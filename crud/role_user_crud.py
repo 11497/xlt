@@ -1,4 +1,4 @@
-from typing import List, Tuple
+﻿from typing import List, Tuple
 
 from model.role_model import Role
 from model.user_model import User
@@ -19,12 +19,12 @@ class RoleUserCRUD:
             return True  # 空列表视为成功操作
 
         # 构造批量插入SQL
-        sql = "INSERT IGNORE INTO role_user (role_id, user_id) VALUES "
+        sql = "INSERT INTO role_user (role_id, user_id, is_deleted, deleted_at) VALUES "
         values_placeholders = []
         params = []
 
         for user_id in user_ids:
-            values_placeholders.append("(%s, %s)")
+            values_placeholders.append("(%s, %s, 0, NULL) ON DUPLICATE KEY UPDATE is_deleted = 0, deleted_at = NULL")
             params.extend([role_id, user_id])
 
         sql += ",".join(values_placeholders)
@@ -46,7 +46,7 @@ class RoleUserCRUD:
 
         # 构造批量删除SQL
         placeholders = ','.join(['%s'] * len(user_ids))
-        sql = f"DELETE FROM role_user WHERE role_id = %s AND user_id IN ({placeholders})"
+        sql = f"UPDATE role_user SET is_deleted = 1, deleted_at = NOW() WHERE is_deleted = 0 AND role_id = %s AND user_id IN ({placeholders})"
 
         with get_cursor() as cursor:
             params = [role_id] + user_ids
@@ -60,7 +60,7 @@ class RoleUserCRUD:
         :param role_id: 角色ID
         :return: 用户ID列表
         """
-        sql = "SELECT user_id FROM role_user WHERE role_id = %s"
+        sql = "SELECT user_id FROM role_user WHERE role_id = %s AND is_deleted = 0"
         with get_cursor() as cursor:
             cursor.execute(sql, (role_id,))
             rows = cursor.fetchall()
@@ -73,7 +73,7 @@ class RoleUserCRUD:
         :param user_id: 用户ID
         :return: 角色ID列表
         """
-        sql = "SELECT role_id FROM role_user WHERE user_id = %s"
+        sql = "SELECT role_id FROM role_user WHERE user_id = %s AND is_deleted = 0"
         with get_cursor() as cursor:
             cursor.execute(sql, (user_id,))
             rows = cursor.fetchall()
@@ -87,7 +87,7 @@ class RoleUserCRUD:
         :param user_id: 用户ID
         :return: 是否成功分配
         """
-        sql = "INSERT IGNORE INTO role_user (role_id, user_id) VALUES (%s, %s)"
+        sql = "INSERT INTO role_user (role_id, user_id, is_deleted, deleted_at) VALUES (%s, %s, 0, NULL) ON DUPLICATE KEY UPDATE is_deleted = 0, deleted_at = NULL"
         with get_cursor() as cursor:
             affected = cursor.execute(sql, (role_id, user_id))
             return affected > 0
@@ -100,7 +100,7 @@ class RoleUserCRUD:
         :param user_id: 用户ID
         :return: 是否成功移除
         """
-        sql = "DELETE FROM role_user WHERE role_id = %s AND user_id = %s"
+        sql = "UPDATE role_user SET is_deleted = 1, deleted_at = NOW() WHERE is_deleted = 0 AND role_id = %s AND user_id = %s"
         with get_cursor() as cursor:
             affected = cursor.execute(sql, (role_id, user_id))
             return affected > 0
@@ -112,7 +112,7 @@ class RoleUserCRUD:
         :param role_id: 角色ID
         :return: 是否成功删除
         """
-        sql = "DELETE FROM role_user WHERE role_id = %s"
+        sql = "UPDATE role_user SET is_deleted = 1, deleted_at = NOW() WHERE is_deleted = 0 AND role_id = %s"
         with get_cursor() as cursor:
             affected = cursor.execute(sql, (role_id,))
             return affected > 0
@@ -124,7 +124,7 @@ class RoleUserCRUD:
         :param user_id: 用户ID
         :return: 是否成功删除
         """
-        sql = "DELETE FROM role_user WHERE user_id = %s"
+        sql = "UPDATE role_user SET is_deleted = 1, deleted_at = NOW() WHERE is_deleted = 0 AND user_id = %s"
         with get_cursor() as cursor:
             affected = cursor.execute(sql, (user_id,))
             return affected > 0
@@ -146,10 +146,10 @@ class RoleUserCRUD:
 
         sql_count = ("SELECT COUNT(*) AS total FROM role_user ru "
                      "JOIN user u ON ru.user_id = u.id "
-                     "WHERE ru.role_id = %s")
+                     "WHERE ru.role_id = %s AND ru.is_deleted = 0 AND u.is_deleted = 0")
         sql_data = ("SELECT u.* FROM role_user ru "
                     "JOIN user u ON ru.user_id = u.id "
-                    "WHERE ru.role_id = %s "
+                    "WHERE ru.role_id = %s AND ru.is_deleted = 0 AND u.is_deleted = 0 "
                     "LIMIT %s OFFSET %s")
 
         with get_cursor() as cursor:
@@ -183,10 +183,10 @@ class RoleUserCRUD:
 
         sql_count = ("SELECT COUNT(*) AS total FROM role_user ru "
                      "JOIN role r ON ru.role_id = r.id "
-                     "WHERE ru.user_id = %s")
+                     "WHERE ru.user_id = %s AND ru.is_deleted = 0 AND r.is_deleted = 0")
         sql_data = ("SELECT r.* FROM role_user ru "
                     "JOIN role r ON ru.role_id = r.id "
-                    "WHERE ru.user_id = %s "
+                    "WHERE ru.user_id = %s AND ru.is_deleted = 0 AND r.is_deleted = 0 "
                     "LIMIT %s OFFSET %s")
 
         with get_cursor() as cursor:

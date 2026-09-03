@@ -1,4 +1,4 @@
-from typing import List, Optional, Tuple
+﻿from typing import List, Optional, Tuple
 from util.db_util import get_cursor
 from model.role_model import Role
 
@@ -24,7 +24,7 @@ class RoleCRUD:
         :param name: 角色名
         :return: 角色对象（如果存在）
         """
-        sql = "SELECT * FROM role WHERE name = %s"
+        sql = "SELECT * FROM role WHERE name = %s AND is_deleted = 0"
         with get_cursor() as cursor:
             cursor.execute(sql, (name,))
             row = cursor.fetchone()
@@ -37,7 +37,7 @@ class RoleCRUD:
         :param role_id: 角色ID
         :return: 角色对象（如果存在）
         """
-        sql = "SELECT * FROM role WHERE id = %s"
+        sql = "SELECT * FROM role WHERE id = %s AND is_deleted = 0"
         with get_cursor() as cursor:
             cursor.execute(sql, (role_id,))
             row = cursor.fetchone()
@@ -49,7 +49,7 @@ class RoleCRUD:
         查询所有角色
         :return: 角色对象列表
         """
-        sql = "SELECT * FROM role"
+        sql = "SELECT * FROM role WHERE is_deleted = 0"
         with get_cursor() as cursor:
             cursor.execute(sql)
             rows = cursor.fetchall()
@@ -65,8 +65,8 @@ class RoleCRUD:
         """
         offset = (page - 1) * page_size
 
-        sql_count = "SELECT COUNT(*) AS total FROM role"
-        sql_data = "SELECT * FROM role LIMIT %s OFFSET %s"
+        sql_count = "SELECT COUNT(*) AS total FROM role WHERE is_deleted = 0"
+        sql_data = "SELECT * FROM role WHERE is_deleted = 0 LIMIT %s OFFSET %s"
 
         with get_cursor() as cursor:
             # 获取总数，兼容字典游标和元组游标
@@ -94,7 +94,7 @@ class RoleCRUD:
         """
         if role_id is None:
             raise ValueError("更新操作需要提供 role_id")
-        sql = "UPDATE role SET name = %s WHERE id = %s"
+        sql = "UPDATE role SET name = %s WHERE id = %s AND is_deleted = 0"
         with get_cursor() as cursor:
             affected = cursor.execute(sql, (name, role_id))
             return affected > 0
@@ -106,7 +106,7 @@ class RoleCRUD:
         :param role_id: 角色ID
         :return: 是否成功删除了记录
         """
-        sql = "DELETE FROM role WHERE id = %s"
+        sql = "UPDATE role SET is_deleted = 1, deleted_at = NOW() WHERE id = %s AND is_deleted = 0"
         with get_cursor() as cursor:
             affected = cursor.execute(sql, (role_id,))
             return affected > 0
@@ -120,13 +120,13 @@ class RoleCRUD:
         """
         roles = []
 
-        sql1 = "SELECT * FROM role WHERE id = %s"
+        sql1 = "SELECT * FROM role WHERE id = %s AND is_deleted = 0"
         with get_cursor() as cursor:
             cursor.execute(sql1, (content,))
             rows = cursor.fetchall()
             roles.extend([Role.from_row(r) for r in rows])
 
-        sql2 = "SELECT * FROM role WHERE name LIKE %s"
+        sql2 = "SELECT * FROM role WHERE name LIKE %s AND is_deleted = 0"
         with get_cursor() as cursor:
             cursor.execute(sql2, (f"%{content}%",))
             rows = cursor.fetchall()

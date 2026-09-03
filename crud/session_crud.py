@@ -1,4 +1,4 @@
-from typing import List, Optional, Tuple
+﻿from typing import List, Optional, Tuple
 from util.db_util import get_cursor
 from model.session_model import (
     Session,
@@ -30,7 +30,7 @@ class SessionCRUD:
         :param session_id: 会话ID
         :return: 会话对象（如果存在）
         """
-        sql = "SELECT * FROM session WHERE id = %s"
+        sql = "SELECT * FROM session WHERE id = %s AND is_deleted = 0"
         with get_cursor() as cursor:
             cursor.execute(sql, (session_id,))
             row = cursor.fetchone()
@@ -43,7 +43,7 @@ class SessionCRUD:
         :param session_id: 会话ID
         :return: 是否成功删除了记录
         """
-        sql = "DELETE FROM session WHERE id = %s"
+        sql = "UPDATE session SET is_deleted = 1, deleted_at = NOW(), update_time = NOW() WHERE id = %s AND is_deleted = 0"
         with get_cursor() as cursor:
             affected = cursor.execute(sql, (session_id,))
             return affected > 0
@@ -55,7 +55,7 @@ class SessionCRUD:
         :param user_id: 用户ID
         :return: 会话对象列表
         """
-        sql = "SELECT * FROM session WHERE user_id = %s ORDER BY update_time DESC"
+        sql = "SELECT * FROM session WHERE user_id = %s AND is_deleted = 0 ORDER BY update_time DESC"
         with get_cursor() as cursor:
             cursor.execute(sql, (user_id,))
             rows = cursor.fetchall()
@@ -71,7 +71,7 @@ class SessionCRUD:
         :return: 是否成功更新了记录
         """
         name = normalize_session_name(name) if normalize else validate_session_name(name)
-        sql = "UPDATE session SET name = %s WHERE id = %s"
+        sql = "UPDATE session SET name = %s WHERE id = %s AND is_deleted = 0"
         with get_cursor() as cursor:
             affected = cursor.execute(sql, (name, session_id))
             return affected > 0
@@ -83,7 +83,7 @@ class SessionCRUD:
         :param session_id: 会话ID
         :return: 是否成功更新了记录
         """
-        sql = "UPDATE session SET update_time = %s WHERE id = %s"
+        sql = "UPDATE session SET update_time = %s WHERE id = %s AND is_deleted = 0"
         with get_cursor() as cursor:
             affected = cursor.execute(sql, (datetime.now(), session_id))
             return affected > 0
@@ -94,7 +94,7 @@ class SessionCRUD:
         获取所有会话
         :return: 所有会话列表
         """
-        sql = "SELECT * FROM session"
+        sql = "SELECT * FROM session WHERE is_deleted = 0"
         with get_cursor() as cursor:
             cursor.execute(sql)
             rows = cursor.fetchall()
@@ -111,11 +111,11 @@ class SessionCRUD:
         """
         offset = (page - 1) * page_size
 
-        sql_count = "SELECT COUNT(*) FROM session"
-        sql_data = "SELECT * FROM session LIMIT %s OFFSET %s"
+        sql_count = "SELECT COUNT(*) FROM session WHERE is_deleted = 0"
+        sql_data = "SELECT * FROM session WHERE is_deleted = 0 LIMIT %s OFFSET %s"
         if user_id is not None:
-            sql_count = "SELECT COUNT(*) AS total FROM session WHERE user_id = %s"
-            sql_data = "SELECT * FROM session WHERE user_id = %s LIMIT %s OFFSET %s"
+            sql_count = "SELECT COUNT(*) AS total FROM session WHERE user_id = %s AND is_deleted = 0"
+            sql_data = "SELECT * FROM session WHERE user_id = %s AND is_deleted = 0 LIMIT %s OFFSET %s"
 
         with get_cursor() as cursor:
             # 获取总数，兼容字典游标和元组游标

@@ -1,4 +1,4 @@
-from typing import List, Optional
+﻿from typing import List, Optional
 from util.db_util import get_cursor
 from model.message_model import Message
 
@@ -24,7 +24,7 @@ class MessageCRUD:
         :param session_id: 会话ID
         :return: 消息对象列表
         """
-        sql = "SELECT * FROM message WHERE session_id = %s ORDER BY create_time"
+        sql = "SELECT * FROM message WHERE session_id = %s AND is_deleted = 0 ORDER BY create_time"
         with get_cursor() as cursor:
             cursor.execute(sql, (session_id,))
             rows = cursor.fetchall()
@@ -37,7 +37,7 @@ class MessageCRUD:
         :param session_id: 会话ID
         :return: 是否成功删除了记录
         """
-        sql = "DELETE FROM message WHERE session_id = %s"
+        sql = "UPDATE message SET is_deleted = 1, deleted_at = NOW() WHERE session_id = %s AND is_deleted = 0"
         with get_cursor() as cursor:
             affected = cursor.execute(sql, (session_id,))
             return affected > 0
@@ -50,7 +50,7 @@ class MessageCRUD:
         :param message_id: 消息ID
         :return: 是否成功删除了记录
         """
-        sql = "DELETE FROM message WHERE session_id = %s AND id >= %s"
+        sql = "UPDATE message SET is_deleted = 1, deleted_at = NOW() WHERE session_id = %s AND id >= %s AND is_deleted = 0"
         with get_cursor() as cursor:
             affected = cursor.execute(sql, (session_id, message_id))
             return affected > 0
@@ -62,7 +62,7 @@ class MessageCRUD:
         :param message_id: 消息ID
         :return: 消息对象（如果存在）
         """
-        sql = "SELECT * FROM message WHERE id = %s"
+        sql = "SELECT * FROM message WHERE id = %s AND is_deleted = 0"
         with get_cursor() as cursor:
             cursor.execute(sql, (message_id,))
             row = cursor.fetchone()
@@ -76,7 +76,7 @@ class MessageCRUD:
         :param rewritten_content: 重写后的内容
         :return: 是否成功更新
         """
-        sql = "UPDATE message SET rewritten_content = %s WHERE id = %s"
+        sql = "UPDATE message SET rewritten_content = %s WHERE id = %s AND is_deleted = 0"
         with get_cursor() as cursor:
             affected = cursor.execute(sql, (rewritten_content, message_id))
             return affected > 0

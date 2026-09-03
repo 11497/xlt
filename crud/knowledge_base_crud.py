@@ -1,4 +1,4 @@
-from typing import List, Optional, Tuple
+﻿from typing import List, Optional, Tuple
 
 from util.db_util import get_cursor
 from model.knowledge_base_model import KnowledgeBase
@@ -25,7 +25,7 @@ class KnowledgeBaseCRUD:
         :param knowledge_base_id: 知识库ID
         :return: KnowledgeBase对象或None
         """
-        sql = "SELECT * FROM knowledge_base WHERE id = %s"
+        sql = "SELECT * FROM knowledge_base WHERE id = %s AND is_deleted = 0"
         with get_cursor() as cursor:
             cursor.execute(sql, (knowledge_base_id,))
             row = cursor.fetchone()
@@ -40,7 +40,7 @@ class KnowledgeBaseCRUD:
         """
         if knowledge_base.id is None:
             raise ValueError("更新操作需要提供 knowledge_base.id")
-        sql = "UPDATE knowledge_base SET name = %s WHERE id = %s"
+        sql = "UPDATE knowledge_base SET name = %s WHERE id = %s AND is_deleted = 0"
         with get_cursor() as cursor:
             affected = cursor.execute(sql, (knowledge_base.name, knowledge_base.id))
             return affected > 0
@@ -51,7 +51,7 @@ class KnowledgeBaseCRUD:
         查看所有知识库
         :return: 所有知识库的列表
         """
-        sql = "SELECT * FROM knowledge_base"
+        sql = "SELECT * FROM knowledge_base WHERE is_deleted = 0"
         with get_cursor() as cursor:
             cursor.execute(sql)
             rows = cursor.fetchall()
@@ -67,8 +67,8 @@ class KnowledgeBaseCRUD:
         """
         offset = (page - 1) * page_size
 
-        sql_count = "SELECT COUNT(*) AS total FROM knowledge_base"
-        sql_data = "SELECT * FROM knowledge_base LIMIT %s OFFSET %s"
+        sql_count = "SELECT COUNT(*) AS total FROM knowledge_base WHERE is_deleted = 0"
+        sql_data = "SELECT * FROM knowledge_base WHERE is_deleted = 0 LIMIT %s OFFSET %s"
 
         with get_cursor() as cursor:
             # 获取总数（兼容字典游标和元组游标）
@@ -93,7 +93,7 @@ class KnowledgeBaseCRUD:
         :param knowledge_base_id: 知识库ID
         :return: 操作是否成功
         """
-        sql = "DELETE FROM knowledge_base WHERE id = %s"
+        sql = "UPDATE knowledge_base SET is_deleted = 1, deleted_at = NOW() WHERE id = %s AND is_deleted = 0"
         with get_cursor() as cursor:
             affected = cursor.execute(sql, (knowledge_base_id,))
             return affected > 0
@@ -107,7 +107,7 @@ class KnowledgeBaseCRUD:
         """
         knowledge_bases = []
 
-        sql1 = "SELECT * FROM knowledge_base WHERE id = %s"
+        sql1 = "SELECT * FROM knowledge_base WHERE id = %s AND is_deleted = 0"
         with get_cursor() as cursor:
             cursor.execute(sql1, (content,))
             rows = cursor.fetchall()
@@ -116,7 +116,7 @@ class KnowledgeBaseCRUD:
                 for row in rows:
                     knowledge_bases.append(KnowledgeBase.from_row(row))
 
-        sql2 = "SELECT * FROM knowledge_base WHERE name LIKE %s"
+        sql2 = "SELECT * FROM knowledge_base WHERE name LIKE %s AND is_deleted = 0"
         with get_cursor() as cursor:
             cursor.execute(sql2, (f"%{content}%",))
             rows = cursor.fetchall()

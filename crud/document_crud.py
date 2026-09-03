@@ -45,7 +45,7 @@ class DocumentCRUD:
         :param document_id: 文档ID
         :return: 文档对象（如果存在）
         """
-        sql = "SELECT * FROM document WHERE id = %s"
+        sql = "SELECT * FROM document WHERE id = %s AND is_deleted = 0"
         with get_cursor() as cursor:
             cursor.execute(sql, (document_id,))
             row = cursor.fetchone()
@@ -58,7 +58,7 @@ class DocumentCRUD:
         :param knowledge_base_id: 知识库ID
         :return: 文档对象列表
         """
-        sql = "SELECT * FROM document WHERE knowledge_base_id = %s ORDER BY create_time DESC"
+        sql = "SELECT * FROM document WHERE knowledge_base_id = %s AND is_deleted = 0 ORDER BY create_time DESC"
         with get_cursor() as cursor:
             cursor.execute(sql, (knowledge_base_id,))
             rows = cursor.fetchall()
@@ -70,7 +70,7 @@ class DocumentCRUD:
         查询所有文档
         :return: 文档对象列表
         """
-        sql = "SELECT * FROM document ORDER BY create_time DESC"
+        sql = "SELECT * FROM document WHERE is_deleted = 0 ORDER BY create_time DESC"
         with get_cursor() as cursor:
             cursor.execute(sql)
             rows = cursor.fetchall()
@@ -84,7 +84,7 @@ class DocumentCRUD:
         :param limit: 返回数量上限
         :return: 文档对象列表
         """
-        sql = "SELECT * FROM document WHERE status = %s ORDER BY id ASC LIMIT %s"
+        sql = "SELECT * FROM document WHERE status = %s AND is_deleted = 0 ORDER BY id ASC LIMIT %s"
         with get_cursor() as cursor:
             cursor.execute(sql, (status, limit))
             rows = cursor.fetchall()
@@ -101,7 +101,7 @@ class DocumentCRUD:
         """
         if document_id is None:
             raise ValueError("更新操作需要提供 document_id")
-        sql = "UPDATE document SET filename = %s, storage_path = %s, update_time = NOW() WHERE id = %s"
+        sql = "UPDATE document SET filename = %s, storage_path = %s, update_time = NOW() WHERE id = %s AND is_deleted = 0"
         with get_cursor() as cursor:
             affected = cursor.execute(sql, (filename, storage_path, document_id))
             return affected > 0
@@ -135,7 +135,7 @@ class DocumentCRUD:
             sets.append("chunk_count = %s")
             params.append(chunk_count)
         params.append(document_id)
-        sql = f"UPDATE document SET {', '.join(sets)} WHERE id = %s"
+        sql = f"UPDATE document SET {', '.join(sets)} WHERE id = %s AND is_deleted = 0"
         with get_cursor() as cursor:
             affected = cursor.execute(sql, tuple(params))
             return affected > 0
@@ -147,7 +147,7 @@ class DocumentCRUD:
         :param document_id: 文档ID
         :return: 是否成功删除了记录
         """
-        sql = "DELETE FROM document WHERE id = %s"
+        sql = "UPDATE document SET status = 'deleted', is_deleted = 1, deleted_at = NOW(), update_time = NOW() WHERE id = %s AND is_deleted = 0"
         with get_cursor() as cursor:
             affected = cursor.execute(sql, (document_id,))
             return affected > 0
@@ -163,7 +163,7 @@ class DocumentCRUD:
             return 0
 
         placeholders = ','.join(['%s'] * len(document_ids))
-        sql = f"DELETE FROM document WHERE id IN ({placeholders})"
+        sql = f"UPDATE document SET status = 'deleted', is_deleted = 1, deleted_at = NOW(), update_time = NOW() WHERE is_deleted = 0 AND id IN ({placeholders})"
         with get_cursor() as cursor:
             cursor.execute(sql, document_ids)
             return cursor.rowcount
@@ -175,7 +175,7 @@ class DocumentCRUD:
         :param knowledge_base_id: 知识库ID
         :return: 成功删除的记录数量
         """
-        sql = "DELETE FROM document WHERE knowledge_base_id = %s"
+        sql = "UPDATE document SET status = 'deleted', is_deleted = 1, deleted_at = NOW(), update_time = NOW() WHERE is_deleted = 0 AND knowledge_base_id = %s"
         with get_cursor() as cursor:
             cursor.execute(sql, (knowledge_base_id,))
             return cursor.rowcount
@@ -195,8 +195,8 @@ class DocumentCRUD:
         """
         offset = (page - 1) * page_size
 
-        sql_count = "SELECT COUNT(*) AS total FROM document WHERE knowledge_base_id = %s"
-        sql_data = ("SELECT * FROM document WHERE knowledge_base_id = %s "
+        sql_count = "SELECT COUNT(*) AS total FROM document WHERE knowledge_base_id = %s AND is_deleted = 0"
+        sql_data = ("SELECT * FROM document WHERE knowledge_base_id = %s AND is_deleted = 0 "
                     "ORDER BY create_time DESC LIMIT %s OFFSET %s")
 
         with get_cursor() as cursor:

@@ -1,4 +1,4 @@
-from typing import List, Optional
+﻿from typing import List, Optional
 from util.db_util import get_cursor
 from model.announcement_attachment_model import AnnouncementAttachment
 
@@ -38,7 +38,7 @@ class AnnouncementAttachmentCRUD:
         :param attachment_id: 附件ID
         :return: 附件对象或 None
         """
-        sql = "SELECT * FROM announcement_attachment WHERE id = %s"
+        sql = "SELECT * FROM announcement_attachment WHERE id = %s AND is_deleted = 0"
         with get_cursor() as cursor:
             cursor.execute(sql, (attachment_id,))
             row = cursor.fetchone()
@@ -51,7 +51,7 @@ class AnnouncementAttachmentCRUD:
         :param announcement_id: 公告ID
         :return: 附件对象列表
         """
-        sql = "SELECT * FROM announcement_attachment WHERE announcement_id = %s ORDER BY upload_time DESC"
+        sql = "SELECT * FROM announcement_attachment WHERE announcement_id = %s AND is_deleted = 0 ORDER BY upload_time DESC"
         with get_cursor() as cursor:
             cursor.execute(sql, (announcement_id,))
             rows = cursor.fetchall()
@@ -63,7 +63,7 @@ class AnnouncementAttachmentCRUD:
         查询所有公告附件
         :return: 附件对象列表
         """
-        sql = "SELECT * FROM announcement_attachment ORDER BY upload_time DESC"
+        sql = "SELECT * FROM announcement_attachment WHERE is_deleted = 0 ORDER BY upload_time DESC"
         with get_cursor() as cursor:
             cursor.execute(sql)
             rows = cursor.fetchall()
@@ -80,7 +80,7 @@ class AnnouncementAttachmentCRUD:
         """
         if attachment_id is None:
             raise ValueError("更新操作需要提供 attachment_id")
-        sql = "UPDATE announcement_attachment SET filename = %s, storage_path = %s, upload_time = NOW() WHERE id = %s"
+        sql = "UPDATE announcement_attachment SET filename = %s, storage_path = %s, upload_time = NOW() WHERE id = %s AND is_deleted = 0"
         with get_cursor() as cursor:
             affected = cursor.execute(sql, (filename, storage_path, attachment_id))
             return affected > 0
@@ -92,7 +92,7 @@ class AnnouncementAttachmentCRUD:
         :param attachment_id: 附件ID
         :return: 是否成功删除了记录
         """
-        sql = "DELETE FROM announcement_attachment WHERE id = %s"
+        sql = "UPDATE announcement_attachment SET is_deleted = 1, deleted_at = NOW() WHERE id = %s AND is_deleted = 0"
         with get_cursor() as cursor:
             affected = cursor.execute(sql, (attachment_id,))
             return affected > 0
@@ -108,7 +108,7 @@ class AnnouncementAttachmentCRUD:
             return 0
 
         placeholders = ','.join(['%s'] * len(attachment_ids))
-        sql = f"DELETE FROM announcement_attachment WHERE id IN ({placeholders})"
+        sql = f"UPDATE announcement_attachment SET is_deleted = 1, deleted_at = NOW() WHERE is_deleted = 0 AND id IN ({placeholders})"
         with get_cursor() as cursor:
             cursor.execute(sql, attachment_ids)
             return cursor.rowcount
@@ -120,7 +120,7 @@ class AnnouncementAttachmentCRUD:
         :param announcement_id: 公告ID
         :return: 成功删除的记录数量
         """
-        sql = "DELETE FROM announcement_attachment WHERE announcement_id = %s"
+        sql = "UPDATE announcement_attachment SET is_deleted = 1, deleted_at = NOW() WHERE announcement_id = %s AND is_deleted = 0"
         with get_cursor() as cursor:
             cursor.execute(sql, (announcement_id,))
             return cursor.rowcount

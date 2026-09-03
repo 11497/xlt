@@ -1,4 +1,4 @@
-from typing import List, Any
+﻿from typing import List, Any
 
 from model.knowledge_base_model import KnowledgeBase
 from model.role_model import Role
@@ -18,9 +18,9 @@ class RoleKnowledgeBaseCRUD:
         if not bindings:
             return True
 
-        sql = ("INSERT INTO role_knowledge_base (role_id, knowledge_base_id, permission) "
+        sql = ("INSERT INTO role_knowledge_base (role_id, knowledge_base_id, permission, is_deleted, deleted_at) "
                "VALUES (%s, %s, %s) "
-               "ON DUPLICATE KEY UPDATE permission = VALUES(permission)")
+               "ON DUPLICATE KEY UPDATE permission = VALUES(permission), is_deleted = 0, deleted_at = NULL")
         params = [(item["role_id"], knowledge_base_id, item["permission"]) for item in bindings]
 
         with get_cursor() as cursor:
@@ -39,7 +39,7 @@ class RoleKnowledgeBaseCRUD:
             return True  # 空列表视为成功操作
         # 构造批量删除SQL
         placeholders = ','.join(['%s'] * len(role_ids))
-        sql = f"DELETE FROM role_knowledge_base WHERE knowledge_base_id = %s AND role_id IN ({placeholders})"
+        sql = f"UPDATE role_knowledge_base SET is_deleted = 1, deleted_at = NOW() WHERE is_deleted = 0 AND knowledge_base_id = %s AND role_id IN ({placeholders})"
         with get_cursor() as cursor:
             params = [knowledge_base_id] + role_ids
             cursor.execute(sql, params)
@@ -52,7 +52,7 @@ class RoleKnowledgeBaseCRUD:
         :param knowledge_base_id: 知识库ID
         :return: 角色ID列表
         """
-        sql = "SELECT role_id FROM role_knowledge_base WHERE knowledge_base_id = %s"
+        sql = "SELECT role_id FROM role_knowledge_base WHERE knowledge_base_id = %s AND is_deleted = 0"
         with get_cursor() as cursor:
             cursor.execute(sql, (knowledge_base_id,))
             rows = cursor.fetchall()
@@ -65,7 +65,7 @@ class RoleKnowledgeBaseCRUD:
         :param role_id: 角色ID
         :return: 知识库ID列表
         """
-        sql = "SELECT knowledge_base_id FROM role_knowledge_base WHERE role_id = %s"
+        sql = "SELECT knowledge_base_id FROM role_knowledge_base WHERE role_id = %s AND is_deleted = 0"
         with get_cursor() as cursor:
             cursor.execute(sql, (role_id,))
             rows = cursor.fetchall()
@@ -84,9 +84,9 @@ class RoleKnowledgeBaseCRUD:
     @staticmethod
     def upsert_binding(role_id: int, knowledge_base_id: int, permission: int) -> bool:
         """新增绑定或更新已有绑定的权限。"""
-        sql = ("INSERT INTO role_knowledge_base (role_id, knowledge_base_id, permission) "
+        sql = ("INSERT INTO role_knowledge_base (role_id, knowledge_base_id, permission, is_deleted, deleted_at) "
                "VALUES (%s, %s, %s) "
-               "ON DUPLICATE KEY UPDATE permission = VALUES(permission)")
+               "ON DUPLICATE KEY UPDATE permission = VALUES(permission), is_deleted = 0, deleted_at = NULL")
         with get_cursor() as cursor:
             cursor.execute(sql, (role_id, knowledge_base_id, permission))
             return True
@@ -99,7 +99,7 @@ class RoleKnowledgeBaseCRUD:
         :param knowledge_base_id: 知识库ID
         :return: 是否成功移除
         """
-        sql = "DELETE FROM role_knowledge_base WHERE role_id = %s AND knowledge_base_id = %s"
+        sql = "UPDATE role_knowledge_base SET is_deleted = 1, deleted_at = NOW() WHERE is_deleted = 0 AND role_id = %s AND knowledge_base_id = %s"
         with get_cursor() as cursor:
             cursor.execute(sql, (role_id, knowledge_base_id))
             return True
@@ -111,7 +111,7 @@ class RoleKnowledgeBaseCRUD:
         :param role_id: 角色ID
         :return: 是否成功删除
         """
-        sql = "DELETE FROM role_knowledge_base WHERE role_id = %s"
+        sql = "UPDATE role_knowledge_base SET is_deleted = 1, deleted_at = NOW() WHERE is_deleted = 0 AND role_id = %s"
         with get_cursor() as cursor:
             cursor.execute(sql, (role_id,))
             return True
@@ -123,7 +123,7 @@ class RoleKnowledgeBaseCRUD:
         :param knowledge_base_id: 知识库ID
         :return: 是否成功删除
         """
-        sql = "DELETE FROM role_knowledge_base WHERE knowledge_base_id = %s"
+        sql = "UPDATE role_knowledge_base SET is_deleted = 1, deleted_at = NOW() WHERE is_deleted = 0 AND knowledge_base_id = %s"
         with get_cursor() as cursor:
             cursor.execute(sql, (knowledge_base_id,))
             return True
@@ -145,10 +145,10 @@ class RoleKnowledgeBaseCRUD:
 
         sql_count = ("SELECT COUNT(*) AS total FROM role_knowledge_base rkb "
                      "JOIN knowledge_base kb ON rkb.knowledge_base_id = kb.id "
-                     "WHERE rkb.role_id = %s")
+                     "WHERE rkb.role_id = %s AND rkb.is_deleted = 0 AND kb.is_deleted = 0")
         sql_data = ("SELECT kb.id, kb.name, rkb.permission FROM role_knowledge_base rkb "
                     "JOIN knowledge_base kb ON rkb.knowledge_base_id = kb.id "
-                    "WHERE rkb.role_id = %s "
+                    "WHERE rkb.role_id = %s AND rkb.is_deleted = 0 AND kb.is_deleted = 0 "
                     "LIMIT %s OFFSET %s")
 
         with get_cursor() as cursor:
@@ -185,10 +185,10 @@ class RoleKnowledgeBaseCRUD:
 
         sql_count = ("SELECT COUNT(*) AS total FROM role_knowledge_base rkb "
                      "JOIN role r ON rkb.role_id = r.id "
-                     "WHERE rkb.knowledge_base_id = %s")
+                     "WHERE rkb.knowledge_base_id = %s AND rkb.is_deleted = 0 AND r.is_deleted = 0")
         sql_data = ("SELECT r.id, r.name, rkb.permission FROM role_knowledge_base rkb "
                     "JOIN role r ON rkb.role_id = r.id "
-                    "WHERE rkb.knowledge_base_id = %s "
+                    "WHERE rkb.knowledge_base_id = %s AND rkb.is_deleted = 0 AND r.is_deleted = 0 "
                     "LIMIT %s OFFSET %s")
 
         with get_cursor() as cursor:

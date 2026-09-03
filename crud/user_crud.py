@@ -1,4 +1,4 @@
-from typing import List, Optional, Tuple
+﻿from typing import List, Optional, Tuple
 from util.db_util import get_cursor
 from model.user_model import User
 from util.password_util import PasswordUtil
@@ -26,7 +26,7 @@ class UserCRUD:
         :param username: 用户名
         :return: 用户对象（如果存在）
         """
-        sql = "SELECT * FROM user WHERE username = %s"
+        sql = "SELECT * FROM user WHERE username = %s AND is_deleted = 0"
         with get_cursor() as cursor:
             cursor.execute(sql, (username,))
             row = cursor.fetchone()
@@ -39,7 +39,7 @@ class UserCRUD:
         :param user_id: 用户ID
         :return: 用户对象（如果存在）
         """
-        sql = "SELECT * FROM user WHERE id = %s"
+        sql = "SELECT * FROM user WHERE id = %s AND is_deleted = 0"
         with get_cursor() as cursor:
             cursor.execute(sql, (user_id,))
             row = cursor.fetchone()
@@ -51,7 +51,7 @@ class UserCRUD:
         查询所有用户
         :return: 用户对象列表
         """
-        sql = "SELECT * FROM user"
+        sql = "SELECT * FROM user WHERE is_deleted = 0"
         with get_cursor() as cursor:
             cursor.execute(sql)
             rows = cursor.fetchall()
@@ -68,8 +68,8 @@ class UserCRUD:
         offset = (page - 1) * page_size
 
         # 使用别名确保字段名可预测
-        sql_count = "SELECT COUNT(*) AS total FROM user"
-        sql_data = "SELECT * FROM user LIMIT %s OFFSET %s"
+        sql_count = "SELECT COUNT(*) AS total FROM user WHERE is_deleted = 0"
+        sql_data = "SELECT * FROM user WHERE is_deleted = 0 LIMIT %s OFFSET %s"
 
         with get_cursor() as cursor:
             # 获取总数
@@ -98,7 +98,7 @@ class UserCRUD:
         """
         if user_id is None:
             raise ValueError("更新操作需要提供 user_id")
-        sql = "UPDATE user SET username = %s WHERE id = %s"
+        sql = "UPDATE user SET username = %s WHERE id = %s AND is_deleted = 0"
         with get_cursor() as cursor:
             affected = cursor.execute(sql, (username, user_id))
             return affected > 0
@@ -110,7 +110,7 @@ class UserCRUD:
         :param user_id: 用户ID
         :return: 是否成功删除了记录
         """
-        sql = "DELETE FROM user WHERE id = %s"
+        sql = "UPDATE user SET is_deleted = 1, deleted_at = NOW() WHERE id = %s AND is_deleted = 0"
         with get_cursor() as cursor:
             affected = cursor.execute(sql, (user_id,))
             return affected > 0
@@ -124,7 +124,7 @@ class UserCRUD:
         :return: 是否成功更新了记录
         """
         password_hash = PasswordUtil.hash_password(new_password)
-        sql = "UPDATE user SET password = %s WHERE id = %s"
+        sql = "UPDATE user SET password = %s WHERE id = %s AND is_deleted = 0"
         with get_cursor() as cursor:
             affected = cursor.execute(sql, (password_hash, user_id))
             return affected > 0
@@ -137,7 +137,7 @@ class UserCRUD:
         :param is_admin: 管理员状态 (1=管理员, 0=普通用户)
         :return: 是否成功更新了记录
         """
-        sql = "UPDATE user SET is_admin = %s WHERE id = %s"
+        sql = "UPDATE user SET is_admin = %s WHERE id = %s AND is_deleted = 0"
         with get_cursor() as cursor:
             affected = cursor.execute(sql, (is_admin, user_id))
             return affected > 0
@@ -151,7 +151,7 @@ class UserCRUD:
         """
         users = []
 
-        sql1 = "SELECT * FROM user WHERE id = %s"
+        sql1 = "SELECT * FROM user WHERE id = %s AND is_deleted = 0"
         with get_cursor() as cursor:
             cursor.execute(sql1, (content,))
             rows = cursor.fetchall()
@@ -160,7 +160,7 @@ class UserCRUD:
                 for row in rows:
                     users.append(User.from_row(row))
 
-        sql2 = "SELECT * FROM user WHERE username LIKE %s"
+        sql2 = "SELECT * FROM user WHERE username LIKE %s AND is_deleted = 0"
         with get_cursor() as cursor:
             cursor.execute(sql2, (f"%{content}%",))
             rows = cursor.fetchall()
