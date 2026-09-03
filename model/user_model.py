@@ -1,3 +1,4 @@
+﻿from datetime import datetime
 from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -17,6 +18,9 @@ class User(BaseModel):
     password: str = Field(min_length=6, max_length=20, exclude=True, repr=False)
     is_admin: int = Field(default=0, ge=0, le=1)
     id: Optional[int] = None
+
+    is_deleted: int = Field(default=0, ge=0, le=1, init=False, exclude=True)
+    deleted_at: Optional[datetime] = Field(default=None, init=False, exclude=True)
 
     def to_dict(self) -> dict:
         return self.model_dump()

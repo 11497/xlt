@@ -17,6 +17,9 @@ class Document(BaseModel):
     retry_count: int = Field(default=0, ge=0)
     chunk_count: Optional[int] = Field(default=None, ge=0)
 
+    is_deleted: int = Field(default=0, ge=0, le=1, init=False, exclude=True)
+    deleted_at: Optional[datetime] = Field(default=None, init=False, exclude=True)
+
     def to_dict(self) -> dict:
         return self.model_dump()
 

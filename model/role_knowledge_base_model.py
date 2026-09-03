@@ -1,3 +1,7 @@
+﻿from typing import Optional
+
+from datetime import datetime
+
 from pydantic import BaseModel, Field
 
 
@@ -6,6 +10,9 @@ class RoleKnowledgeBase(BaseModel):
     role_id: int = Field(ge=1)
     knowledge_base_id: int = Field(ge=1)
     permission: int = Field(default=0, ge=0, le=1, description="权限：0=只读，1=读写")
+
+    is_deleted: int = Field(default=0, ge=0, le=1, init=False, exclude=True)
+    deleted_at: Optional[datetime] = Field(default=None, init=False, exclude=True)
 
     def to_dict(self) -> dict:
         return self.model_dump()

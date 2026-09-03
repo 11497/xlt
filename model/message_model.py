@@ -1,4 +1,4 @@
-from datetime import datetime
+﻿from datetime import datetime
 from typing import Literal, Optional
 
 from pydantic import BaseModel, Field
@@ -12,6 +12,9 @@ class Message(BaseModel):
     create_time: datetime
     id: Optional[int] = Field(default=None, ge=1)  # 新建时 id 为 None，查询时自动填充
     rewritten_content: Optional[str] = None
+
+    is_deleted: int = Field(default=0, ge=0, le=1, init=False, exclude=True)
+    deleted_at: Optional[datetime] = Field(default=None, init=False, exclude=True)
 
     def to_dict(self) -> dict:
         return self.model_dump()

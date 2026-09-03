@@ -1,4 +1,4 @@
-from typing import Optional
+﻿from typing import Optional
 from datetime import datetime
 
 from pydantic import BaseModel, Field
@@ -50,6 +50,9 @@ class Session(BaseModel):
     create_time: Optional[datetime] = None
     update_time: Optional[datetime] = None
     id: Optional[int] = Field(default=None, ge=1)  # 新建时 id 为 None，查询时自动填充
+
+    is_deleted: int = Field(default=0, ge=0, le=1, init=False, exclude=True)
+    deleted_at: Optional[datetime] = Field(default=None, init=False, exclude=True)
 
     def to_dict(self) -> dict:
         return self.model_dump()
