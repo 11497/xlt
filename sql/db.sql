@@ -1,17 +1,20 @@
--- 非破坏性初始化脚本：不会删除已有数据库、表或数据。
+﻿-- 空环境初始化脚本：业务数据删除采用逻辑删除。
 create database if not exists xlt;
 
 use xlt;
 
 -- 外键删除策略：
--- 1. 完全隶属于父记录、且不关联外部资源的数据使用 CASCADE。
--- 2. 需要先解绑或清理 OSS、Chroma、Elasticsearch 的数据使用 RESTRICT。
+-- 业务表统一使用 RESTRICT，避免数据库级联硬删除绕过应用层逻辑删除。
+-- document_task 是异步任务状态表，不参与业务软删除。
 
 create table user (
     id int auto_increment primary key comment '用户id',
     username varchar(255) not null unique comment '用户名',
     password varchar(255) not null default '$argon2id$v=19$m=65536,t=3,p=4$sFFvvH2qZYyhTBvJs0vx5A$nfy24ZwxcDs6A/VKWLKZlofCg3KENlL9dhExvnByGc0' comment 'Argon2id 密码哈希',
-    is_admin tinyint default 0 comment '是否管理员，0为普通用户，1为管理员'
+    is_admin tinyint default 0 comment '是否管理员，0为普通用户，1为管理员',
+    is_deleted tinyint(1) not null default 0 comment '是否逻辑删除，0=否，1=是',
+    deleted_at datetime null comment '逻辑删除时间',
+    key idx_user_deleted (is_deleted)
 ) comment '用户';
 
 create table session (
@@ -20,8 +23,12 @@ create table session (
     name varchar(30) not null default '新建会话' comment '会话名称',
     create_time datetime default current_timestamp comment '创建时间',
     update_time datetime not null default current_timestamp comment '更新时间',
+    is_deleted tinyint(1) not null default 0 comment '是否逻辑删除，0=否，1=是',
+    deleted_at datetime null comment '逻辑删除时间',
+    key idx_session_deleted (is_deleted),
+    key idx_session_user_deleted (user_id, is_deleted),
     constraint fk_session_user
-        foreign key (user_id) references user(id) on delete cascade
+        foreign key (user_id) references user(id) on delete restrict
 ) comment '会话';
 
 create table message (
@@ -31,24 +38,37 @@ create table message (
     content text comment '消息内容',
     rewritten_content text comment '重写后的内容',
     create_time datetime default current_timestamp comment '创建时间',
+    is_deleted tinyint(1) not null default 0 comment '是否逻辑删除，0=否，1=是',
+    deleted_at datetime null comment '逻辑删除时间',
+    key idx_message_deleted (is_deleted),
+    key idx_message_session_deleted (session_id, is_deleted),
     constraint fk_message_session
-        foreign key (session_id) references session(id) on delete cascade
+        foreign key (session_id) references session(id) on delete restrict
 ) comment '消息';
 
 create table knowledge_base (
     id int auto_increment primary key comment '知识库id',
-    name varchar(255) not null unique comment '知识库名称'
+    name varchar(255) not null unique comment '知识库名称',
+    is_deleted tinyint(1) not null default 0 comment '是否逻辑删除，0=否，1=是',
+    deleted_at datetime null comment '逻辑删除时间',
+    key idx_knowledge_base_deleted (is_deleted)
 ) comment '知识库';
 
 create table role (
     id int auto_increment primary key comment '角色id',
-    name varchar(255) not null unique comment '角色名称'
+    name varchar(255) not null unique comment '角色名称',
+    is_deleted tinyint(1) not null default 0 comment '是否逻辑删除，0=否，1=是',
+    deleted_at datetime null comment '逻辑删除时间',
+    key idx_role_deleted (is_deleted)
 ) comment '角色';
 
 create table role_user (
-    role_id int comment '角色id',
-    user_id int comment '用户id',
+    role_id int not null comment '角色id',
+    user_id int not null comment '用户id',
+    is_deleted tinyint(1) not null default 0 comment '是否逻辑删除，0=否，1=是',
+    deleted_at datetime null comment '逻辑删除时间',
     primary key (role_id, user_id),
+    key idx_role_user_deleted (is_deleted, role_id, user_id),
     constraint fk_role_user_role
         foreign key (role_id) references role(id) on delete restrict,
     constraint fk_role_user_user
@@ -56,10 +76,13 @@ create table role_user (
 ) comment '角色用户关联';
 
 create table role_knowledge_base (
-    role_id int comment '角色id',
-    knowledge_base_id int comment '知识库id',
+    role_id int not null comment '角色id',
+    knowledge_base_id int not null comment '知识库id',
     permission tinyint not null default 0 comment '权限：0=只读，1=读写',
+    is_deleted tinyint(1) not null default 0 comment '是否逻辑删除，0=否，1=是',
+    deleted_at datetime null comment '逻辑删除时间',
     primary key (role_id, knowledge_base_id),
+    key idx_role_knowledge_base_deleted (is_deleted, role_id, knowledge_base_id),
     constraint fk_role_knowledge_base_role
         foreign key (role_id) references role(id) on delete restrict,
     constraint fk_role_knowledge_base_knowledge_base
@@ -72,21 +95,24 @@ create table document (
     knowledge_base_id int not null comment '知识库id',
     filename varchar(255) not null comment '文档文件名（原始文件名，仅用于展示和下载）',
     storage_path varchar(500) not null comment 'OSS对象key，使用UUID避免同名覆盖',
-    status varchar(20) not null default 'pending' comment '状态：pending=待索引, indexing=索引中, ready=可用, failed=索引失败, deleting=删除中',
+    status varchar(20) not null default 'pending' comment '状态：pending=待索引, indexing=索引中, ready=可用, failed=索引失败, deleting=删除中, deleted=已删除',
     error_message text null comment '最近一次失败原因',
     retry_count int not null default 0 comment '索引重试次数',
     chunk_count int null comment '实际写入的切片数',
     create_time datetime not null default current_timestamp comment '创建时间',
     update_time datetime not null default current_timestamp comment '更新时间',
+    is_deleted tinyint(1) not null default 0 comment '是否逻辑删除，0=否，1=是',
+    deleted_at datetime null comment '逻辑删除时间',
     key idx_document_status (status),
     key idx_document_kb_status (knowledge_base_id, status),
+    key idx_document_deleted (is_deleted),
     constraint fk_document_knowledge_base
         foreign key (knowledge_base_id) references knowledge_base(id) on delete restrict
 ) comment '文档';
 
 create table document_task (
     id bigint unsigned auto_increment primary key comment '任务id',
-    task_type varchar(20) not null comment '任务类型：index=索引, delete=删除',
+    task_type varchar(20) not null comment '任务类型：index=索引, delete=删除, delete_kb=删除知识库',
     document_id int not null comment '文档id',
     knowledge_base_id int not null comment '知识库id',
     status varchar(20) not null default 'pending' comment '状态：pending=待处理, processing=处理中, done=完成, failed=失败',
@@ -95,7 +121,7 @@ create table document_task (
     retry_count int not null default 0 comment '已重试次数',
     max_retries int not null default 5 comment '最大重试次数',
     next_retry_at datetime null comment '下次重试时间（指数退避）',
-    result_json text null comment '各存储删除/写入结果记录（OSS/Chroma/ES）',
+    result_json text null comment 'Chroma/ES 删除或写入结果记录，OSS 保留不删除',
     create_time datetime not null default current_timestamp comment '创建时间',
     update_time datetime not null default current_timestamp on update current_timestamp comment '更新时间',
     key idx_task_status_retry (status, next_retry_at),
@@ -109,7 +135,10 @@ create table announcement (
     content longtext not null comment '公告内容',
     is_top tinyint not null default 0 comment '是否置顶，0=否，1=是',
     create_time datetime not null default current_timestamp comment '创建时间',
-    update_time datetime not null default current_timestamp comment '更新时间'
+    update_time datetime not null default current_timestamp comment '更新时间',
+    is_deleted tinyint(1) not null default 0 comment '是否逻辑删除，0=否，1=是',
+    deleted_at datetime null comment '逻辑删除时间',
+    key idx_announcement_deleted (is_deleted)
 ) comment '公告';
 
 create table announcement_attachment (
@@ -118,6 +147,10 @@ create table announcement_attachment (
     filename varchar(255) not null comment '附件文件名',
     storage_path varchar(500) not null comment 'OSS对象key，使用UUID避免同名覆盖',
     upload_time datetime not null default current_timestamp comment '上传时间',
+    is_deleted tinyint(1) not null default 0 comment '是否逻辑删除，0=否，1=是',
+    deleted_at datetime null comment '逻辑删除时间',
+    key idx_announcement_attachment_deleted (is_deleted),
+    key idx_announcement_attachment_announcement_deleted (announcement_id, is_deleted),
     constraint fk_announcement_attachment_announcement
         foreign key (announcement_id) references announcement(id) on delete restrict
 ) comment '公告附件';
