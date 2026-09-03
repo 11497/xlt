@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Query, Body
+﻿from fastapi import APIRouter, Depends, Query, Body
 
 from authentication.user_auth import require_admin, require_current_user
 from config.jwt_config import JWT_CONFIG
@@ -165,7 +165,7 @@ async def update_username(
 @router.delete("/{id}")
 async def delete_user(id: int, _admin: User = Depends(require_admin)):
     """
-    管理员删除用户
+    管理员逻辑删除用户
     :param id: 用户ID
     :param _admin: 管理员用户对象
     :return: 删除结果
@@ -180,7 +180,7 @@ async def delete_user(id: int, _admin: User = Depends(require_admin)):
     delete_result = UserCRUD.delete(id)
     if not delete_result:
         return result.error(msg="用户不存在")
-    return result.success(msg="删除成功")
+    return result.success(msg="删除成功，用户已进入逻辑删除状态")
 
 @router.put("/password")
 async def update_password(

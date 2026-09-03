@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Path, Query
+﻿from fastapi import APIRouter, Depends, Path, Query
 
 from authentication.user_auth import require_admin, require_current_user
 from crud.role_crud import RoleCRUD
@@ -139,4 +139,4 @@ async def delete(id: int, _admin: User = Depends(require_admin)):
     delete_result = RoleCRUD.delete(id)
     if not delete_result:
         return result.error(msg="删除角色失败")
-    return result.success(msg="删除角色成功")
+    return result.success(msg="删除角色成功，角色已进入逻辑删除状态")

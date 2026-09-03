@@ -1,4 +1,4 @@
-from typing import Optional
+﻿from typing import Optional
 
 from fastapi import APIRouter, Depends, UploadFile, File, Form
 
@@ -100,15 +100,11 @@ async def upload_attachment(
         filename=file.filename,
         storage_path=storage_path
     )
-    # 保存到数据库；失败时补偿删除刚上传的 OSS 对象，避免孤儿文件
+    # 保存到数据库；失败时保留已上传 OSS 对象用于留存/人工核对。
     try:
         attachment_id = AnnouncementAttachmentCRUD.create(attachment)
     except Exception as e:
-        try:
-            async with OSSUtil() as oss_client:
-                await oss_client.delete_file(storage_path)
-        except Exception as cleanup_error:
-            print(f"[ERROR] 清理孤儿 OSS 对象失败：{storage_path} -> {cleanup_error}")
+        print(f"[ERROR] 附件记录保存失败，OSS 对象保留：{storage_path} -> {e}")
         return result.error(msg=f"保存附件记录失败：{str(e)}")
 
     return result.success(msg="上传成功", data={"id": attachment_id, "filename": file.filename})

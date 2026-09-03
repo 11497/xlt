@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Query
+﻿from fastapi import APIRouter, Depends, Query
 from fastapi.params import Body
 
 from authentication.user_auth import require_admin, require_current_user
@@ -7,7 +7,6 @@ from crud.announcement_crud import AnnouncementCRUD
 from model.announcement_model import Announcement
 from model.result import Result
 from model.user_model import User
-from util.oss_util import OSSUtil
 
 router = APIRouter(prefix="/api/announcement", tags=["announcement"])
 
@@ -115,23 +114,11 @@ async def delete_announcements(ids: list[int] = Body(..., alias="ids"),
     """
     result = Result()
 
-    # 删除公告附件
-    for id in ids:
-        attachments = AnnouncementAttachmentCRUD.get_by_announcement_id(id)
-        if not attachments:
-            continue
-        for attachment in attachments:
-            if not attachment:
-                continue
-            try:
-                async with OSSUtil() as oss_client:
-                    await oss_client.delete_file(attachment.storage_path)
-            except Exception as e:
-                return result.error(msg=f"文件删除失败：{str(e)}")
-            AnnouncementAttachmentCRUD.delete(attachment.id)
-
+    # 公告与附件仅逻辑删除，OSS 对象保留用于留存。
+    for announcement_id in ids:
+        AnnouncementAttachmentCRUD.delete_by_announcement_id(announcement_id)
 
     delete_result = AnnouncementCRUD.batch_delete(ids)
     if not delete_result:
         return result.error(msg="批量删除公告失败")
-    return result.success(msg="批量删除成功")
+    return result.success(msg="批量删除成功，公告及附件已进入逻辑删除状态，文件保留")
