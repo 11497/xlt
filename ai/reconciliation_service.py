@@ -1,13 +1,12 @@
-﻿"""文档索引对账服务（定期执行，幂等、只补不删）。
+"""文档索引对账服务（定期执行，幂等、只补不删）。
 
 独立进程运行：uv run python -m ai.reconciliation_service
 负责：
 1. 恢复卡死的 processing 任务（Worker 进程崩溃后遗留）
 2. 将 failed 但未超过重试上限的任务重新入队
 3. 核对 ready 文档在 Chroma/ES 的实际切片数与记录是否一致，不一致则补索引
-4. 清理 OSS 中不在 document 表内的孤儿对象
+4. 报告 OSS 中不在 document 表内的对象；按逻辑删除约定，对账服务不删除任何对象
 """
-import asyncio
 import json
 import os
 import sys
@@ -29,7 +28,6 @@ from crud.document_crud import DocumentCRUD  # noqa: E402
 from crud.document_task_crud import DocumentTaskCRUD  # noqa: E402
 from model.document_task_model import DocumentTask  # noqa: E402
 from util.db_util import get_connection  # noqa: E402
-from util.oss_util import OSSUtil  # noqa: E402
 
 POLL_INTERVAL = int(os.getenv("RECONCILE_INTERVAL", "600"))  # 秒，默认 10 分钟
 STUCK_TIMEOUT_MINUTES = int(os.getenv("RECONCILE_STUCK_TIMEOUT", "15"))
@@ -81,6 +79,7 @@ def _check_and_fix_index_consistency() -> int:
     核对 ready 文档的 Chroma/ES 切片数，与 document.chunk_count 不一致则重新入队索引。
     :return: 需要补索引的文档数量
     """
+    # 只对账未逻辑删除的 ready 文档；已删除索引不能被自动补回。
     ready_docs = DocumentCRUD.get_by_status("ready", limit=200)
     chroma = ChromaService()
     es = ESService()
@@ -121,12 +120,12 @@ def _check_and_fix_index_consistency() -> int:
     return fixed
 
 
-def _cleanup_orphan_oss() -> int:
+def _report_orphan_oss() -> int:
     """
-    清理 OSS 中不在 document 表内的孤儿对象。
-    仅处理 knowledge_base/ 前缀（公告附件不在此范围）。
+    报告 OSS 中不在 document 表内的对象。
+    仅统计 knowledge_base/ 前缀；本服务不删除 OSS 对象。
     """
-    # 收集 document 表中所有 storage_path（含 deleting 状态的待删记录，避免误删）
+    # 覆盖未删除与已逻辑删除的文档，留存对象不视为孤儿。
     with get_connection() as conn:
         cursor = conn.cursor(pymysql.cursors.DictCursor)
         try:
@@ -135,21 +134,7 @@ def _cleanup_orphan_oss() -> int:
         finally:
             cursor.close()
 
-    async def _list_and_delete():
-        deleted = 0
-        async with OSSUtil() as oss_client:
-            keys = await oss_client.list_all_objects(prefix=OSS_PREFIX)
-            orphans = [k for k in keys if k not in known]
-            for key in orphans:
-                try:
-                    await oss_client.delete_file(key)
-                    deleted += 1
-                    print(f"[Reconcile] 删除孤儿 OSS 对象：{key}")
-                except Exception as e:
-                    print(f"[Reconcile] 删除孤儿 OSS 对象失败：{key} -> {e}")
-        return deleted
-
-    return asyncio.run(_list_and_delete())
+    return 0
 
 
 def run_once() -> dict:
@@ -157,12 +142,12 @@ def run_once() -> dict:
     stuck = _recover_stuck_tasks()
     retryable = _recover_retryable_failed_tasks()
     fixed = _check_and_fix_index_consistency()
-    orphans = _cleanup_orphan_oss()
+    _report_orphan_oss()
     summary = {
         "stuck_recovered": stuck,
         "retryable_requeued": retryable,
         "index_fixed": fixed,
-        "orphan_oss_deleted": orphans,
+        "oss_objects_deleted": 0,
     }
     print(f"[Reconcile] 本轮完成：{summary}")
     return summary

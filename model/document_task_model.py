@@ -1,4 +1,4 @@
-﻿from datetime import datetime
+from datetime import datetime
 from typing import Optional
 
 from pydantic import BaseModel, Field
@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 class DocumentTask(BaseModel):
     """DocumentTask 数据模型，对应 xlt.document_task 表"""
     task_type: str = Field(min_length=1, max_length=20)  # index / delete
-    document_id: int = Field(ge=1)
+    document_id: int = Field(ge=0)
     knowledge_base_id: int = Field(ge=1)
     status: str = Field(default="pending", max_length=20)
     payload: Optional[str] = None

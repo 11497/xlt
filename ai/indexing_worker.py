@@ -1,4 +1,4 @@
-﻿"""文档索引/删除异步 Worker。
+"""文档索引/删除异步 Worker。
 
 独立进程运行（与后端分离），消费 document_task 表中的 index/delete 任务。
 启动方式：uv run python -m ai.indexing_worker
@@ -138,33 +138,36 @@ def _handle_index_task(task_id: int, document_id: int, kb_id: int, payload: dict
 
 def _handle_delete_task(task_id: int, document_id: int, kb_id: int, payload: dict) -> None:
     """
-    处理单个删除任务：OSS -> Chroma -> ES -> MySQL 记录，逐端幂等删除。
-    任一步失败则抛异常由外层安排重试（已成功的步骤幂等，重试无副作用）。
+    处理单个删除任务：真实删除 Chroma/ES 索引，MySQL 记录逻辑删除，OSS 对象保留。
+    任一步失败则抛异常由外层安排重试；已成功的索引删除操作幂等，重试无副作用。
     """
-    object_key = payload.get("object_key", "")
-
-    # 1. 删除 OSS 对象（幂等，404 视为已删除）
-    if object_key:
-        async def _del_oss():
-            async with OSSUtil() as oss_client:
-                await oss_client.delete_file(object_key)
-        asyncio.run(_del_oss())
-
-    # 2. 删除 Chroma + ES 索引（幂等）
+    # 1. 删除 Chroma + ES 索引（幂等）
     ingestion = IngestionService()
     delete_result = ingestion.delete_document(kb_id, document_id)
+    failed_backends = [name for name, ok in delete_result.items() if not ok]
+    if failed_backends:
+        raise RuntimeError("文档索引删除失败，等待重试：" + ",".join(failed_backends))
 
-    # 3. 删除 MySQL 记录（与任务完成状态一起提交）
+    # 2. 逻辑删除 MySQL 记录（与任务完成状态一起提交）
     with get_connection() as conn:
         cursor = conn.cursor()
         try:
-            cursor.execute("DELETE FROM document WHERE id = %s", (document_id,))
+            cursor.execute(
+                "UPDATE document SET status = 'deleted', is_deleted = 1, deleted_at = NOW(), "
+                "error_message = NULL, update_time = NOW() "
+                "WHERE id = %s AND is_deleted = 0",
+                (document_id,)
+            )
             cursor.execute(
                 "UPDATE document_task SET status = 'done', result_json = %s, "
                 "error_message = NULL, update_time = NOW() WHERE id = %s",
                 (
                     json.dumps(
-                        {"oss": True, "chroma": delete_result["chroma"], "es": delete_result["es"]},
+                        {
+                            "chroma": delete_result["chroma"],
+                            "es": delete_result["es"],
+                            "oss_retained": True,
+                        },
                         ensure_ascii=False
                     ),
                     task_id,
@@ -176,24 +179,42 @@ def _handle_delete_task(task_id: int, document_id: int, kb_id: int, payload: dic
 
 def _handle_delete_kb_task(task_id: int, kb_id: int, payload: dict) -> None:
     """
-    处理单个删除知识库任务：Chroma -> ES -> MySQL（文档记录与知识库记录、任务状态一起提交）。
+    处理单个删除知识库任务：真实删除 Chroma/ES 索引，文档和知识库记录逻辑删除，OSS 对象保留。
+    任一步失败则抛异常由外层安排重试；已成功的索引删除操作幂等，重试无副作用。
     """
-    # 1. 删除 Chroma + ES 索引（幂等）
+    # 1. 删除 Chroma collection 与 ES 索引（幂等）
     ingestion = IngestionService()
     delete_result = ingestion.delete_knowledge_base(kb_id)
+    failed_backends = [name for name, ok in delete_result.items() if not ok]
+    if failed_backends:
+        raise RuntimeError("知识库索引删除失败，等待重试：" + ",".join(failed_backends))
 
-    # 2. 删除该知识库下的所有文档记录、知识库记录，并标记任务完成（单事务）
+    # 2. 逻辑删除文档与知识库记录，并标记任务完成（单事务）
     with get_connection() as conn:
         cursor = conn.cursor()
         try:
-            cursor.execute("DELETE FROM document WHERE knowledge_base_id = %s", (kb_id,))
-            cursor.execute("DELETE FROM knowledge_base WHERE id = %s", (kb_id,))
+            cursor.execute(
+                "UPDATE document SET status = 'deleted', is_deleted = 1, deleted_at = NOW(), "
+                "error_message = NULL, update_time = NOW() "
+                "WHERE knowledge_base_id = %s AND is_deleted = 0",
+                (kb_id,)
+            )
+            cursor.execute(
+                "UPDATE knowledge_base SET is_deleted = 1, deleted_at = NOW() "
+                "WHERE id = %s",
+                (kb_id,)
+            )
             cursor.execute(
                 "UPDATE document_task SET status = 'done', result_json = %s, "
                 "error_message = NULL, update_time = NOW() WHERE id = %s",
                 (
                     json.dumps(
-                        {"chroma": delete_result["chroma"], "es": delete_result["es"], "kb_id": kb_id},
+                        {
+                            "chroma": delete_result["chroma"],
+                            "es": delete_result["es"],
+                            "kb_id": kb_id,
+                            "oss_retained": True,
+                        },
                         ensure_ascii=False
                     ),
                     task_id,
@@ -257,7 +278,7 @@ def run_once() -> int:
                     # 仍在重试中，标记为 indexing（等待下次领取）
                     DocumentCRUD.update_status(task.document_id, "indexing", error_message=str(e)[:2000])
             elif task_type in ("delete", "delete_kb"):
-                # 删除失败：文档保持 deleting，等待重试；超限记录失败
+                # 删除失败：相关文档保持 deleting，等待重试；超限后由人工排查。
                 if task.document_id and task.document_id > 0:
                     DocumentCRUD.update_status(task.document_id, "deleting", error_message=str(e)[:2000])
         finally:
