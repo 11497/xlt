@@ -1,4 +1,4 @@
-﻿from typing import Optional
+from typing import Optional
 
 from fastapi import APIRouter, Depends, UploadFile, File, Form
 
@@ -155,7 +155,7 @@ async def delete_attachment(
         _admin: User = Depends(require_admin)
 ):
     """
-    删除公告附件
+    逻辑删除公告附件，OSS 对象保留用于留存。
     :param attachment_id: 附件ID
     :param _admin: 管理员用户对象
     :return: 删除结果
@@ -167,19 +167,12 @@ async def delete_attachment(
     if not attachment:
         return result.error(msg="附件不存在")
 
-    # 从OSS删除文件
-    try:
-        async with OSSUtil() as oss_client:
-            await oss_client.delete_file(attachment.storage_path)
-    except Exception as e:
-        return result.error(msg=f"文件删除失败：{str(e)}")
-
-    # 从数据库删除记录
+    # 数据库记录逻辑删除；OSS 对象保留，不执行外部存储删除。
     delete_result = AnnouncementAttachmentCRUD.delete(attachment_id)
     if not delete_result:
-        return result.error(msg="数据库记录删除失败")
+        return result.error(msg="删除附件记录失败")
 
-    return result.success(msg="删除成功")
+    return result.success(msg="删除成功，附件已进入逻辑删除状态，文件保留")
 
 
 @router.get("/announcement/{announcement_id}")

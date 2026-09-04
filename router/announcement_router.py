@@ -1,8 +1,7 @@
-﻿from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query
 from fastapi.params import Body
 
 from authentication.user_auth import require_admin, require_current_user
-from crud.announcement_attachment_crud import AnnouncementAttachmentCRUD
 from crud.announcement_crud import AnnouncementCRUD
 from model.announcement_model import Announcement
 from model.result import Result
@@ -107,7 +106,7 @@ async def update_announcement(announcement: Announcement,
 async def delete_announcements(ids: list[int] = Body(..., alias="ids"),
                               _admin: User = Depends(require_admin)):
     """
-    批量删除公告
+    批量删除公告（公告与附件同事务逻辑删除，OSS 对象保留）
     :param ids: 公告ID列表
     :param _admin: 管理员用户对象
     :return: 删除结果
@@ -115,10 +114,7 @@ async def delete_announcements(ids: list[int] = Body(..., alias="ids"),
     result = Result()
 
     # 公告与附件仅逻辑删除，OSS 对象保留用于留存。
-    for announcement_id in ids:
-        AnnouncementAttachmentCRUD.delete_by_announcement_id(announcement_id)
-
-    delete_result = AnnouncementCRUD.batch_delete(ids)
+    delete_result = AnnouncementCRUD.batch_delete_with_attachments(ids)
     if not delete_result:
         return result.error(msg="批量删除公告失败")
     return result.success(msg="批量删除成功，公告及附件已进入逻辑删除状态，文件保留")

@@ -1,5 +1,5 @@
-﻿from typing import List, Optional, Tuple
-from util.db_util import get_cursor
+from typing import List, Optional, Tuple
+from util.db_util import get_connection, get_cursor
 from model.session_model import (
     Session,
     normalize_session_name,
@@ -47,6 +47,30 @@ class SessionCRUD:
         with get_cursor() as cursor:
             affected = cursor.execute(sql, (session_id,))
             return affected > 0
+
+    @staticmethod
+    def delete_with_messages(session_id: int) -> bool:
+        """
+        单事务逻辑删除会话及其消息。
+        :param session_id: 会话ID
+        :return: 是否成功逻辑删除会话
+        """
+        with get_connection() as conn:
+            cursor = conn.cursor()
+            try:
+                cursor.execute(
+                    "UPDATE message SET is_deleted = 1, deleted_at = NOW() "
+                    "WHERE session_id = %s AND is_deleted = 0",
+                    (session_id,)
+                )
+                cursor.execute(
+                    "UPDATE session SET is_deleted = 1, deleted_at = NOW(), update_time = NOW() "
+                    "WHERE id = %s AND is_deleted = 0",
+                    (session_id,)
+                )
+                return cursor.rowcount > 0
+            finally:
+                cursor.close()
 
     @staticmethod
     def get_by_user_id(user_id: int) -> List[Session]:

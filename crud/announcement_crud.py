@@ -1,5 +1,6 @@
-﻿from typing import List, Optional, Tuple
-from util.db_util import get_cursor
+from typing import List, Optional, Tuple
+
+from util.db_util import get_connection, get_cursor
 from model.announcement_model import Announcement
 
 
@@ -67,6 +68,34 @@ class AnnouncementCRUD:
         with get_cursor() as cursor:
             cursor.execute(sql, announcement_ids)
             return cursor.rowcount
+
+    @staticmethod
+    def batch_delete_with_attachments(announcement_ids: List[int]) -> int:
+        """
+        单事务逻辑删除公告及其附件，OSS 对象保留。
+        :param announcement_ids: 公告ID列表
+        :return: 成功逻辑删除的公告数量
+        """
+        if not announcement_ids:
+            return 0
+
+        placeholders = ",".join(["%s"] * len(announcement_ids))
+        with get_connection() as conn:
+            cursor = conn.cursor()
+            try:
+                cursor.execute(
+                    f"UPDATE announcement_attachment SET is_deleted = 1, deleted_at = NOW() "
+                    f"WHERE is_deleted = 0 AND announcement_id IN ({placeholders})",
+                    announcement_ids
+                )
+                cursor.execute(
+                    f"UPDATE announcement SET is_deleted = 1, deleted_at = NOW(), update_time = NOW() "
+                    f"WHERE is_deleted = 0 AND id IN ({placeholders})",
+                    announcement_ids
+                )
+                return cursor.rowcount
+            finally:
+                cursor.close()
 
     @staticmethod
     def get_by_id(announcement_id: int) -> Optional[Announcement]:

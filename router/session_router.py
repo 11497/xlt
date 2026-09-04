@@ -1,7 +1,6 @@
 from fastapi import APIRouter, Depends, Query
 
 from authentication.user_auth import require_current_user, require_admin
-from crud.message_crud import MessageCRUD
 from crud.session_crud import SessionCRUD
 from model.result import Result
 from model.session_model import (
@@ -123,7 +122,7 @@ async def delete_session(
         session_id: int,
         user: User = Depends(require_current_user)):
     """
-    根据id删除会话
+    根据id逻辑删除会话及其消息
     :param session_id: 会话ID
     :param user: 当前用户对象
     :return: 删除结果
@@ -136,14 +135,12 @@ async def delete_session(
     if not session or (session.user_id != user.id and user.is_admin == 0):
         return result.error(msg="会话不存在或无权删除")
 
-    # 删除会话下的所有消息
-    MessageCRUD.delete_by_session_id(session_id)
-    
-    delete_result = SessionCRUD.delete(session_id)
+    # 会话及其消息在同一事务中逻辑删除。
+    delete_result = SessionCRUD.delete_with_messages(session_id)
     if not delete_result:
         return result.error(msg="删除失败")
     
-    return result.success(msg="删除成功")
+    return result.success(msg="删除成功，会话及消息已进入逻辑删除状态")
 
 
 @router.put("/name")
