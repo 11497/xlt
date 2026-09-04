@@ -1,4 +1,4 @@
-﻿from typing import List, Tuple
+from typing import List, Tuple
 
 from model.role_model import Role
 from model.user_model import User
@@ -18,16 +18,17 @@ class RoleUserCRUD:
         if not user_ids:
             return True  # 空列表视为成功操作
 
-        # 构造批量插入SQL
+        # 构造批量插入 SQL；重复主键表示恢复原软删除关联
         sql = "INSERT INTO role_user (role_id, user_id, is_deleted, deleted_at) VALUES "
         values_placeholders = []
         params = []
 
         for user_id in user_ids:
-            values_placeholders.append("(%s, %s, 0, NULL) ON DUPLICATE KEY UPDATE is_deleted = 0, deleted_at = NULL")
+            values_placeholders.append("(%s, %s, 0, NULL)")
             params.extend([role_id, user_id])
 
         sql += ",".join(values_placeholders)
+        sql += " ON DUPLICATE KEY UPDATE is_deleted = 0, deleted_at = NULL"
 
         with get_cursor() as cursor:
             affected = cursor.execute(sql, params)
