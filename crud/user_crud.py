@@ -1,4 +1,4 @@
-﻿from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple
 from util.db_util import get_cursor
 from model.user_model import User
 from util.password_util import PasswordUtil

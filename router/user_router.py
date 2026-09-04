@@ -1,4 +1,4 @@
-﻿from fastapi import APIRouter, Depends, Query, Body
+from fastapi import APIRouter, Depends, Query, Body
 
 from authentication.user_auth import require_admin, require_current_user
 from config.jwt_config import JWT_CONFIG

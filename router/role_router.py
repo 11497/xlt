@@ -1,4 +1,4 @@
-﻿from fastapi import APIRouter, Depends, Path, Query
+from fastapi import APIRouter, Depends, Path, Query
 
 from authentication.user_auth import require_admin, require_current_user
 from crud.role_crud import RoleCRUD

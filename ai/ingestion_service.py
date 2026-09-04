@@ -1,4 +1,4 @@
-﻿from typing import List, Dict, Any
+from typing import List, Dict, Any
 
 from ai.embedding import EmbeddingService
 from ai.chroma_service import ChromaService

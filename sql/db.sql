@@ -1,4 +1,4 @@
-﻿-- 空环境初始化脚本：业务数据删除采用逻辑删除。
+-- 空环境初始化脚本：业务数据删除采用逻辑删除。
 create database if not exists xlt;
 
 use xlt;

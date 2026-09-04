@@ -1,4 +1,4 @@
-﻿from typing import List, Optional
+from typing import List, Optional
 from util.db_util import get_cursor
 from model.announcement_attachment_model import AnnouncementAttachment
 
