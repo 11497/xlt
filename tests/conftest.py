@@ -6,8 +6,9 @@ from fastapi import FastAPI
 from starlette.testclient import TestClient
 
 from authentication.authentication import get_current_user
+from authentication.authentication import router as authentication_router
 from model.user_model import User
-from router import message_router, session_router
+from router import message_router, session_router, user_router
 
 
 class StubChatService:
@@ -50,8 +51,10 @@ def app_client_factory():
             search_service: Any | None = None
     ) -> TestClient:
         app = FastAPI()
+        app.include_router(authentication_router)
         app.include_router(session_router.router)
         app.include_router(message_router.router)
+        app.include_router(user_router.router)
 
         if user is not None:
             app.dependency_overrides[get_current_user] = lambda: user
