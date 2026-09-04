@@ -1,4 +1,4 @@
-﻿from typing import List, Any
+from typing import List, Any
 
 from model.knowledge_base_model import KnowledgeBase
 from model.role_model import Role
@@ -19,7 +19,7 @@ class RoleKnowledgeBaseCRUD:
             return True
 
         sql = ("INSERT INTO role_knowledge_base (role_id, knowledge_base_id, permission, is_deleted, deleted_at) "
-               "VALUES (%s, %s, %s) "
+               "VALUES (%s, %s, %s, 0, NULL) "
                "ON DUPLICATE KEY UPDATE permission = VALUES(permission), is_deleted = 0, deleted_at = NULL")
         params = [(item["role_id"], knowledge_base_id, item["permission"]) for item in bindings]
 
@@ -85,7 +85,7 @@ class RoleKnowledgeBaseCRUD:
     def upsert_binding(role_id: int, knowledge_base_id: int, permission: int) -> bool:
         """新增绑定或更新已有绑定的权限。"""
         sql = ("INSERT INTO role_knowledge_base (role_id, knowledge_base_id, permission, is_deleted, deleted_at) "
-               "VALUES (%s, %s, %s) "
+               "VALUES (%s, %s, %s, 0, NULL) "
                "ON DUPLICATE KEY UPDATE permission = VALUES(permission), is_deleted = 0, deleted_at = NULL")
         with get_cursor() as cursor:
             cursor.execute(sql, (role_id, knowledge_base_id, permission))
