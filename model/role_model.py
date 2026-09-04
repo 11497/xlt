@@ -1,11 +1,12 @@
-﻿from typing import Optional
+from typing import Optional
 
 from datetime import datetime
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class Role(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     """Role 数据模型，对应 xlt.role 表"""
     name: str = Field(min_length=1, max_length=15)
     id: Optional[int] = Field(default=None, ge=1)  # 新建时 id 为 None，查询时自动填充

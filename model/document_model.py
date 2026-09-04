@@ -1,10 +1,11 @@
-﻿from datetime import datetime
+from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class Document(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     """Document 数据模型，对应 xlt.document 表"""
     knowledge_base_id: int = Field(ge=1)
     filename: str = Field(min_length=1, max_length=255)

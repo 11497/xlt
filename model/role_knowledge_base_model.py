@@ -1,11 +1,12 @@
-﻿from typing import Optional
+from typing import Optional
 
 from datetime import datetime
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class RoleKnowledgeBase(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     """RoleKnowledgeBase 数据模型，对应 xlt.role_knowledge_base 表"""
     role_id: int = Field(ge=1)
     knowledge_base_id: int = Field(ge=1)

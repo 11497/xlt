@@ -1,10 +1,11 @@
-﻿from datetime import datetime
+from datetime import datetime
 from typing import Literal, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class Message(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     """Message 数据模型，对应 xlt.message 表"""
     session_id: int = Field(ge=1)
     role: Literal["user", "assistant"]

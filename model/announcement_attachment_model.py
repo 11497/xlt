@@ -1,10 +1,11 @@
-﻿from typing import Optional
+from typing import Optional
 from datetime import datetime
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class AnnouncementAttachment(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     """AnnouncementAttachment 数据模型，对应 xlt.announcement_attachment 表"""
     announcement_id: int = Field(ge=1)
     filename: str = Field(min_length=1, max_length=255)

@@ -1,7 +1,7 @@
-﻿from typing import Optional
+from typing import Optional
 from datetime import datetime
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 SESSION_NAME_MIN_LENGTH = 1
@@ -41,6 +41,7 @@ def validate_session_name(name: str) -> str:
 
 
 class Session(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     """Session 数据模型，对应 xlt.session 表"""
     user_id: int = Field(ge=1)
     name: str = Field(

@@ -1,11 +1,12 @@
-﻿from typing import Optional
+from typing import Optional
 
 from datetime import datetime
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class RoleUser(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     """RoleUser 数据模型，对应 xlt.role_user 表"""
     role_id: int = Field(ge=1)
     user_id: int = Field(ge=1)
