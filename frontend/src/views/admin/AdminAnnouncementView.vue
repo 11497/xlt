@@ -85,7 +85,7 @@ const handleBatchDelete = async () => {
     return;
   }
   try {
-    await ElMessageBox.confirm('确定要删除选中的公告吗？此操作不可恢复。', '警告', {
+    await ElMessageBox.confirm('确定要删除选中的公告吗？公告及附件将进入逻辑删除状态，文件保留。', '警告', {
       confirmButtonText: '确定',
       cancelButtonText: '取消',
       type: 'warning',
@@ -116,7 +116,7 @@ const handleBatchDelete = async () => {
 // 删除单个附件
 const handleDeleteAttachment = async (attachmentId, filename) => {
   try {
-    await ElMessageBox.confirm(`确定要删除附件 "${filename}" 吗？`, '警告', {
+    await ElMessageBox.confirm(`确定要删除附件 "${filename}" 吗？附件记录将逻辑删除，文件保留。`, '警告', {
       confirmButtonText: '确定',
       cancelButtonText: '取消',
       type: 'warning',
@@ -128,7 +128,7 @@ const handleDeleteAttachment = async (attachmentId, filename) => {
     if (res.code === 1) {
       // 2. 从本地列表移除
       attachmentList.value = attachmentList.value.filter(item => item.id !== attachmentId);
-      ElMessage.success('附件删除成功');
+      ElMessage.success('附件已进入逻辑删除状态，文件保留');
     } else {
       ElMessage.error(res.msg || '删除失败');
     }

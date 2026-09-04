@@ -1,4 +1,4 @@
-﻿<script setup>
+<script setup>
 import {computed, nextTick, ref} from 'vue'
 import MarkdownIt from 'markdown-it'
 import {ElMessage} from 'element-plus'

@@ -1,4 +1,4 @@
-﻿<script setup>
+<script setup>
 import { ref, reactive, onBeforeUnmount } from 'vue';
 import { Delete, Upload, Refresh } from '@element-plus/icons-vue';
 import { getDocumentListByKnowledgeBase, deleteDocument, uploadDocument, getDocumentStatus, reindexDocument } from '@/api/document.js';
@@ -32,6 +32,7 @@ const STATUS_META = {
   ready: { text: '可用', type: 'success' },
   failed: { text: '失败', type: 'danger' },
   deleting: { text: '删除中', type: 'info' },
+  deleted: { text: '已删除', type: 'info' },
 };
 const statusMeta = (status) => STATUS_META[status] || { text: status || '未知', type: 'info' };
 
@@ -102,7 +103,7 @@ const fetchDocuments = async (silent = false) => {
 const handleDelete = (row) => {
   if (row.status === 'deleting') { ElMessage.warning('该文档正在删除中'); return; }
   ElMessageBox.confirm(
-      `确定要删除文档「${row.filename}」吗？此操作不可恢复。`,
+      `确定要删除文档「${row.filename}」吗？检索索引将被删除，数据库记录和文件将保留。`,
       '删除确认',
       {
         confirmButtonText: '删除',

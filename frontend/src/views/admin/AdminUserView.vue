@@ -81,7 +81,7 @@ const handleBatchDelete = async () => {
   }
   try {
     await ElMessageBox.confirm(
-      `确定要删除选中的 ${selectedRows.value.length} 个用户吗？此操作不可恢复。`,
+      `确定要删除选中的 ${selectedRows.value.length} 个用户吗？用户将进入逻辑删除状态。`,
       '批量删除确认',
       { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' }
     );

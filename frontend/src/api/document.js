@@ -1,4 +1,4 @@
-﻿import request from "@/utils/request.js";
+import request from "@/utils/request.js";
 import {ElMessage} from "element-plus";
 
 // 上传文档（异步索引，返回 status: pending）

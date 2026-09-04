@@ -1,4 +1,4 @@
-﻿<script setup>
+<script setup>
 import { reactive, ref, onBeforeUnmount } from 'vue';
 import { Delete, Download, Upload, Refresh } from '@element-plus/icons-vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
@@ -22,6 +22,7 @@ const STATUS_META = {
   ready: { text: '可用', type: 'success' },
   failed: { text: '失败', type: 'danger' },
   deleting: { text: '删除中', type: 'info' },
+  deleted: { text: '已删除', type: 'info' },
 };
 const statusMeta = (status) => STATUS_META[status] || { text: status || '未知', type: 'info' };
 const hasActive = () => documentList.value.some((d) => ['pending', 'indexing', 'deleting'].includes(d.status));
@@ -77,7 +78,7 @@ const handleDelete = async (row) => {
   if (!canManage()) return;
   if (row.status === 'deleting') { ElMessage.warning('该文档正在删除中'); return; }
   try {
-    await ElMessageBox.confirm(`确定要删除文档「${row.filename}」吗？此操作不可恢复。`, '删除确认', { confirmButtonText: '删除', cancelButtonText: '取消', type: 'warning' });
+    await ElMessageBox.confirm(`确定要删除文档「${row.filename}」吗？检索索引将被删除，数据库记录和文件将保留。`, '删除确认', { confirmButtonText: '删除', cancelButtonText: '取消', type: 'warning' });
     const res = await deleteDocument(row.id);
     if (res.code !== 1) { ElMessage.error(res.msg || '删除失败'); return; }
     ElMessage.success('删除任务已提交');

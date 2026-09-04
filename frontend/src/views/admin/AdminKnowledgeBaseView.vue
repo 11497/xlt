@@ -76,7 +76,7 @@ const handleBatchDelete = () => {
   }
 
   ElMessageBox.confirm(
-      `确定要删除选中的 ${selectedRows.value.length} 个知识库吗？此操作不可恢复。`,
+      `确定要删除选中的 ${selectedRows.value.length} 个知识库吗？检索索引将被删除，数据库记录和文件将保留。`,
       "批量删除确认",
       {
         confirmButtonText: "删除",

@@ -51,7 +51,7 @@ const handleDelete = async () => {
   try {
     // 弹出确认框
     await ElMessageBox.confirm(
-      `确定要删除选中的 ${selectedRows.value.length} 条会话吗？删除后不可恢复。`,
+      `确定要删除选中的 ${selectedRows.value.length} 条会话吗？会话和消息将进入逻辑删除状态。`,
       '删除确认',
       {
         confirmButtonText: '确定',
