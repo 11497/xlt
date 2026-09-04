@@ -1,4 +1,4 @@
-﻿import json
+import json
 from datetime import datetime
 from typing import Optional
 from uuid import uuid4
@@ -71,12 +71,19 @@ def _create_document_and_task(
     :param filename: 原始文件名
     :param object_key: OSS 对象 key
     :return: 文档ID
-    :raises: 事务失败时抛出异常（由调用方补偿删除 OSS 对象）
+    :raises: 事务失败时抛出异常；已上传 OSS 对象保留，由人工核对
     """
     payload = json.dumps({"object_key": object_key, "filename": filename}, ensure_ascii=False)
     with get_connection() as conn:
         cursor = conn.cursor()
         try:
+            # 锁定知识库，避免与知识库删除任务并发插入新文档。
+            cursor.execute(
+                "SELECT id FROM knowledge_base WHERE id = %s AND is_deleted = 0 FOR UPDATE",
+                (knowledge_base_id,)
+            )
+            if cursor.fetchone() is None:
+                raise ValueError("知识库不存在或已进入删除流程")
             cursor.execute(
                 "INSERT INTO document (knowledge_base_id, filename, storage_path, status) "
                 "VALUES (%s, %s, %s, 'pending')",
@@ -135,12 +142,8 @@ async def upload_document(
     try:
         document_id = _create_document_and_task(knowledge_base_id, file.filename, object_key)
     except Exception as e:
-        # 事务失败：补偿删除刚上传的 OSS 对象，避免孤儿文件
-        try:
-            async with OSSUtil() as oss_client:
-                await oss_client.delete_file(object_key)
-        except Exception as cleanup_e:
-            print(f"[ERROR] 清理孤儿 OSS 对象失败：{object_key} -> {cleanup_e}")
+        # 数据库事务失败时不删除 OSS 对象，保留上传文件用于人工核对。
+        print(f"[ERROR] 文档记录保存失败，OSS 对象保留：{object_key} -> {e}")
         return result.error(msg=f"保存文档记录失败：{str(e)}")
 
     return result.success(
@@ -278,7 +281,7 @@ async def delete_document(
         user: User = Depends(require_current_user)
 ):
     """
-    删除文档（异步：OSS/Chroma/ES/MySQL 四端清理由 Worker 执行）
+    删除文档（异步：Chroma/ES 索引清理由 Worker 执行，MySQL 逻辑删除，OSS 保留）
     :param document_id: 文档ID
     :param user: 当前用户对象
     :return: 删除结果（异步提交）
@@ -303,9 +306,18 @@ async def delete_document(
             cursor = conn.cursor()
             try:
                 cursor.execute(
-                    "UPDATE document SET status = 'deleting', update_time = NOW() WHERE id = %s",
+                    "SELECT id FROM knowledge_base WHERE id = %s AND is_deleted = 0 FOR UPDATE",
+                    (document.knowledge_base_id,)
+                )
+                if cursor.fetchone() is None:
+                    raise ValueError("知识库不存在或已进入删除流程")
+                cursor.execute(
+                    "UPDATE document SET status = 'deleting', update_time = NOW() "
+                    "WHERE id = %s AND is_deleted = 0 AND status <> 'deleting'",
                     (document_id,)
                 )
+                if cursor.rowcount != 1:
+                    raise ValueError("文档不存在或已进入删除流程")
                 cursor.execute(
                     "INSERT INTO document_task (task_type, document_id, knowledge_base_id, status, payload) "
                     "VALUES ('delete', %s, %s, 'pending', %s)",
@@ -316,7 +328,7 @@ async def delete_document(
     except Exception as e:
         return result.error(msg=f"提交删除任务失败：{str(e)}")
 
-    return result.success(msg="删除任务已提交，正在清理", data={
+    return result.success(msg="删除任务已提交，正在清理检索索引；文件将保留", data={
         "id": document_id,
         "status": "deleting"
     })

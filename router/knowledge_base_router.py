@@ -7,6 +7,7 @@ from crud.user_knowledge_base_crud import UserKnowledgeBaseCRUD
 from model.knowledge_base_model import KnowledgeBase
 from model.result import Result
 from model.user_model import User
+from util.db_util import get_connection
 
 router = APIRouter(prefix="/api/knowledge_base", tags=["knowledge_base"])
 
@@ -90,7 +91,7 @@ async def update_knowledge_base(knowledge_base: KnowledgeBase,
 @router.delete("")
 async def delete_knowledge_base(id: int, _admin: User = Depends(require_admin)):
     """
-    删除知识库
+    删除知识库（异步：Chroma/ES 索引清理由 Worker 执行，MySQL 逻辑删除，OSS 保留）
     :param id: 知识库ID
     :param _admin: 管理员用户对象
     :return: 删除结果
@@ -102,7 +103,7 @@ async def delete_knowledge_base(id: int, _admin: User = Depends(require_admin)):
     if roles:
         return result.error(msg="知识库下有绑定的角色，不能删除")
 
-    # 异步删除：入队 delete_kb 任务，由 Worker 清理 Chroma/ES 及文档记录后，再删除知识库记录
+    # 异步删除：入队 delete_kb 任务；Worker 清理 Chroma/ES 后统一逻辑删除文档和知识库。
     from crud.document_task_crud import DocumentTaskCRUD
     from model.document_task_model import DocumentTask
     import json
@@ -124,9 +125,40 @@ async def delete_knowledge_base(id: int, _admin: User = Depends(require_admin)):
         knowledge_base_id=id,
         payload=payload
     )
-    DocumentTaskCRUD.create(task)
 
-    return result.success(msg="删除任务已提交，正在清理知识库数据")
+    # 提交任务时先锁定知识库并进入逻辑删除态，阻止并发上传/删除文档；
+    # Worker 清理 Chroma/ES 成功后再统一将文档置为最终逻辑删除。
+    try:
+        with get_connection() as conn:
+            cursor = conn.cursor()
+            try:
+                cursor.execute(
+                    "SELECT id FROM knowledge_base WHERE id = %s AND is_deleted = 0 FOR UPDATE",
+                    (id,)
+                )
+                if cursor.fetchone() is None:
+                    return result.error(msg="知识库不存在或已有删除任务")
+                cursor.execute(
+                    "UPDATE document SET status = 'deleting', update_time = NOW() "
+                    "WHERE knowledge_base_id = %s AND is_deleted = 0 AND status <> 'deleting'",
+                    (id,)
+                )
+                cursor.execute(
+                    "UPDATE knowledge_base SET is_deleted = 1, deleted_at = NOW() "
+                    "WHERE id = %s AND is_deleted = 0",
+                    (id,)
+                )
+                cursor.execute(
+                    "INSERT INTO document_task (task_type, document_id, knowledge_base_id, status, payload) "
+                    "VALUES ('delete_kb', %s, %s, 'pending', %s)",
+                    (task.document_id, task.knowledge_base_id, task.payload)
+                )
+            finally:
+                cursor.close()
+    except Exception as e:
+        return result.error(msg=f"提交删除任务失败：{str(e)}")
+
+    return result.success(msg="删除任务已提交，正在清理知识库检索数据；文件将保留")
 
 @router.get("/{id}")
 async def get_by_id(id: int, user: User = Depends(require_current_user)):
