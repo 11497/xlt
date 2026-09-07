@@ -9,6 +9,7 @@ from crud.role_crud import RoleCRUD
 from crud.role_knowledge_base_crud import RoleKnowledgeBaseCRUD
 from model.result import Result
 from model.user_model import User
+from util.db_util import get_connection
 
 router = APIRouter(prefix="/api/role_knowledge_base", tags=["role_knowledge_base"])
 
@@ -45,12 +46,34 @@ async def batch_assign_role_to_knowledge_base(
         if not RoleCRUD.get_by_id(binding.role_id):
             return result.error(msg=f"角色不存在：{binding.role_id}")
 
-    res = RoleKnowledgeBaseCRUD.batch_assign_roles_to_knowledge_base(
-        request.knowledge_base_id,
-        [binding.model_dump() for binding in request.bindings]
-    )
+    try:
+        with get_connection() as conn:
+            cursor = conn.cursor()
+            try:
+                cursor.execute(
+                    "SELECT id FROM knowledge_base WHERE id = %s AND is_deleted = 0 FOR UPDATE",
+                    (request.knowledge_base_id,),
+                )
+                if cursor.fetchone() is None:
+                    return result.error(msg="知识库不存在或已进入删除流程")
+                for binding in request.bindings:
+                    cursor.execute(
+                        "SELECT id FROM role WHERE id = %s AND is_deleted = 0 FOR UPDATE",
+                        (binding.role_id,),
+                    )
+                    if cursor.fetchone() is None:
+                        return result.error(msg=f"角色不存在：{binding.role_id}")
+                res = RoleKnowledgeBaseCRUD.batch_assign_roles_to_knowledge_base(
+                    request.knowledge_base_id,
+                    [binding.model_dump() for binding in request.bindings],
+                    cursor=cursor,
+                )
+            finally:
+                cursor.close()
+    except Exception as e:
+        return result.error(msg=f"分配角色失败：{str(e)}")
     if not res:
-        result.error(msg="分配角色失败")
+        return result.error(msg="分配角色失败")
     return result.success(msg="分配角色成功")
 
 
@@ -159,9 +182,31 @@ async def assign_knowledge_base_to_role(
         return result.error(msg="角色不存在")
     if not KnowledgeBaseCRUD.get_by_id(knowledge_base_id):
         return result.error(msg="知识库不存在")
-    res = RoleKnowledgeBaseCRUD.upsert_binding(role_id, knowledge_base_id, permission)
+    try:
+        with get_connection() as conn:
+            cursor = conn.cursor()
+            try:
+                cursor.execute(
+                    "SELECT id FROM knowledge_base WHERE id = %s AND is_deleted = 0 FOR UPDATE",
+                    (knowledge_base_id,),
+                )
+                if cursor.fetchone() is None:
+                    return result.error(msg="知识库不存在或已进入删除流程")
+                cursor.execute(
+                    "SELECT id FROM role WHERE id = %s AND is_deleted = 0 FOR UPDATE",
+                    (role_id,),
+                )
+                if cursor.fetchone() is None:
+                    return result.error(msg="角色不存在")
+                res = RoleKnowledgeBaseCRUD.upsert_binding(
+                    role_id, knowledge_base_id, permission, cursor=cursor
+                )
+            finally:
+                cursor.close()
+    except Exception as e:
+        return result.error(msg=f"分配知识库失败：{str(e)}")
     if not res:
-        result.error(msg="分配知识库失败")
+        return result.error(msg="分配知识库失败")
     return result.success(msg="分配知识库成功")
 
 

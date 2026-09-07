@@ -5,6 +5,8 @@ from fastapi.params import Body
 
 from authentication.user_auth import require_admin, require_current_user
 from crud.role_user_crud import RoleUserCRUD
+from crud.role_crud import RoleCRUD
+from crud.user_crud import UserCRUD
 from model.result import Result
 from model.user_model import User
 
@@ -24,6 +26,12 @@ async def batch_assign_users_to_role(
     """
     result = Result()
 
+    if not RoleCRUD.get_by_id(role_id):
+        return result.error(msg="角色不存在")
+    for user_id in user_ids:
+        if not UserCRUD.get_by_id(user_id):
+            return result.error(msg=f"用户不存在：{user_id}")
+
     # 删除user_ids中已经分配给角色的用户
     new_user_ids = []
     assigned_user_ids = RoleUserCRUD.get_users_by_role(role_id)
@@ -33,7 +41,7 @@ async def batch_assign_users_to_role(
 
     res = RoleUserCRUD.batch_assign_users_to_role(role_id, new_user_ids)
     if not res:
-        result.error(msg="分配用户失败")
+        return result.error(msg="分配用户失败")
     return result.success(msg="分配用户成功")
 
 
@@ -50,9 +58,14 @@ async def batch_remove_users_from_role(
     :return: 移除结果
     """
     result = Result()
+    if not RoleCRUD.get_by_id(role_id):
+        return result.error(msg="角色不存在")
+    for user_id in user_ids:
+        if not UserCRUD.get_by_id(user_id):
+            return result.error(msg=f"用户不存在：{user_id}")
     res = RoleUserCRUD.batch_remove_users_from_role(role_id, user_ids)
     if not res:
-        result.error(msg="移除用户失败")
+        return result.error(msg="移除用户失败")
     return result.success(msg="移除用户成功")
 
 
@@ -103,7 +116,7 @@ async def get_roles_by_user(
 
     # 验证用户是否有查询权限
     if user.id != user_id and user.is_admin == 0:
-        result.error(msg="没有权限查询其他用户的角色")
+        return result.error(msg="没有权限查询其他用户的角色")
 
     roles, total = RoleUserCRUD.get_page_roles_by_user(
         user_id=user_id,
@@ -143,9 +156,13 @@ async def assign_user_to_role(
     :return: 分配结果
     """
     result = Result()
+    if not RoleCRUD.get_by_id(role_id):
+        return result.error(msg="角色不存在")
+    if not UserCRUD.get_by_id(user_id):
+        return result.error(msg="用户不存在")
     res = RoleUserCRUD.assign_user_to_role(role_id, user_id)
     if not res:
-        result.error(msg="分配用户失败")
+        return result.error(msg="分配用户失败")
     return result.success(msg="分配用户成功")
 
 
@@ -164,7 +181,7 @@ async def remove_user_from_role(
     result = Result()
     res = RoleUserCRUD.remove_user_from_role(role_id, user_id)
     if not res:
-        result.error(msg="移除用户失败")
+        return result.error(msg="移除用户失败")
     return result.success(msg="移除用户成功")
 
 
@@ -181,7 +198,7 @@ async def delete_by_role(
     result = Result()
     res = RoleUserCRUD.delete_by_role(role_id)
     if not res:
-        result.error(msg="删除角色关联关系失败")
+        return result.error(msg="删除角色关联关系失败")
     return result.success(msg="删除角色关联关系成功")
 
 
@@ -198,5 +215,5 @@ async def delete_by_user(
     result = Result()
     res = RoleUserCRUD.delete_by_user(user_id)
     if not res:
-        result.error(msg="删除用户关联关系失败")
+        return result.error(msg="删除用户关联关系失败")
     return result.success(msg="删除用户关联关系成功")
