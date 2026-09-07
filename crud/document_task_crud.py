@@ -105,7 +105,8 @@ class DocumentTaskCRUD:
         :return: 任务对象列表
         """
         sql = ("SELECT * FROM document_task WHERE status = 'processing' "
-               "AND update_time < NOW() - INTERVAL %s MINUTE ORDER BY id ASC LIMIT %s")
+               "AND COALESCE(claimed_at, update_time) < NOW() - INTERVAL %s MINUTE "
+               "ORDER BY id ASC LIMIT %s")
         with get_connection() as conn:
             cursor = conn.cursor(pymysql.cursors.DictCursor)
             try:
@@ -148,44 +149,78 @@ class DocumentTaskCRUD:
         :param limit: 领取数量
         :return: 领取到的任务对象列表
         """
+        if task_type == "index":
+            resource_filter = (
+                "JOIN document d ON d.id = dt.document_id "
+                "JOIN knowledge_base kb ON kb.id = dt.knowledge_base_id "
+                "AND kb.is_deleted = 0 "
+                "WHERE dt.document_id > 0 AND d.is_deleted = 0 "
+                "AND d.status NOT IN ('deleting', 'deleted')"
+            )
+        elif task_type == "delete":
+            resource_filter = (
+                "JOIN document d ON d.id = dt.document_id "
+                "JOIN knowledge_base kb ON kb.id = dt.knowledge_base_id "
+                "AND kb.is_deleted = 0 "
+                "WHERE dt.document_id > 0 AND d.is_deleted = 0 AND d.status = 'deleting'"
+            )
+        elif task_type == "delete_kb":
+            resource_filter = (
+                "JOIN knowledge_base kb ON kb.id = dt.knowledge_base_id "
+                "WHERE dt.document_id = 0 AND kb.is_deleted = 1"
+            )
+        else:
+            raise ValueError(f"不支持的任务类型：{task_type}")
+
         claimed: List[DocumentTask] = []
         with get_connection() as conn:
             cursor = conn.cursor(pymysql.cursors.DictCursor)
             try:
                 cursor.execute(
-                    "SELECT * FROM document_task "
-                    "WHERE task_type = %s AND status = 'pending' "
-                    "AND (next_retry_at IS NULL OR next_retry_at <= NOW()) "
-                    "ORDER BY id ASC LIMIT %s FOR UPDATE SKIP LOCKED",
+                    "SELECT dt.* FROM document_task dt "
+                    f"{resource_filter} AND dt.task_type = %s AND dt.status = 'pending' "
+                    "AND (dt.next_retry_at IS NULL OR dt.next_retry_at <= NOW()) "
+                    "ORDER BY dt.id ASC LIMIT %s FOR UPDATE SKIP LOCKED",
                     (task_type, limit)
                 )
                 rows = cursor.fetchall()
                 for row in rows:
                     cursor.execute(
                         "UPDATE document_task SET status = 'processing', "
-                        "error_message = %s, update_time = NOW() WHERE id = %s",
-                        (f"claimed by {worker_id}", row["id"])
+                        "claimed_by = %s, claimed_at = NOW(), error_message = %s, "
+                        "update_time = NOW() WHERE id = %s AND status = 'pending'",
+                        (worker_id, f"claimed by {worker_id}", row["id"])
                     )
+                    row["status"] = "processing"
+                    row["claimed_by"] = worker_id
                     claimed.append(DocumentTask.from_row(row))
             finally:
                 cursor.close()
         return claimed
 
     @staticmethod
-    def mark_done(task_id: int, result_json: Optional[dict] = None) -> bool:
+    def mark_done(
+            task_id: int,
+            result_json: Optional[dict] = None,
+            worker_id: Optional[str] = None,
+    ) -> bool:
         """
         标记任务完成
         :param task_id: 任务ID
         :param result_json: 各存储执行结果
         :return: 是否更新成功
         """
+        owner_clause = " AND claimed_by = %s" if worker_id else ""
         if result_json is not None:
             sql = ("UPDATE document_task SET status = 'done', error_message = NULL, "
-                   "result_json = %s, update_time = NOW() WHERE id = %s")
-            params = (json.dumps(result_json, ensure_ascii=False), task_id)
+                   "result_json = %s, claimed_by = NULL, claimed_at = NULL, update_time = NOW() "
+                   f"WHERE id = %s AND status = 'processing'{owner_clause}")
+            params = (json.dumps(result_json, ensure_ascii=False), task_id) + ((worker_id,) if worker_id else ())
         else:
-            sql = "UPDATE document_task SET status = 'done', error_message = NULL, update_time = NOW() WHERE id = %s"
-            params = (task_id,)
+            sql = ("UPDATE document_task SET status = 'done', error_message = NULL, "
+                   "claimed_by = NULL, claimed_at = NULL, update_time = NOW() "
+                   f"WHERE id = %s AND status = 'processing'{owner_clause}")
+            params = (task_id,) + ((worker_id,) if worker_id else ())
         with get_connection() as conn:
             cursor = conn.cursor(pymysql.cursors.DictCursor)
             try:
@@ -195,7 +230,13 @@ class DocumentTaskCRUD:
                 cursor.close()
 
     @staticmethod
-    def mark_retry(task_id: int, error_message: str, retry_count: int, max_retries: int) -> bool:
+    def mark_retry(
+            task_id: int,
+            error_message: str,
+            retry_count: int,
+            max_retries: int,
+            worker_id: Optional[str] = None,
+    ) -> Optional[bool]:
         """
         任务失败，按指数退避安排重试；超过最大次数则标记 failed
         :param task_id: 任务ID
@@ -204,29 +245,37 @@ class DocumentTaskCRUD:
         :param max_retries: 最大重试次数
         :return: 是否标记为最终失败（True=failed，False=已安排重试）
         """
+        owner_clause = " AND claimed_by = %s" if worker_id else ""
         if retry_count >= max_retries:
             sql = ("UPDATE document_task SET status = 'failed', error_message = %s, "
-                   "retry_count = %s, update_time = NOW() WHERE id = %s")
-            params = (error_message[:2000], retry_count, task_id)
+                   "retry_count = %s, claimed_by = NULL, claimed_at = NULL, update_time = NOW() "
+                   f"WHERE id = %s AND status = 'processing'{owner_clause}")
+            params = (error_message[:2000], retry_count, task_id) + ((worker_id,) if worker_id else ())
             is_final = True
         else:
             # 指数退避：1m, 5m, 30m, 2h, 8h...
             delay_seconds = min(30 * (2 ** (retry_count - 1)), 8 * 3600)
             next_retry = datetime.now() + timedelta(seconds=delay_seconds)
             sql = ("UPDATE document_task SET status = 'pending', error_message = %s, "
-                   "retry_count = %s, next_retry_at = %s, update_time = NOW() WHERE id = %s")
-            params = (error_message[:2000], retry_count, next_retry, task_id)
+                   "retry_count = %s, next_retry_at = %s, claimed_by = NULL, claimed_at = NULL, "
+                   "update_time = NOW() "
+                   f"WHERE id = %s AND status = 'processing'{owner_clause}")
+            params = (error_message[:2000], retry_count, next_retry, task_id) + ((worker_id,) if worker_id else ())
             is_final = False
         with get_connection() as conn:
             cursor = conn.cursor(pymysql.cursors.DictCursor)
             try:
-                cursor.execute(sql, params)
-                return is_final
+                affected = cursor.execute(sql, params)
+                return is_final if affected else None
             finally:
                 cursor.close()
 
     @staticmethod
-    def reset_stuck_tasks(task_ids: List[int], worker_id: str = "reconciliation") -> int:
+    def reset_stuck_tasks(
+            task_ids: List[int],
+            worker_id: str = "reconciliation",
+            timeout_minutes: int = 15,
+    ) -> int:
         """
         将卡死的 processing 任务重置为 pending
         :param task_ids: 任务ID列表
@@ -237,11 +286,14 @@ class DocumentTaskCRUD:
             return 0
         placeholders = ",".join(["%s"] * len(task_ids))
         sql = (f"UPDATE document_task SET status = 'pending', error_message = %s, "
-               f"update_time = NOW() WHERE id IN ({placeholders})")
+               f"claimed_by = NULL, claimed_at = NULL, update_time = NOW() "
+               f"WHERE status = 'processing' AND COALESCE(claimed_at, update_time) "
+               f"< NOW() - INTERVAL %s MINUTE "
+               f"AND id IN ({placeholders})")
         with get_connection() as conn:
             cursor = conn.cursor(pymysql.cursors.DictCursor)
             try:
-                affected = cursor.execute(sql, (f"reset by {worker_id}", *task_ids))
+                affected = cursor.execute(sql, (f"reset by {worker_id}", timeout_minutes, *task_ids))
                 return affected
             finally:
                 cursor.close()
