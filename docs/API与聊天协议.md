@@ -4,7 +4,7 @@
 
 | 模块             | 路径                           | 说明                             |
 |------------------|--------------------------------|----------------------------------|
-| OAuth2 认证      | `/api/auth`                    | Swagger OAuth2 表单登录          |
+| OAuth2 认证      | `POST /api/auth`               | Swagger OAuth2 表单登录          |
 | 用户             | `/api/user`                    | 注册、登录、用户资料和管理员操作 |
 | 角色             | `/api/role`                    | 角色增删改查                     |
 | 用户角色         | `/api/role_user`               | 用户与角色关联                   |
@@ -16,6 +16,8 @@
 | 消息             | `/api/message`                 | RAG 问答和消息管理               |
 | 公告             | `/api/announcement`            | 发布、查询和置顶                 |
 | 公告附件         | `/api/announcement_attachment` | 上传、下载和删除                 |
+
+认证路由挂在 `/api` 下，实际接口为 `POST /api/auth`，没有 `/api/auth/*` 子路由。
 
 普通业务接口通常需要：
 

@@ -1,7 +1,7 @@
 ﻿@echo off
 setlocal
 
-rem Always run from the project directory, even when started by double-click.
+rem 始终在项目目录运行，即使是双击启动。
 set "PROJECT_DIR=%~dp0"
 cd /d "%PROJECT_DIR%"
 
@@ -27,11 +27,10 @@ if not exist "%PROJECT_DIR%frontend\package.json" (
 
 start "XLT Backend" cmd /k "cd /d ""%PROJECT_DIR%"" && uv run uvicorn main:app --reload --host 0.0.0.0 --port 8000"
 
-rem Document indexing/delete Worker: REQUIRED, uploads stay "pending" without it.
+rem 文档索引/删除 Worker：必须启动，否则上传文档会一直停留在 pending。
 start "XLT Worker" cmd /k "cd /d ""%PROJECT_DIR%"" && uv run python -m ai.indexing_worker"
 
-rem Optional reconciliation service: recovers stuck tasks, verifies indexes and
-rem reports orphan OSS objects without deleting them. Uncomment the next line to enable it.
+rem 可选对账服务：恢复卡死任务、核对索引，不删除 OSS 对象。取消下一行注释即可启用。
 rem start "XLT Reconcile" cmd /k "cd /d ""%PROJECT_DIR%"" && uv run python -m ai.reconciliation_service"
 
 start "XLT Frontend" cmd /k "cd /d ""%PROJECT_DIR%frontend"" && npm run dev -- --host"

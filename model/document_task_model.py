@@ -7,7 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 class DocumentTask(BaseModel):
     """DocumentTask 数据模型，对应 xlt.document_task 表"""
     model_config = ConfigDict(extra="forbid")
-    task_type: str = Field(min_length=1, max_length=20)  # index / delete
+    task_type: str = Field(min_length=1, max_length=20)  # 任务类型：index（索引）/ delete（删除）
     document_id: int = Field(ge=0)
     knowledge_base_id: int = Field(ge=1)
     status: str = Field(default="pending", max_length=20)
