@@ -10,7 +10,7 @@
 
 - **后端**：FastAPI、Uvicorn、Pydantic 2、MySQL、ChromaDB、Elasticsearch 8.x
 - **前端**：Vue 3、Vite、Element Plus、Vue Router 4、Pinia 4
-- **AI 服务**：SiliconFlow 对话、向量化和精排模型
+- **AI 服务**：对话、向量化和精排模型（当前默认 SiliconFlow，地址与模型名在 `config/ai_config.py`）
 - **认证与存储**：JWT、Argon2id、阿里云 OSS
 - **文档处理**：Markdown、TXT、PDF、DOCX
 
@@ -21,10 +21,10 @@
 - 权限管理：用户、角色和知识库关联，支持只读和读写权限
 - 会话管理：多会话切换、历史保存、重命名和逻辑删除
 - 公告系统：公告发布、附件上传、置顶和逻辑删除
-- 删除语义：MySQL 业务数据逻辑删除；用户、角色、知识库软删除时将唯一名称改为原名加 UUID 后缀，允许用原名重建；文档/知识库的 ChromaDB 与 Elasticsearch 索引真实删除；OSS 文件保留用于留存
+- 删除语义：业务数据逻辑删除，文档/知识库检索索引真实删除，OSS 对象保留；细节见[架构与功能说明](docs/架构与功能.md)
 - 校园知识工作台：用户端、管理端和聊天端的统一界面与移动端适配
 
-详细功能、项目结构和检索流程见[架构与功能说明](docs/架构与功能.md)。
+详细功能、项目结构、异步索引和检索流程见[架构与功能说明](docs/架构与功能.md)。
 
 ## 快速开始
 
@@ -35,8 +35,8 @@
 - MySQL
 - Elasticsearch 8.x，并安装 IK 中文分词插件
 - uv
-- 可访问的 SiliconFlow API
-- 阿里云 OSS Bucket
+- 可访问的对话、向量化和精排 API（当前默认 SiliconFlow）
+- 阿里云 OSS（`.env` 填密钥；Bucket 与 Endpoint 在 `config/oss_config.py`）
 
 ### 1. 安装依赖
 
@@ -55,7 +55,7 @@ npm install
 
 ### 2. 配置环境变量
 
-在项目根目录复制 `.env.example` 为 `.env`，填写数据库、Elasticsearch、AI 服务和 OSS 配置：
+在项目根目录复制 `.env.example` 为 `.env`，填写数据库、Elasticsearch、AI 密钥和 OSS 密钥：
 
 ```powershell
 Copy-Item .env.example .env
@@ -71,7 +71,7 @@ Copy-Item .env.example .env
 SOURCE sql/db.sql;
 ```
 
-`sql/db.sql` 仅用于空环境首次初始化，不是可重复执行的迁移脚本；项目当前不提供增量 SQL。已有数据库需先备份，再完全重置 MySQL、ChromaDB、Elasticsearch 和 OSS 后重新执行 `sql/db.sql`。`sql/reset-dev.sql` 会删除整个 `xlt` 数据库，只能用于可丢弃全部数据的本地开发环境。
+`sql/db.sql` 仅用于空环境首次初始化。重置方式、软删除字段和注意事项见[配置与数据库说明](docs/配置与数据库.md)。
 
 ### 4. 启动服务
 
@@ -117,8 +117,8 @@ Windows 用户完成配置后也可以双击根目录的 `start.bat` 一键启�
 
 ## 文档
 
-- [架构与功能说明](docs/架构与功能.md)：项目结构、技术栈细节、核心功能、数据库概览和混合检索流程
-- [配置与数据库说明](docs/配置与数据库.md)：环境变量、AI 配置、提示词和数据库初始化
+- [架构与功能说明](docs/架构与功能.md)：项目结构、核心功能、数据库概览、异步索引和检索流程
+- [配置与数据库说明](docs/配置与数据库.md)：环境变量、AI 配置、提示词、数据库初始化和常见问题
 - [API 与聊天协议](docs/API与聊天协议.md)：接口模块、鉴权约定、聊天 NDJSON 流和接口文档生成
 - [开发与部署说明](docs/开发与部署.md)：测试、文件限制、安全要求、部署和外部服务一致性注意事项
 - [接口文档](docs/接口文档.md)：由 `scripts/generate_api_doc.py` 生成的接口摘要
