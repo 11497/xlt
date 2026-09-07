@@ -27,7 +27,7 @@
 - 启动前端：在 `frontend/` 中运行 `npm run dev`。
 - 构建前端：在 `frontend/` 中运行 `npm run build`。
 - 生成接口文档：`uv run python scripts/generate_api_doc.py`。
-- 当前仓库没有配置自动化测试、lint 或 formatter；不要声称运行过不存在的检查，也不要仅为完成普通任务擅自引入相关工具。
+- 仓库已配置 pytest 自动化测试（开发依赖组和 `tests/`），当前未配置 lint 或 formatter；不要声称运行过不存在的检查，也不要仅为完成普通任务擅自引入相关工具。
 
 ## 后端约定
 
@@ -52,7 +52,7 @@
 
 - 后端接口路径、HTTP 方法、参数名或响应结构变化时，同步更新 `frontend/src/api/` 下的调用方和相关页面。
 - 普通前端请求复用 `frontend/src/utils/request.js`；聊天流使用原生 `fetch()`，不要强行改用普通 Axios 响应流程。
-- 文件上传类型、大小和文件名限制同时存在于 `config/file_config.py` 与 `frontend/src/utils/uploadValidation.js`，修改任一侧时必须同步另一侧。
+- 文件上传类型和大小限制同时存在于 `config/file_config.py` 与 `frontend/src/utils/uploadValidation.js`，修改任一侧时必须同步另一侧。文件名长度还涉及 `frontend/src/utils/uploadValidation.js`、文档模型和数据库字段；上传路由当前直接接收 `UploadFile`，未复用文档模型的文件名长度校验，修改限制时必须单独验证两条上传路径。
 - Vite 本地开发通过 `/api` 代理到 `http://127.0.0.1:8000`。不要在业务组件中硬编码后端绝对地址。
 - 保持现有 Vue Composition API、`@` 路径别名和 Element Plus 中文本地化用法；共享请求逻辑放在 `frontend/src/api/` 或 `frontend/src/utils/`，不要在多个页面重复实现。
 
