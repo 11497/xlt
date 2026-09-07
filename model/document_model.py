@@ -1,11 +1,16 @@
+from model.schema_utils import SoftDeleteModel, exclude_internal_soft_delete_fields
+
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import ConfigDict, Field
 
 
-class Document(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+class Document(SoftDeleteModel):
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra=exclude_internal_soft_delete_fields,
+    )
     """Document 数据模型，对应 xlt.document 表"""
     knowledge_base_id: int = Field(ge=1)
     filename: str = Field(min_length=1, max_length=255)
@@ -31,4 +36,4 @@ class Document(BaseModel):
         :param row: 数据库查询结果行
         :return: Document 对象
         """
-        return cls.model_validate(row)
+        return cls.model_construct(**row)

@@ -1,7 +1,9 @@
+from model.schema_utils import SoftDeleteModel, exclude_internal_soft_delete_fields
+
 from typing import Optional
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import ConfigDict, Field
 
 
 SESSION_NAME_MIN_LENGTH = 1
@@ -40,8 +42,11 @@ def validate_session_name(name: str) -> str:
     return name
 
 
-class Session(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+class Session(SoftDeleteModel):
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra=exclude_internal_soft_delete_fields,
+    )
     """Session 数据模型，对应 xlt.session 表"""
     user_id: int = Field(ge=1)
     name: str = Field(
@@ -65,4 +70,4 @@ class Session(BaseModel):
         :param row: 数据库查询结果行
         :return: Session 对象
         """
-        return cls.model_validate(row)
+        return cls.model_construct(**row)

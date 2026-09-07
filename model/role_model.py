@@ -1,12 +1,17 @@
+from model.schema_utils import SoftDeleteModel, exclude_internal_soft_delete_fields
+
 from typing import Optional
 
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import ConfigDict, Field
 
 
-class Role(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+class Role(SoftDeleteModel):
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra=exclude_internal_soft_delete_fields,
+    )
     """Role 数据模型，对应 xlt.role 表"""
     name: str = Field(min_length=1, max_length=15)
     id: Optional[int] = Field(default=None, ge=1)  # 新建时 id 为 None，查询时自动填充
@@ -24,4 +29,4 @@ class Role(BaseModel):
         :param row: 数据库查询结果行
         :return: Role 对象
         """
-        return cls.model_validate(row)
+        return cls.model_construct(**row)

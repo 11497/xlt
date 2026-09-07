@@ -1,11 +1,16 @@
+from model.schema_utils import SoftDeleteModel, exclude_internal_soft_delete_fields
+
 from datetime import datetime
 from typing import Literal, Optional
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import ConfigDict, Field
 
 
-class Message(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+class Message(SoftDeleteModel):
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra=exclude_internal_soft_delete_fields,
+    )
     """Message 数据模型，对应 xlt.message 表"""
     session_id: int = Field(ge=1)
     role: Literal["user", "assistant"]
@@ -27,4 +32,4 @@ class Message(BaseModel):
         :param row: 数据库查询结果行
         :return: Message 对象
         """
-        return cls.model_validate(row)
+        return cls.model_construct(**row)

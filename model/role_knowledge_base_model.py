@@ -1,12 +1,17 @@
+from model.schema_utils import SoftDeleteModel, exclude_internal_soft_delete_fields
+
 from typing import Optional
 
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import ConfigDict, Field
 
 
-class RoleKnowledgeBase(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+class RoleKnowledgeBase(SoftDeleteModel):
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra=exclude_internal_soft_delete_fields,
+    )
     """RoleKnowledgeBase 数据模型，对应 xlt.role_knowledge_base 表"""
     role_id: int = Field(ge=1)
     knowledge_base_id: int = Field(ge=1)
@@ -25,4 +30,4 @@ class RoleKnowledgeBase(BaseModel):
         :param row: 数据库查询结果行
         :return: RoleKnowledgeBase 对象
         """
-        return cls.model_validate(row)
+        return cls.model_construct(**row)

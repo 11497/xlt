@@ -1,11 +1,16 @@
+from model.schema_utils import SoftDeleteModel, exclude_internal_soft_delete_fields
+
 from typing import Optional
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import ConfigDict, Field
 
 
-class Announcement(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+class Announcement(SoftDeleteModel):
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra=exclude_internal_soft_delete_fields,
+    )
     """Announcement 数据模型，对应 xlt.announcement 表"""
     title: str = Field(min_length=1, max_length=255)
     content: str = Field(min_length=1)
@@ -27,4 +32,4 @@ class Announcement(BaseModel):
         :param row: 数据库查询结果行
         :return: Announcement 对象
         """
-        return cls.model_validate(row)
+        return cls.model_construct(**row)

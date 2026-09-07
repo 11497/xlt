@@ -1,11 +1,16 @@
+from model.schema_utils import SoftDeleteModel, exclude_internal_soft_delete_fields
+
 from typing import Optional
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import ConfigDict, Field
 
 
-class AnnouncementAttachment(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+class AnnouncementAttachment(SoftDeleteModel):
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra=exclude_internal_soft_delete_fields,
+    )
     """AnnouncementAttachment 数据模型，对应 xlt.announcement_attachment 表"""
     announcement_id: int = Field(ge=1)
     filename: str = Field(min_length=1, max_length=255)
@@ -26,4 +31,4 @@ class AnnouncementAttachment(BaseModel):
         :param row: 数据库查询结果行
         :return: AnnouncementAttachment 对象
         """
-        return cls.model_validate(row)
+        return cls.model_construct(**row)
