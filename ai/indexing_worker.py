@@ -12,24 +12,24 @@ import time
 from pathlib import Path
 from typing import Optional
 
-# 独立进程运行时加载项目根目录 .env
+# 独立进程运行时确保能导入项目根目录下的 config 包，并触发统一加载 .env。
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from dotenv import load_dotenv  # noqa: E402
-load_dotenv(PROJECT_ROOT / ".env")
+import config  # noqa: E402
 
 from ai.ingestion_service import IngestionService  # noqa: E402
 from crud.document_crud import DocumentCRUD  # noqa: E402
 from crud.document_task_crud import DocumentTaskCRUD  # noqa: E402
 from model.document_model import Document  # noqa: E402
 from util.db_util import get_connection  # noqa: E402
+from config.worker_config import WORKER_POLL_INTERVAL, WORKER_IDLE_SLEEP  # noqa: E402
 from util.oss_util import OSSUtil  # noqa: E402
 from util.file_util import chunk_text_by_sentence, read_file_content  # noqa: E402
 
 WORKER_ID = f"worker-{os.getpid()}"
-POLL_INTERVAL = float(os.getenv("INDEX_WORKER_POLL_INTERVAL", "2"))
-IDLE_SLEEP = float(os.getenv("INDEX_WORKER_IDLE_SLEEP", "3"))
+POLL_INTERVAL = WORKER_POLL_INTERVAL
+IDLE_SLEEP = WORKER_IDLE_SLEEP
 MAX_EMPTY_LOOPS = 30  # 连续空转 N 次后短暂休眠，降低对 DB 的轮询压力
 
 

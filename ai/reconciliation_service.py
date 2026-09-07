@@ -8,7 +8,6 @@
 4. 报告 OSS 中不在 document 表内的对象；按逻辑删除约定，对账服务不删除任何对象
 """
 import json
-import os
 import sys
 import time
 from pathlib import Path
@@ -17,8 +16,7 @@ from typing import Any, List, Optional
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from dotenv import load_dotenv  # noqa: E402
-load_dotenv(PROJECT_ROOT / ".env")
+import config  # noqa: E402
 
 import pymysql  # noqa: E402
 
@@ -27,10 +25,14 @@ from ai.chroma_service import ChromaService  # noqa: E402
 from crud.document_crud import DocumentCRUD  # noqa: E402
 from crud.document_task_crud import DocumentTaskCRUD  # noqa: E402
 from model.document_task_model import DocumentTask  # noqa: E402
+from config.worker_config import (
+    RECONCILIATION_POLL_INTERVAL,
+    RECONCILIATION_STUCK_TIMEOUT_MINUTES,
+)  # noqa: E402
 from util.db_util import get_connection  # noqa: E402
 
-POLL_INTERVAL = int(os.getenv("RECONCILE_INTERVAL", "600"))  # 秒，默认 10 分钟
-STUCK_TIMEOUT_MINUTES = int(os.getenv("RECONCILE_STUCK_TIMEOUT", "15"))
+POLL_INTERVAL = RECONCILIATION_POLL_INTERVAL
+STUCK_TIMEOUT_MINUTES = RECONCILIATION_STUCK_TIMEOUT_MINUTES
 OSS_PREFIX = "knowledge_base/"
 
 
