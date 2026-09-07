@@ -14,7 +14,7 @@
 
 - `README.md`：项目概览、最短启动步骤、默认账号和文档索引，适合快速了解项目。
 - `docs/架构与功能.md`：项目结构、技术栈细节、核心功能、数据库概览和混合检索流程。
-- `docs/配置与数据库.md`：环境变量、AI 配置、提示词约定、数据库初始化和增量迁移。
+- `docs/配置与数据库.md`：环境变量、AI 配置、提示词约定和数据库初始化。
 - `docs/API与聊天协议.md`：接口模块、鉴权约定、聊天 NDJSON 协议和接口文档生成方式。
 - `docs/开发与部署.md`：测试、文件限制、安全要求、部署和外部服务一致性注意事项。
 - `docs/接口文档.md`：由 `scripts/generate_api_doc.py` 生成的 OpenAPI 接口摘要，不得手动编辑。
@@ -37,11 +37,12 @@
 - 新增或修改接口时必须使用 `require_current_user` 或 `require_admin`，并验证会话、消息、文档、知识库等资源归属。前端路由或按钮可见性不能代替后端权限校验。
 - 新增静态子路径时检查其与 `/{id}` 等动态路由的声明顺序，避免被动态路由提前匹配。
 - 数据库字段或约束变化时同步检查 `sql/db.sql`、相关 Pydantic 模型、CRUD、路由、前端调用和生成的接口文档。
-- `sql/db.sql` 是空环境初始化脚本，不是可重复执行的迁移脚本。已有数据库的结构变化应提供增量 SQL，不要依赖重新初始化数据库。
+- `sql/db.sql` 是空环境初始化脚本，不是可重复执行的迁移脚本。项目当前不维护 `sql/migrations/` 增量脚本；数据库字段或约束变化时更新 `sql/db.sql`，已有数据库需备份后完全重置并重新初始化，不要在已有库上重复执行 `sql/db.sql`。
 
 ## AI 与检索约定
 
 - AI 模型、服务地址、密钥读取和检索参数位于 `config/ai_config.py`；提示词正文位于 `config/prompts/`，不得重新内嵌到 Python 文件。
+- 环境变量、密钥、服务地址和独立进程运行参数只能在 `config/` 内读取；`router/`、`crud/`、`ai/`、`util/`、`authentication/`、`scripts/`、`tests/` 和 `main.py` 不得直接 `os.getenv`、访问 `os.environ` 或调用 `load_dotenv`，应从对应 config 模块导入常量。
 - 提示词文件使用 UTF-8。修改时保留 `{conversation}`、`{user_input}`、`{conversation_history}`、`{user_question}` 等运行时占位符；普通花括号需要按 Python `str.format()` 规则转义。
 - `POST /api/message/chat` 必须保持 `application/x-ndjson` 流式协议，逐行发送 `start`、`delta`、`done`、`stopped` 或 `error` 事件，并保持 `frontend/src/api/message.js` 的解析逻辑同步。
 - 用户消息在生成前持久化；AI 消息在完整生成后持久化，或在用户通过停止接口显式中断时持久化已生成的非空片段。生成失败、断网或客户端直接取消的流不得留下不完整的 AI 历史记录。
