@@ -1,3 +1,4 @@
+import pymysql
 from typing import Optional
 
 from fastapi import APIRouter, Depends, UploadFile, File, Form
@@ -11,6 +12,7 @@ from model.result import Result
 from model.user_model import User
 from uuid import uuid4
 
+from util.db_util import get_connection
 from util.oss_util import OSSUtil
 
 router = APIRouter(prefix="/api/announcement_attachment", tags=["announcement_attachment"])
@@ -100,9 +102,36 @@ async def upload_attachment(
         filename=file.filename,
         storage_path=storage_path
     )
-    # 保存到数据库；失败时保留已上传 OSS 对象用于留存/人工核对。
+    # 落库前锁定父公告并再次确认未逻辑删除，避免与公告删除并发时插入活动附件。
     try:
-        attachment_id = AnnouncementAttachmentCRUD.create(attachment)
+        with get_connection() as conn:
+            cursor = conn.cursor(pymysql.cursors.DictCursor)
+            try:
+                cursor.execute(
+                    "SELECT id FROM announcement WHERE id = %s AND is_deleted = 0 FOR UPDATE",
+                    (announcement_id,)
+                )
+                if cursor.fetchone() is None:
+                    return result.error(msg="公告不存在或已删除")
+                cursor.execute(
+                    "SELECT id FROM announcement_attachment "
+                    "WHERE announcement_id = %s AND filename = %s AND is_deleted = 1 "
+                    "ORDER BY id ASC LIMIT 1 FOR UPDATE",
+                    (announcement_id, file.filename)
+                )
+                deleted_attachment = cursor.fetchone()
+                if deleted_attachment:
+                    deleted_attachment_id = deleted_attachment["id"]
+                    cursor.execute(
+                        "UPDATE announcement_attachment SET filename = %s, storage_path = %s, "
+                        "upload_time = NOW(), is_deleted = 0, deleted_at = NULL WHERE id = %s",
+                        (file.filename, storage_path, deleted_attachment_id)
+                    )
+                    attachment_id = deleted_attachment_id
+                else:
+                    attachment_id = AnnouncementAttachmentCRUD.create_with_cursor(cursor, attachment)
+            finally:
+                cursor.close()
     except Exception as e:
         print(f"[ERROR] 附件记录保存失败，OSS 对象保留：{storage_path} -> {e}")
         return result.error(msg=f"保存附件记录失败：{str(e)}")
@@ -127,6 +156,11 @@ async def download_attachment(
     attachment = AnnouncementAttachmentCRUD.get_by_id(attachment_id)
     if not attachment:
         return result.error(msg="附件不存在")
+
+    # 同时校验父公告未逻辑删除，避免已删除公告的附件仍可下载。
+    announcement = AnnouncementCRUD.get_by_id(attachment.announcement_id)
+    if not announcement:
+        return result.error(msg="附件所属公告不存在")
 
     # 生成预签名URL用于下载
     try:
