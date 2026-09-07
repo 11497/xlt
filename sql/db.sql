@@ -124,7 +124,10 @@ create table document_task (
     result_json text null comment 'Chroma/ES 删除或写入结果记录，OSS 保留不删除',
     create_time datetime not null default current_timestamp comment '创建时间',
     update_time datetime not null default current_timestamp on update current_timestamp comment '更新时间',
+    claimed_by varchar(100) null comment '当前 Worker 租约标识',
+    claimed_at datetime null comment '当前 Worker 租约时间',
     key idx_task_status_retry (status, next_retry_at),
+    key idx_task_lease (status, claimed_at),
     key idx_task_document (document_id),
     key idx_task_kb (knowledge_base_id)
 ) comment '文档索引/删除异步任务';
