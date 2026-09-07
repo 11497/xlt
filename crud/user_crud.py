@@ -2,6 +2,7 @@ from typing import List, Optional, Tuple
 from util.db_util import get_cursor
 from model.user_model import User
 from util.password_util import PasswordUtil
+from util.soft_delete_name import tombstone_unique_name
 
 
 class UserCRUD:
@@ -106,13 +107,25 @@ class UserCRUD:
     @staticmethod
     def delete(user_id: int) -> bool:
         """
-        根据 ID 删除用户
+        根据 ID 逻辑删除用户，并将用户名改为墓碑名以释放唯一约束。
         :param user_id: 用户ID
         :return: 是否成功删除了记录
         """
-        sql = "UPDATE user SET is_deleted = 1, deleted_at = NOW() WHERE id = %s AND is_deleted = 0"
+        select_sql = "SELECT username FROM user WHERE id = %s AND is_deleted = 0"
+        update_sql = (
+            "UPDATE user "
+            "SET username = %s, is_deleted = 1, deleted_at = NOW() "
+            "WHERE id = %s AND is_deleted = 0"
+        )
         with get_cursor() as cursor:
-            affected = cursor.execute(sql, (user_id,))
+            cursor.execute(select_sql, (user_id,))
+            row = cursor.fetchone()
+            if not row:
+                return False
+            affected = cursor.execute(
+                update_sql,
+                (tombstone_unique_name(row["username"]), user_id),
+            )
             return affected > 0
 
     @staticmethod

@@ -1,6 +1,7 @@
 from typing import List, Optional, Tuple
 from util.db_util import get_cursor
 from model.role_model import Role
+from util.soft_delete_name import tombstone_unique_name
 
 
 class RoleCRUD:
@@ -102,13 +103,25 @@ class RoleCRUD:
     @staticmethod
     def delete(role_id: int) -> bool:
         """
-        根据 ID 删除角色
+        根据 ID 逻辑删除角色，并将角色名改为墓碑名以释放唯一约束。
         :param role_id: 角色ID
         :return: 是否成功删除了记录
         """
-        sql = "UPDATE role SET is_deleted = 1, deleted_at = NOW() WHERE id = %s AND is_deleted = 0"
+        select_sql = "SELECT name FROM role WHERE id = %s AND is_deleted = 0"
+        update_sql = (
+            "UPDATE role "
+            "SET name = %s, is_deleted = 1, deleted_at = NOW() "
+            "WHERE id = %s AND is_deleted = 0"
+        )
         with get_cursor() as cursor:
-            affected = cursor.execute(sql, (role_id,))
+            cursor.execute(select_sql, (role_id,))
+            row = cursor.fetchone()
+            if not row:
+                return False
+            affected = cursor.execute(
+                update_sql,
+                (tombstone_unique_name(row["name"]), role_id),
+            )
             return affected > 0
 
     @staticmethod

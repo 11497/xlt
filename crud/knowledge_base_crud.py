@@ -2,6 +2,7 @@ from typing import List, Optional, Tuple
 
 from util.db_util import get_cursor
 from model.knowledge_base_model import KnowledgeBase
+from util.soft_delete_name import tombstone_unique_name
 
 
 class KnowledgeBaseCRUD:
@@ -89,13 +90,25 @@ class KnowledgeBaseCRUD:
     @staticmethod
     def delete(knowledge_base_id: int) -> bool:
         """
-        删除知识库
+        逻辑删除知识库，并将名称改为墓碑名以释放唯一约束。
         :param knowledge_base_id: 知识库ID
         :return: 操作是否成功
         """
-        sql = "UPDATE knowledge_base SET is_deleted = 1, deleted_at = NOW() WHERE id = %s AND is_deleted = 0"
+        select_sql = "SELECT name FROM knowledge_base WHERE id = %s AND is_deleted = 0"
+        update_sql = (
+            "UPDATE knowledge_base "
+            "SET name = %s, is_deleted = 1, deleted_at = NOW() "
+            "WHERE id = %s AND is_deleted = 0"
+        )
         with get_cursor() as cursor:
-            affected = cursor.execute(sql, (knowledge_base_id,))
+            cursor.execute(select_sql, (knowledge_base_id,))
+            row = cursor.fetchone()
+            if not row:
+                return False
+            affected = cursor.execute(
+                update_sql,
+                (tombstone_unique_name(row["name"]), knowledge_base_id),
+            )
             return affected > 0
 
     @staticmethod
