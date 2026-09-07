@@ -12,7 +12,7 @@ import os
 import sys
 import time
 from pathlib import Path
-from typing import List, Optional
+from typing import Any, List, Optional
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
@@ -40,16 +40,19 @@ def _recover_stuck_tasks() -> int:
     if not stuck:
         return 0
     task_ids = [t.id for t in stuck]
-    count = DocumentTaskCRUD.reset_stuck_tasks(task_ids)
+    count = DocumentTaskCRUD.reset_stuck_tasks(
+        task_ids, timeout_minutes=STUCK_TIMEOUT_MINUTES
+    )
     print(f"[Reconcile] 恢复卡死任务 {count} 个：{task_ids}")
     return count
 
 
 def _recover_retryable_failed_tasks() -> int:
     """
-    将 failed 但 retry_count < max_retries 的任务重置为 pending（下次轮询会领取重试）。
+    将 failed 但 retry_count < max_retries 的索引任务重置为 pending（下次轮询会领取重试）。
+    删除任务失败不自动转回索引重试，避免覆盖删除语义。
     """
-    failed = DocumentTaskCRUD.get_failed_tasks()
+    failed = DocumentTaskCRUD.get_failed_tasks(task_type="index")
     reset_ids = []
     for task in failed:
         if task.retry_count < task.max_retries:
@@ -58,7 +61,8 @@ def _recover_retryable_failed_tasks() -> int:
                 try:
                     cursor.execute(
                         "UPDATE document_task SET status = 'pending', next_retry_at = NULL, "
-                        "error_message = NULL, update_time = NOW() WHERE id = %s",
+                        "error_message = NULL, claimed_by = NULL, claimed_at = NULL, update_time = NOW() "
+                        "WHERE id = %s AND status = 'failed' AND retry_count < max_retries",
                         (task.id,)
                     )
                 finally:
@@ -74,6 +78,47 @@ def _find_index_tasks(document_id: int) -> List[DocumentTask]:
     return DocumentTaskCRUD.get_by_document_id(document_id, task_type="index")
 
 
+def _enqueue_reindex_if_still_active(doc: Any, payload: str) -> bool:
+    """在知识库锁内再次确认文档可索引，并原子地补入任务。"""
+    with get_connection() as conn:
+        cursor = conn.cursor(pymysql.cursors.DictCursor)
+        try:
+            cursor.execute(
+                "SELECT id FROM knowledge_base WHERE id = %s AND is_deleted = 0 FOR UPDATE",
+                (doc.knowledge_base_id,),
+            )
+            if cursor.fetchone() is None:
+                return False
+            cursor.execute(
+                "SELECT id FROM document WHERE id = %s AND knowledge_base_id = %s "
+                "AND is_deleted = 0 AND status = 'ready' FOR UPDATE",
+                (doc.id, doc.knowledge_base_id),
+            )
+            if cursor.fetchone() is None:
+                return False
+            cursor.execute(
+                "SELECT id FROM document_task WHERE document_id = %s AND task_type = 'index' "
+                "AND status IN ('pending', 'processing') FOR UPDATE",
+                (doc.id,),
+            )
+            if cursor.fetchone() is not None:
+                return False
+            cursor.execute(
+                "INSERT INTO document_task "
+                "(task_type, document_id, knowledge_base_id, status, payload) "
+                "VALUES ('index', %s, %s, 'pending', %s)",
+                (doc.id, doc.knowledge_base_id, payload),
+            )
+            cursor.execute(
+                "UPDATE document SET status = 'pending', update_time = NOW() "
+                "WHERE id = %s AND is_deleted = 0 AND status = 'ready'",
+                (doc.id,),
+            )
+            return cursor.rowcount == 1
+        finally:
+            cursor.close()
+
+
 def _check_and_fix_index_consistency() -> int:
     """
     核对 ready 文档的 Chroma/ES 切片数，与 document.chunk_count 不一致则重新入队索引。
@@ -85,6 +130,10 @@ def _check_and_fix_index_consistency() -> int:
     es = ESService()
     fixed = 0
     for doc in ready_docs:
+        # ready 不应是删除中状态；防御性跳过，避免并发删除后补写索引。
+        if doc.status == "deleting":
+            continue
+
         # 存在进行中/待处理任务则跳过（避免重复）
         tasks = _find_index_tasks(doc.id)
         if tasks and any(t.status in ("pending", "processing") for t in tasks):
@@ -104,14 +153,8 @@ def _check_and_fix_index_consistency() -> int:
             payload = json.dumps(
                 {"object_key": doc.storage_path, "filename": doc.filename}, ensure_ascii=False
             )
-            task = DocumentTask(
-                task_type="index",
-                document_id=doc.id,
-                knowledge_base_id=doc.knowledge_base_id,
-                payload=payload
-            )
-            DocumentTaskCRUD.create(task)
-            DocumentCRUD.update_status(doc.id, "pending")
+            if not _enqueue_reindex_if_still_active(doc, payload):
+                continue
             print(
                 f"[Reconcile] doc={doc.id} 索引不一致：chroma={chroma_count}, es={es_count}, "
                 f"expected={expected}，已重新入队"
@@ -122,18 +165,11 @@ def _check_and_fix_index_consistency() -> int:
 
 def _report_orphan_oss() -> int:
     """
-    报告 OSS 中不在 document 表内的对象。
-    仅统计 knowledge_base/ 前缀；本服务不删除 OSS 对象。
-    """
-    # 覆盖未删除与已逻辑删除的文档，留存对象不视为孤儿。
-    with get_connection() as conn:
-        cursor = conn.cursor(pymysql.cursors.DictCursor)
-        try:
-            cursor.execute("SELECT storage_path FROM document")
-            known = {row["storage_path"] for row in cursor.fetchall()}
-        finally:
-            cursor.close()
+    保留 OSS 对象，不提供孤儿对象枚举。
 
+    OSS 是留存层，当前对账服务没有列举权限和删除职责；返回值固定为 0
+    表示本轮没有执行 OSS 清理，而不是表示 OSS 中不存在孤儿对象。
+    """
     return 0
 
 

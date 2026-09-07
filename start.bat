@@ -31,7 +31,7 @@ rem Document indexing/delete Worker: REQUIRED, uploads stay "pending" without it
 start "XLT Worker" cmd /k "cd /d ""%PROJECT_DIR%"" && uv run python -m ai.indexing_worker"
 
 rem Optional reconciliation service: recovers stuck tasks, verifies indexes and
-rem cleans orphan OSS objects. Uncomment the next line to enable it.
+rem reports orphan OSS objects without deleting them. Uncomment the next line to enable it.
 rem start "XLT Reconcile" cmd /k "cd /d ""%PROJECT_DIR%"" && uv run python -m ai.reconciliation_service"
 
 start "XLT Frontend" cmd /k "cd /d ""%PROJECT_DIR%frontend"" && npm run dev -- --host"
