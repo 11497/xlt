@@ -112,7 +112,11 @@ class ChromaService:
         :return: 是否执行成功
         """
         try:
-            collection = self.get_or_create_collection(knowledge_base_id)
+            collection_name = self._get_collection_name(knowledge_base_id)
+            existing_collections = [col.name for col in self.client.list_collections()]
+            if collection_name not in existing_collections:
+                return True
+            collection = self.client.get_collection(name=collection_name)
             collection.delete(where={"document_id": document_id})
             return True
         except Exception as e:

@@ -5,6 +5,7 @@
 """
 import asyncio
 import json
+import pymysql
 import os
 import sys
 import time
@@ -79,6 +80,115 @@ def _parse_filename_ext(filename: str) -> str:
     return filename.split(".")[-1].lower() if "." in filename else ""
 
 
+def _mark_index_task_skipped(cursor, task_id: int, reason: str) -> bool:
+    cursor.execute(
+        "UPDATE document_task SET status = 'done', result_json = %s, "
+        "error_message = NULL, claimed_by = NULL, claimed_at = NULL, update_time = NOW() "
+        "WHERE id = %s AND status = 'processing' AND claimed_by = %s",
+        (json.dumps({"skipped": reason}, ensure_ascii=False), task_id, WORKER_ID),
+    )
+    return cursor.rowcount == 1
+
+
+def _validate_index_task(task_id: int, document_id: int, kb_id: int) -> bool:
+    """处理索引任务前校验文档和知识库仍可索引，并取消过期索引任务。"""
+    with get_connection() as conn:
+        cursor = conn.cursor(pymysql.cursors.DictCursor)
+        try:
+            cursor.execute(
+                "SELECT id FROM knowledge_base WHERE id = %s AND is_deleted = 0 FOR UPDATE",
+                (kb_id,)
+            )
+            if cursor.fetchone() is None:
+                cursor.execute(
+                    "UPDATE document_task SET status = 'done', result_json = %s, "
+                    "error_message = NULL, claimed_by = NULL, claimed_at = NULL, update_time = NOW() "
+                    "WHERE id = %s AND status = 'processing' AND claimed_by = %s",
+                    (json.dumps({"skipped": "knowledge_base_deleted"}, ensure_ascii=False), task_id, WORKER_ID)
+                )
+                return False
+            cursor.execute(
+                "SELECT id, status FROM document WHERE id = %s AND knowledge_base_id = %s "
+                "AND is_deleted = 0 FOR UPDATE",
+                (document_id, kb_id)
+            )
+            row = cursor.fetchone()
+            if row is None:
+                cursor.execute(
+                    "UPDATE document_task SET status = 'done', result_json = %s, "
+                    "error_message = NULL, claimed_by = NULL, claimed_at = NULL, update_time = NOW() "
+                    "WHERE id = %s AND status = 'processing' AND claimed_by = %s",
+                    (json.dumps({"skipped": "document_deleted"}, ensure_ascii=False), task_id, WORKER_ID)
+                )
+                return False
+            if row["status"] == "deleting":
+                _mark_index_task_skipped(cursor, task_id, "document_deleting")
+                return False
+            cursor.execute(
+                "SELECT id FROM document_task WHERE id = %s AND status = 'processing' "
+                "AND claimed_by = %s FOR UPDATE",
+                (task_id, WORKER_ID),
+            )
+            if cursor.fetchone() is None:
+                return False
+            cursor.execute(
+                "UPDATE document SET status = 'indexing', error_message = NULL, update_time = NOW() "
+                "WHERE id = %s AND knowledge_base_id = %s AND is_deleted = 0 "
+                "AND status NOT IN ('deleting', 'deleted')",
+                (document_id, kb_id),
+            )
+            return cursor.rowcount == 1
+        finally:
+            cursor.close()
+
+
+def _finish_index_task(
+        task_id: int,
+        document_id: int,
+        kb_id: int,
+        result_json: dict,
+        chunk_count: int,
+) -> bool:
+    """在同一事务内完成文档状态和任务状态，避免删除看到半完成索引。"""
+    with get_connection() as conn:
+        cursor = conn.cursor(pymysql.cursors.DictCursor)
+        try:
+            cursor.execute("SELECT id FROM knowledge_base WHERE id = %s FOR UPDATE", (kb_id,))
+            if cursor.fetchone() is None:
+                return False
+            cursor.execute(
+                "SELECT id FROM document WHERE id = %s AND knowledge_base_id = %s "
+                "AND is_deleted = 0 AND status = 'indexing' FOR UPDATE",
+                (document_id, kb_id),
+            )
+            if cursor.fetchone() is None:
+                return False
+            cursor.execute(
+                "SELECT id FROM document_task WHERE id = %s AND status = 'processing' "
+                "AND claimed_by = %s FOR UPDATE",
+                (task_id, WORKER_ID),
+            )
+            if cursor.fetchone() is None:
+                return False
+            cursor.execute(
+                "UPDATE document SET status = 'ready', error_message = NULL, retry_count = 0, "
+                "chunk_count = %s, update_time = NOW() WHERE id = %s AND is_deleted = 0 "
+                "AND status = 'indexing'",
+                (chunk_count, document_id),
+            )
+            cursor.execute(
+                "UPDATE document_task SET status = 'done', result_json = %s, error_message = NULL, "
+                "claimed_by = NULL, claimed_at = NULL, update_time = NOW() "
+                "WHERE id = %s AND status = 'processing' AND claimed_by = %s",
+                (json.dumps(result_json, ensure_ascii=False), task_id, WORKER_ID),
+            )
+            if cursor.rowcount != 1:
+                raise RuntimeError("索引任务所有权已失效")
+            return True
+        finally:
+            cursor.close()
+
+
 def _handle_index_task(task_id: int, document_id: int, kb_id: int, payload: dict) -> None:
     """
     处理单个索引任务。
@@ -87,10 +197,11 @@ def _handle_index_task(task_id: int, document_id: int, kb_id: int, payload: dict
     object_key = payload.get("object_key", "")
     filename = payload.get("filename", "")
 
-    # 1. 标记文档为索引中（幂等）
-    DocumentCRUD.update_status(document_id, "indexing")
+    # 1. 校验知识库和文档未被删除；过期索引任务标记为 done/skipped。
+    if not _validate_index_task(task_id, document_id, kb_id):
+        return
 
-    # 2. 从 OSS 拉取内容并解析
+    # 3. 从 OSS 拉取内容并解析
     text = _extract_text_from_oss(object_key, filename)
     if text is None:
         # 解析失败（可能是 OSS 404 或文件无法解析），按失败处理
@@ -99,32 +210,27 @@ def _handle_index_task(task_id: int, document_id: int, kb_id: int, payload: dict
     chunks = chunk_text_by_sentence(text)
     if not chunks:
         # 空文档：无内容可索引，视为成功（避免留下 pending 状态）
-        DocumentCRUD.update_status(document_id, "ready", chunk_count=0)
-        DocumentTaskCRUD.mark_done(
-            task_id,
-            {"chroma": True, "es": True, "chunk_count": 0, "note": "empty_content"}
+        _finish_index_task(
+            task_id, document_id, kb_id,
+            {"chroma": True, "es": True, "chunk_count": 0, "note": "empty_content"},
+            chunk_count=0,
         )
         return
 
-    # 3. 向量化 + 双写（幂等）
+    # 4. 向量化 + 双写（幂等）
     ingestion = IngestionService()
     ingest_result = ingestion.ingest_document(knowledge_base_id=kb_id, document_id=document_id, chunks=chunks)
 
-    # 4. 依据结果更新状态
+    # 5. 依据结果更新状态
     if ingest_result["status"] == "success":
-        DocumentCRUD.update_status(
-            document_id, "ready",
-            chunk_count=ingest_result["chunk_count"],
-            error_message=None,
-            retry_count=0
-        )
-        DocumentTaskCRUD.mark_done(
-            task_id,
+        _finish_index_task(
+            task_id, document_id, kb_id,
             {
                 "chroma": ingest_result["chroma_ok"],
                 "es": ingest_result["es_ok"],
                 "chunk_count": ingest_result["chunk_count"],
-            }
+            },
+            chunk_count=ingest_result["chunk_count"],
         )
     elif ingest_result["status"] == "partial":
         # 部分成功：本次先按失败重试（幂等补写另一侧），记录中间结果
@@ -150,17 +256,35 @@ def _handle_delete_task(task_id: int, document_id: int, kb_id: int, payload: dic
 
     # 2. 逻辑删除 MySQL 记录（与任务完成状态一起提交）
     with get_connection() as conn:
-        cursor = conn.cursor()
+        cursor = conn.cursor(pymysql.cursors.DictCursor)
         try:
+            cursor.execute("SELECT id FROM knowledge_base WHERE id = %s FOR UPDATE", (kb_id,))
+            if cursor.fetchone() is None:
+                return
+            cursor.execute(
+                "SELECT id FROM document WHERE id = %s AND knowledge_base_id = %s "
+                "AND is_deleted = 0 AND status = 'deleting' FOR UPDATE",
+                (document_id, kb_id),
+            )
+            if cursor.fetchone() is None:
+                return
+            cursor.execute(
+                "SELECT id FROM document_task WHERE id = %s AND status = 'processing' "
+                "AND claimed_by = %s FOR UPDATE",
+                (task_id, WORKER_ID),
+            )
+            if cursor.fetchone() is None:
+                return
             cursor.execute(
                 "UPDATE document SET status = 'deleted', is_deleted = 1, deleted_at = NOW(), "
                 "error_message = NULL, update_time = NOW() "
-                "WHERE id = %s AND is_deleted = 0",
+                "WHERE id = %s AND is_deleted = 0 AND status = 'deleting'",
                 (document_id,)
             )
             cursor.execute(
                 "UPDATE document_task SET status = 'done', result_json = %s, "
-                "error_message = NULL, update_time = NOW() WHERE id = %s",
+                "error_message = NULL, claimed_by = NULL, claimed_at = NULL, update_time = NOW() "
+                "WHERE id = %s AND status = 'processing' AND claimed_by = %s",
                 (
                     json.dumps(
                         {
@@ -170,9 +294,11 @@ def _handle_delete_task(task_id: int, document_id: int, kb_id: int, payload: dic
                         },
                         ensure_ascii=False
                     ),
-                    task_id,
+                    task_id, WORKER_ID,
                 )
             )
+            if cursor.rowcount != 1:
+                raise RuntimeError("删除任务所有权已失效")
         finally:
             cursor.close()
 
@@ -191,22 +317,36 @@ def _handle_delete_kb_task(task_id: int, kb_id: int, payload: dict) -> None:
 
     # 2. 逻辑删除文档与知识库记录，并标记任务完成（单事务）
     with get_connection() as conn:
-        cursor = conn.cursor()
+        cursor = conn.cursor(pymysql.cursors.DictCursor)
         try:
+            cursor.execute(
+                "SELECT id FROM knowledge_base WHERE id = %s AND is_deleted = 1 FOR UPDATE",
+                (kb_id,),
+            )
+            if cursor.fetchone() is None:
+                return
+            cursor.execute(
+                "SELECT id FROM document_task WHERE id = %s AND status = 'processing' "
+                "AND claimed_by = %s FOR UPDATE",
+                (task_id, WORKER_ID),
+            )
+            if cursor.fetchone() is None:
+                return
             cursor.execute(
                 "UPDATE document SET status = 'deleted', is_deleted = 1, deleted_at = NOW(), "
                 "error_message = NULL, update_time = NOW() "
-                "WHERE knowledge_base_id = %s AND is_deleted = 0",
+                "WHERE knowledge_base_id = %s AND is_deleted = 0 AND status = 'deleting'",
                 (kb_id,)
             )
             cursor.execute(
                 "UPDATE knowledge_base SET is_deleted = 1, deleted_at = NOW() "
-                "WHERE id = %s",
+                "WHERE id = %s AND is_deleted = 1",
                 (kb_id,)
             )
             cursor.execute(
                 "UPDATE document_task SET status = 'done', result_json = %s, "
-                "error_message = NULL, update_time = NOW() WHERE id = %s",
+                "error_message = NULL, claimed_by = NULL, claimed_at = NULL, update_time = NOW() "
+                "WHERE id = %s AND status = 'processing' AND claimed_by = %s",
                 (
                     json.dumps(
                         {
@@ -217,9 +357,11 @@ def _handle_delete_kb_task(task_id: int, kb_id: int, payload: dict) -> None:
                         },
                         ensure_ascii=False
                     ),
-                    task_id,
+                    task_id, WORKER_ID,
                 )
             )
+            if cursor.rowcount != 1:
+                raise RuntimeError("知识库删除任务所有权已失效")
         finally:
             cursor.close()
 
@@ -270,8 +412,11 @@ def run_once() -> int:
                 str(e),
                 retry_count=task.retry_count + 1,
                 max_retries=task.max_retries,
+                worker_id=WORKER_ID,
             )
-            if task_type == "index":
+            if final is None:
+                print(f"[Worker] {task_type} task #{task.id} 已被其他 Worker 接管，跳过旧结果")
+            elif task_type == "index":
                 if final:
                     DocumentCRUD.update_status(task.document_id, "failed", error_message=str(e)[:2000])
                 else:
