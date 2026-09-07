@@ -1,13 +1,14 @@
+import pymysql
 from fastapi import APIRouter, Depends, Query
 
 from authentication.user_auth import require_admin, require_current_user
 from crud.knowledge_base_crud import KnowledgeBaseCRUD
-from crud.role_knowledge_base_crud import RoleKnowledgeBaseCRUD
 from crud.user_knowledge_base_crud import UserKnowledgeBaseCRUD
 from model.knowledge_base_model import KnowledgeBase
 from model.result import Result
 from model.user_model import User
 from util.db_util import get_connection
+from util.soft_delete_name import tombstone_unique_name
 
 router = APIRouter(prefix="/api/knowledge_base", tags=["knowledge_base"])
 
@@ -98,25 +99,10 @@ async def delete_knowledge_base(id: int, _admin: User = Depends(require_admin)):
     """
     result = Result()
 
-    # 验证目标知识库是否有绑定的角色
-    roles = RoleKnowledgeBaseCRUD.get_roles_by_knowledge_base(id)
-    if roles:
-        return result.error(msg="知识库下有绑定的角色，不能删除")
-
     # 异步删除：入队 delete_kb 任务；Worker 清理 Chroma/ES 后统一逻辑删除文档和知识库。
     from crud.document_task_crud import DocumentTaskCRUD
     from model.document_task_model import DocumentTask
     import json
-
-    # 检查是否已有进行中的删除任务
-    existing_tasks = DocumentTaskCRUD.get_tasks_by_knowledge_base(id, task_type="delete_kb")
-    if existing_tasks and any(t.status in ("pending", "processing") for t in existing_tasks):
-        return result.error(msg="该知识库已有删除任务进行中")
-
-    # 检查是否还有进行中的文档索引/删除任务，避免与删除知识库产生竞态
-    active_doc_tasks = DocumentTaskCRUD.get_tasks_by_knowledge_base(id)
-    if any(t.task_type != "delete_kb" and t.status in ("pending", "processing") for t in active_doc_tasks):
-        return result.error(msg="该知识库下仍有文档任务进行中，请稍后再删除")
 
     payload = json.dumps({"kb_id": id}, ensure_ascii=False)
     task = DocumentTask(
@@ -130,23 +116,52 @@ async def delete_knowledge_base(id: int, _admin: User = Depends(require_admin)):
     # Worker 清理 Chroma/ES 成功后再统一将文档置为最终逻辑删除。
     try:
         with get_connection() as conn:
-            cursor = conn.cursor()
+            cursor = conn.cursor(pymysql.cursors.DictCursor)
             try:
                 cursor.execute(
-                    "SELECT id FROM knowledge_base WHERE id = %s AND is_deleted = 0 FOR UPDATE",
+                    "SELECT id, name FROM knowledge_base WHERE id = %s AND is_deleted = 0 FOR UPDATE",
                     (id,)
                 )
-                if cursor.fetchone() is None:
+                knowledge_base_row = cursor.fetchone()
+                if knowledge_base_row is None:
                     return result.error(msg="知识库不存在或已有删除任务")
+                cursor.execute(
+                    "SELECT rkb.role_id FROM role_knowledge_base rkb "
+                    "JOIN role r ON r.id = rkb.role_id AND r.is_deleted = 0 "
+                    "WHERE rkb.knowledge_base_id = %s AND rkb.is_deleted = 0 FOR UPDATE",
+                    (id,),
+                )
+                if cursor.fetchone() is not None:
+                    return result.error(msg="知识库下有绑定的角色，不能删除")
+                cursor.execute(
+                    "SELECT id, status FROM document WHERE knowledge_base_id = %s AND is_deleted = 0 FOR UPDATE",
+                    (id,)
+                )
+                documents = cursor.fetchall()
+                if any(document["status"] == "deleting" for document in documents):
+                    return result.error(msg="知识库下仍有文档删除任务进行中，请稍后再删除")
+                cursor.execute(
+                    "SELECT id, status, task_type FROM document_task WHERE knowledge_base_id = %s FOR UPDATE",
+                    (id,)
+                )
+                tasks = cursor.fetchall()
+                if any(task["status"] in ("pending", "processing") and task["task_type"] != "delete_kb" for task in tasks):
+                    return result.error(msg="该知识库下仍有文档任务进行中，请稍后再删除")
+                cursor.execute(
+                    "SELECT id FROM document_task WHERE knowledge_base_id = %s AND task_type = 'delete_kb' AND status IN ('pending', 'processing') FOR UPDATE",
+                    (id,)
+                )
+                if cursor.fetchone() is not None:
+                    return result.error(msg="该知识库已有删除任务进行中")
                 cursor.execute(
                     "UPDATE document SET status = 'deleting', update_time = NOW() "
                     "WHERE knowledge_base_id = %s AND is_deleted = 0 AND status <> 'deleting'",
                     (id,)
                 )
                 cursor.execute(
-                    "UPDATE knowledge_base SET is_deleted = 1, deleted_at = NOW() "
+                    "UPDATE knowledge_base SET name = %s, is_deleted = 1, deleted_at = NOW() "
                     "WHERE id = %s AND is_deleted = 0",
-                    (id,)
+                    (tombstone_unique_name(knowledge_base_row["name"]), id),
                 )
                 cursor.execute(
                     "INSERT INTO document_task (task_type, document_id, knowledge_base_id, status, payload) "
