@@ -8,7 +8,11 @@ from util.db_util import get_cursor
 class RoleKnowledgeBaseCRUD:
 
     @staticmethod
-    def batch_assign_roles_to_knowledge_base(knowledge_base_id: int, bindings: List[dict]) -> bool:
+    def batch_assign_roles_to_knowledge_base(
+            knowledge_base_id: int,
+            bindings: List[dict],
+            cursor=None,
+    ) -> bool:
         """
         批量分配角色到指定知识库
         :param knowledge_base_id: 知识库ID
@@ -19,12 +23,19 @@ class RoleKnowledgeBaseCRUD:
             return True
 
         sql = ("INSERT INTO role_knowledge_base (role_id, knowledge_base_id, permission, is_deleted, deleted_at) "
-               "VALUES (%s, %s, %s, 0, NULL) "
+               "SELECT %s, %s, %s, 0, NULL FROM role r CROSS JOIN knowledge_base kb "
+               "WHERE r.id = %s AND r.is_deleted = 0 AND kb.id = %s AND kb.is_deleted = 0 "
                "ON DUPLICATE KEY UPDATE permission = VALUES(permission), is_deleted = 0, deleted_at = NULL")
-        params = [(item["role_id"], knowledge_base_id, item["permission"]) for item in bindings]
+        params = [
+            (item["role_id"], knowledge_base_id, item["permission"], item["role_id"], knowledge_base_id)
+            for item in bindings
+        ]
 
-        with get_cursor() as cursor:
+        if cursor is not None:
             cursor.executemany(sql, params)
+            return True
+        with get_cursor() as db_cursor:
+            db_cursor.executemany(sql, params)
             return True
 
     @staticmethod
@@ -52,7 +63,12 @@ class RoleKnowledgeBaseCRUD:
         :param knowledge_base_id: 知识库ID
         :return: 角色ID列表
         """
-        sql = "SELECT role_id FROM role_knowledge_base WHERE knowledge_base_id = %s AND is_deleted = 0"
+        sql = (
+            "SELECT rkb.role_id FROM role_knowledge_base rkb "
+            "JOIN role r ON r.id = rkb.role_id AND r.is_deleted = 0 "
+            "JOIN knowledge_base kb ON rkb.knowledge_base_id = kb.id AND kb.is_deleted = 0 "
+            "WHERE rkb.knowledge_base_id = %s AND rkb.is_deleted = 0"
+        )
         with get_cursor() as cursor:
             cursor.execute(sql, (knowledge_base_id,))
             rows = cursor.fetchall()
@@ -65,7 +81,11 @@ class RoleKnowledgeBaseCRUD:
         :param role_id: 角色ID
         :return: 知识库ID列表
         """
-        sql = "SELECT knowledge_base_id FROM role_knowledge_base WHERE role_id = %s AND is_deleted = 0"
+        sql = (
+            "SELECT rkb.knowledge_base_id FROM role_knowledge_base rkb "
+            "JOIN knowledge_base kb ON rkb.knowledge_base_id = kb.id AND kb.is_deleted = 0 "
+            "WHERE rkb.role_id = %s AND rkb.is_deleted = 0"
+        )
         with get_cursor() as cursor:
             cursor.execute(sql, (role_id,))
             rows = cursor.fetchall()
@@ -82,13 +102,17 @@ class RoleKnowledgeBaseCRUD:
         return RoleKnowledgeBaseCRUD.upsert_binding(role_id, knowledge_base_id, 0)
 
     @staticmethod
-    def upsert_binding(role_id: int, knowledge_base_id: int, permission: int) -> bool:
+    def upsert_binding(role_id: int, knowledge_base_id: int, permission: int, cursor=None) -> bool:
         """新增绑定或更新已有绑定的权限。"""
         sql = ("INSERT INTO role_knowledge_base (role_id, knowledge_base_id, permission, is_deleted, deleted_at) "
-               "VALUES (%s, %s, %s, 0, NULL) "
+               "SELECT %s, %s, %s, 0, NULL FROM role r CROSS JOIN knowledge_base kb "
+               "WHERE r.id = %s AND r.is_deleted = 0 AND kb.id = %s AND kb.is_deleted = 0 "
                "ON DUPLICATE KEY UPDATE permission = VALUES(permission), is_deleted = 0, deleted_at = NULL")
-        with get_cursor() as cursor:
-            cursor.execute(sql, (role_id, knowledge_base_id, permission))
+        if cursor is not None:
+            cursor.execute(sql, (role_id, knowledge_base_id, permission, role_id, knowledge_base_id))
+            return True
+        with get_cursor() as db_cursor:
+            db_cursor.execute(sql, (role_id, knowledge_base_id, permission, role_id, knowledge_base_id))
             return True
 
     @staticmethod

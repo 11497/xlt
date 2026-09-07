@@ -18,21 +18,19 @@ class RoleUserCRUD:
         if not user_ids:
             return True  # 空列表视为成功操作
 
-        # 构造批量插入 SQL；重复主键表示恢复原软删除关联
-        sql = "INSERT INTO role_user (role_id, user_id, is_deleted, deleted_at) VALUES "
-        values_placeholders = []
-        params = []
-
-        for user_id in user_ids:
-            values_placeholders.append("(%s, %s, 0, NULL)")
-            params.extend([role_id, user_id])
-
-        sql += ",".join(values_placeholders)
-        sql += " ON DUPLICATE KEY UPDATE is_deleted = 0, deleted_at = NULL"
+        # 只有活动角色和活动用户可以建立关联；重复主键表示恢复原软删除关联。
+        sql = (
+            "INSERT INTO role_user (role_id, user_id, is_deleted, deleted_at) "
+            "SELECT %s, %s, 0, NULL FROM role r CROSS JOIN user u "
+            "WHERE r.id = %s AND r.is_deleted = 0 AND u.id = %s AND u.is_deleted = 0 "
+            "ON DUPLICATE KEY UPDATE is_deleted = 0, deleted_at = NULL"
+        )
 
         with get_cursor() as cursor:
-            affected = cursor.execute(sql, params)
-            return affected > 0  # 插入操作总是返回True表示执行成功
+            affected = 0
+            for user_id in user_ids:
+                affected += cursor.execute(sql, (role_id, user_id, role_id, user_id))
+            return affected > 0
 
     @staticmethod
     def batch_remove_users_from_role(role_id: int, user_ids: List[int]) -> bool:
@@ -61,7 +59,12 @@ class RoleUserCRUD:
         :param role_id: 角色ID
         :return: 用户ID列表
         """
-        sql = "SELECT user_id FROM role_user WHERE role_id = %s AND is_deleted = 0"
+        sql = (
+            "SELECT ru.user_id FROM role_user ru "
+            "JOIN role r ON ru.role_id = r.id AND r.is_deleted = 0 "
+            "JOIN user u ON ru.user_id = u.id AND u.is_deleted = 0 "
+            "WHERE ru.role_id = %s AND ru.is_deleted = 0"
+        )
         with get_cursor() as cursor:
             cursor.execute(sql, (role_id,))
             rows = cursor.fetchall()
@@ -74,7 +77,11 @@ class RoleUserCRUD:
         :param user_id: 用户ID
         :return: 角色ID列表
         """
-        sql = "SELECT role_id FROM role_user WHERE user_id = %s AND is_deleted = 0"
+        sql = (
+            "SELECT ru.role_id FROM role_user ru "
+            "JOIN role r ON ru.role_id = r.id AND r.is_deleted = 0 "
+            "WHERE ru.user_id = %s AND ru.is_deleted = 0"
+        )
         with get_cursor() as cursor:
             cursor.execute(sql, (user_id,))
             rows = cursor.fetchall()
@@ -88,9 +95,14 @@ class RoleUserCRUD:
         :param user_id: 用户ID
         :return: 是否成功分配
         """
-        sql = "INSERT INTO role_user (role_id, user_id, is_deleted, deleted_at) VALUES (%s, %s, 0, NULL) ON DUPLICATE KEY UPDATE is_deleted = 0, deleted_at = NULL"
+        sql = (
+            "INSERT INTO role_user (role_id, user_id, is_deleted, deleted_at) "
+            "SELECT %s, %s, 0, NULL FROM role r CROSS JOIN user u "
+            "WHERE r.id = %s AND r.is_deleted = 0 AND u.id = %s AND u.is_deleted = 0 "
+            "ON DUPLICATE KEY UPDATE is_deleted = 0, deleted_at = NULL"
+        )
         with get_cursor() as cursor:
-            affected = cursor.execute(sql, (role_id, user_id))
+            affected = cursor.execute(sql, (role_id, user_id, role_id, user_id))
             return affected > 0
 
     @staticmethod

@@ -6,16 +6,21 @@ from model.announcement_attachment_model import AnnouncementAttachment
 class AnnouncementAttachmentCRUD:
 
     @staticmethod
+    def create_with_cursor(cursor, attachment: AnnouncementAttachment) -> int:
+        """在调用方事务中创建附件记录。"""
+        sql = "INSERT INTO announcement_attachment (announcement_id, filename, storage_path) VALUES (%s, %s, %s)"
+        cursor.execute(sql, (attachment.announcement_id, attachment.filename, attachment.storage_path))
+        return cursor.lastrowid
+
+    @staticmethod
     def create(attachment: AnnouncementAttachment) -> int:
         """
         新增公告附件
         :param attachment: 附件对象
         :return: 新插入记录的 id
         """
-        sql = "INSERT INTO announcement_attachment (announcement_id, filename, storage_path) VALUES (%s, %s, %s)"
         with get_cursor() as cursor:
-            cursor.execute(sql, (attachment.announcement_id, attachment.filename, attachment.storage_path))
-            return cursor.lastrowid
+            return AnnouncementAttachmentCRUD.create_with_cursor(cursor, attachment)
 
     @staticmethod
     def batch_create(attachments: list) -> int:

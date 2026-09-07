@@ -45,7 +45,8 @@ class UserKnowledgeBaseCRUD:
         JOIN user u ON ru.user_id = u.id AND u.is_deleted = 0
         JOIN role_knowledge_base rkb ON ru.role_id = rkb.role_id AND rkb.is_deleted = 0
         JOIN knowledge_base kb ON rkb.knowledge_base_id = kb.id AND kb.is_deleted = 0
-        WHERE ru.user_id = %s AND rkb.knowledge_base_id = %s
+        WHERE ru.user_id = %s AND ru.is_deleted = 0
+          AND rkb.knowledge_base_id = %s
         """
         with get_cursor() as cursor:
             cursor.execute(sql, (user_id, knowledge_base_id))
