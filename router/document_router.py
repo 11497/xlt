@@ -3,6 +3,7 @@ from datetime import datetime
 from typing import Optional
 from uuid import uuid4
 
+import pymysql
 from fastapi import APIRouter, Depends, UploadFile, File, Form, Query, Response, status as http_status
 
 from authentication.user_auth import require_current_user, require_admin
@@ -248,33 +249,55 @@ async def reindex_document(
     if user.is_admin == 0 and not UserKnowledgeBaseCRUD.has_write_permission(user.id, document.knowledge_base_id):
         return result.error(msg="用户没有权限修改该知识库")
 
-    # 检查是否有进行中的任务，避免重复入队
-    existing = DocumentTaskCRUD.get_by_document_id(document_id, task_type="index")
-    if existing and any(t.status in ("pending", "processing") for t in existing):
-        return result.error(msg="该文档已有索引任务进行中，请稍后")
-
-    # 重置文档状态并重新入队
-    DocumentCRUD.update_status(
-        document_id, "pending",
-        error_message=None,
-        retry_count=0,
-        chunk_count=None
-    )
+    # 锁定知识库和文档，在同一事务内复核删除状态、活动任务并提交索引任务。
     payload = json.dumps({"object_key": document.storage_path, "filename": document.filename}, ensure_ascii=False)
-    task = DocumentTask(
-        task_type="index",
-        document_id=document_id,
-        knowledge_base_id=document.knowledge_base_id,
-        payload=payload
-    )
-    DocumentTaskCRUD.create(task)
+    try:
+        with get_connection() as conn:
+            cursor = conn.cursor(pymysql.cursors.DictCursor)
+            try:
+                cursor.execute(
+                    "SELECT id FROM knowledge_base WHERE id = %s AND is_deleted = 0 FOR UPDATE",
+                    (document.knowledge_base_id,)
+                )
+                if cursor.fetchone() is None:
+                    return result.error(msg="知识库不存在或已进入删除流程")
+                cursor.execute(
+                    "SELECT id, status FROM document WHERE id = %s AND is_deleted = 0 FOR UPDATE",
+                    (document_id,)
+                )
+                document_row = cursor.fetchone()
+                if document_row is None:
+                    return result.error(msg="文档不存在或已进入删除流程")
+                if document_row["status"] == "deleting":
+                    return result.error(msg="文档正在删除中，无法重新索引")
+                cursor.execute(
+                    "SELECT id, status FROM document_task WHERE document_id = %s AND task_type = 'index' FOR UPDATE",
+                    (document_id,)
+                )
+                tasks = cursor.fetchall()
+                if any(task["status"] in ("pending", "processing") for task in tasks):
+                    return result.error(msg="该文档已有索引任务进行中，请稍后")
+                cursor.execute(
+                    "UPDATE document SET status = 'pending', error_message = NULL, "
+                    "retry_count = 0, chunk_count = NULL, update_time = NOW() WHERE id = %s AND is_deleted = 0",
+                    (document_id,)
+                )
+                if cursor.rowcount != 1:
+                    raise ValueError("文档不存在或已进入删除流程")
+                cursor.execute(
+                    "INSERT INTO document_task (task_type, document_id, knowledge_base_id, status, payload) "
+                    "VALUES ('index', %s, %s, 'pending', %s)",
+                    (document_id, document.knowledge_base_id, payload)
+                )
+            finally:
+                cursor.close()
+    except Exception as e:
+        return result.error(msg=f"提交重新索引任务失败：{str(e)}")
 
     return result.success(msg="已重新提交索引任务", data={
         "id": document_id,
         "status": "pending"
     })
-
-
 @router.delete("/{document_id}")
 async def delete_document(
         document_id: int,
@@ -303,7 +326,7 @@ async def delete_document(
     payload = json.dumps({"object_key": document.storage_path, "filename": document.filename}, ensure_ascii=False)
     try:
         with get_connection() as conn:
-            cursor = conn.cursor()
+            cursor = conn.cursor(pymysql.cursors.DictCursor)
             try:
                 cursor.execute(
                     "SELECT id FROM knowledge_base WHERE id = %s AND is_deleted = 0 FOR UPDATE",
@@ -311,6 +334,23 @@ async def delete_document(
                 )
                 if cursor.fetchone() is None:
                     raise ValueError("知识库不存在或已进入删除流程")
+                cursor.execute(
+                    "SELECT id, status, filename, storage_path FROM document "
+                    "WHERE id = %s AND knowledge_base_id = %s AND is_deleted = 0 FOR UPDATE",
+                    (document_id, document.knowledge_base_id),
+                )
+                document_row = cursor.fetchone()
+                if document_row is None:
+                    raise ValueError("文档不存在或已进入删除流程")
+                if document_row["status"] == "deleting":
+                    return result.error(msg="该文档正在删除中，请稍后")
+                cursor.execute(
+                    "SELECT id FROM document_task WHERE document_id = %s "
+                    "AND task_type = 'index' AND status IN ('pending', 'processing') FOR UPDATE",
+                    (document_id,),
+                )
+                if cursor.fetchone() is not None:
+                    return result.error(msg="该文档仍有索引任务进行中，请稍后删除")
                 cursor.execute(
                     "UPDATE document SET status = 'deleting', update_time = NOW() "
                     "WHERE id = %s AND is_deleted = 0 AND status <> 'deleting'",
