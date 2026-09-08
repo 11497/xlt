@@ -132,6 +132,16 @@ uv sync --group dev
 uv run pytest -q
 ```
 
+恢复单个已删除文档的索引（人工维护，先在 `scripts/restore_deleted_document.py` 顶部填写文档 ID）：
+
+```bash
+uv run python scripts/restore_deleted_document.py
+uv run python scripts/restore_deleted_document.py --execute
+```
+
+默认命令只核验并输出恢复目标摘要；`--execute` 才会下载 OSS 留存对象、重建 ChromaDB/Elasticsearch 索引并恢复文档状态。
+执行 `--execute` 前必须暂停文档索引 Worker 和对账服务，恢复完成后再重新启动；否则独立进程可能与脚本同时操作目标索引。脚本仍会在执行前和最终落库前检查活动任务，但该检查不能替代暂停进程。
+
 前端生产构建：
 
 ```bash
