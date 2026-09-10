@@ -33,7 +33,7 @@ Authorization: Bearer <access-token>
 
 `POST /api/message/chat` 使用 `application/x-ndjson` 返回流式响应。用户消息在完成恶意/敏感检查后保存（被拦截时用户消息标记 `is_malicious=1`）；AI 消息在完整生成后保存，或在用户显式停止时保存已生成的非空片段（assistant 消息标记 `is_stopped=1`）。生成失败、客户端直接取消或断开时不保存不完整的 AI 回复。消息详情与列表接口会返回 `is_malicious`、`is_stopped` 字段。
 
-完整生成或用户显式停止且已有非空片段，且回复不是「知识库中没有找到」时，后端会用 utility 模型判定已生成内容实际使用的来源切片。`message_source` 与 assistant 消息在同一事务保存；判定失败或未命中来源时不影响回答保存，也不写脏来源。本次前端不消费 `sources`。
+完整生成或用户显式停止且已有非空片段，且回复不是「知识库中没有找到」时，后端会用 utility 模型判定已生成内容实际使用的来源切片。`message_source` 与 assistant 消息在同一事务保存；判定失败或未命中来源时不影响回答保存，也不写脏来源。前端在聊天页以及用户端、管理端的会话详情中为存在来源的 assistant 消息提供溯源查看入口；来源为空时隐藏入口。
 
 请求体示例：
 
