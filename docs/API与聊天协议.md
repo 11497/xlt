@@ -33,6 +33,8 @@ Authorization: Bearer <access-token>
 
 `POST /api/message/chat` 使用 `application/x-ndjson` 返回流式响应。用户消息在生成前保存；AI 消息在完整生成后保存，或在用户显式停止时保存已生成的非空片段。生成失败、客户端直接取消或断开时不保存不完整的 AI 回复。
 
+完整生成或用户显式停止且已有非空片段，且回复不是「知识库中没有找到」时，后端会用 utility 模型判定已生成内容实际使用的来源切片。`message_source` 与 assistant 消息在同一事务保存；判定失败或未命中来源时不影响回答保存，也不写脏来源。本次前端不消费 `sources`。
+
 请求体示例：
 
 ```json
@@ -50,8 +52,8 @@ Authorization: Bearer <access-token>
 |-----------|---------------------------------|-------------------------------------------|
 | `start`   | `user_message_id`, `request_id` | 用户消息已保存；`request_id` 用于停止生成 |
 | `delta`   | `content`                       | AI 回复文本片段                           |
-| `done`    | `assistant_message_id`          | AI 回复完整生成并保存                     |
-| `stopped` | `assistant_message_id`          | 用户停止；无内容时 ID 为 `null`           |
+| `done`    | `assistant_message_id`, `sources` | AI 回复完整生成并保存；`sources` 是来源快照数组，可为空 |
+| `stopped` | `assistant_message_id`, `sources` | 用户停止；无内容时 ID 为 `null`；`sources` 为已生成片段的来源快照，可为空 |
 | `error`   | `message`                       | 生成失败，不保存不完整回复                |
 
 示例：
@@ -60,8 +62,10 @@ Authorization: Bearer <access-token>
 {"type":"start","user_message_id":101,"request_id":"40cb2f0e-b79a-4c89-85e3-c80a17e22a35"}
 {"type":"delta","content":"学校图书馆"}
 {"type":"delta","content":"通常在晚上 22:00 关闭。"}
-{"type":"done","assistant_message_id":102}
+{"type":"done","assistant_message_id":102,"sources":[]}
 ```
+
+`GET /api/message/session/{session_id}` 和 `GET /api/message/{message_id}` 也会为 assistant 消息返回 `sources`；user 消息的 `sources` 为空数组。来源字段包括 `chunk_id`、`chunk_index`、`document_id`、`filename`、`knowledge_base_id`、`content`、`rerank_score`、`recall_source` 和 `sort_order`。
 
 用户显式停止时，前端调用 `POST /api/message/chat/stop/{request_id}`。切换会话、离开页面或尚未取得 `request_id` 时，前端通过 `AbortController` 取消连接，不保存部分 AI 回复。
 
