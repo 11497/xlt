@@ -1,3 +1,4 @@
+import json
 from collections.abc import AsyncIterator
 from typing import Any, List
 
@@ -15,6 +16,7 @@ from config.ai_config import (
     UTILITY_API_KEY,
     UTILITY_BASE_URL,
     UTILITY_CONFIG,
+    SOURCE_SELECT_PROMPT,
 )
 
 
@@ -171,3 +173,43 @@ class ChatService:
         response = await self.utility_llm.ainvoke([HumanMessage(content=prompt)])
 
         return _content_to_text(response.content)
+
+    async def select_source_ids(
+            self,
+            sources: str,
+            user_question: str,
+            model_answer: str
+    ) -> list[str]:
+        """
+        使用 utility 模型判定回答实际使用的来源切片 ID。
+        :param sources: 候选切片格式化文本
+        :param user_question: 用户问题
+        :param model_answer: 完整助手回答
+        :return: 模型给出的切片 ID 列表
+        """
+        prompt = SOURCE_SELECT_PROMPT.format(
+            sources=sources,
+            user_question=user_question,
+            model_answer=model_answer
+        )
+
+        response = await self.utility_llm.ainvoke([HumanMessage(content=prompt)])
+        output = _content_to_text(response.content)
+
+        # 解析 utility 模型输出；非法 JSON 或非列表输出由调用方按无来源处理。
+        try:
+            parsed = json.loads(output)
+        except json.JSONDecodeError:
+            return []
+
+        if not isinstance(parsed, list):
+            return []
+
+        selected_ids = []
+        seen_ids = set()
+        for item in parsed:
+            if isinstance(item, str) and item not in seen_ids:
+                seen_ids.add(item)
+                selected_ids.append(item)
+
+        return selected_ids
