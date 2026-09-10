@@ -136,6 +136,31 @@ def format_source_blocks(chunks: list[dict]) -> str:
     )
 
 
+def build_history_messages(messages: List[Message]) -> List[BaseMessage]:
+    """组装用于问题重写和生成的历史消息。
+
+    被判恶意/敏感的用户输入及其紧随的安全拒绝回复不进入上下文；
+    用户显式停止保存的部分回复仍视为用户看过的历史。
+    """
+    history_messages: List[BaseMessage] = []
+    skip_next_assistant = False
+    for msg in messages:
+        if msg.role == "user":
+            if msg.is_malicious:
+                skip_next_assistant = True
+                continue
+            skip_next_assistant = False
+            # 如果有重写后的内容，使用重写后的；否则使用原始内容
+            query_content = msg.rewritten_content if msg.rewritten_content else msg.content
+            history_messages.append(HumanMessage(content=query_content))
+        elif msg.role == "assistant":
+            if skip_next_assistant:
+                skip_next_assistant = False
+                continue
+            history_messages.append(AIMessage(content=msg.content))
+    return history_messages
+
+
 @router.post("/chat")
 async def chat(
         message: Message,
@@ -160,21 +185,27 @@ async def chat(
     existing_messages = MessageCRUD.get_by_session_id(message.session_id)
     is_first_round = len(existing_messages) == 0
 
-    # 保存用户消息
-    message.create_time = datetime.now()
-    message_id = MessageCRUD.create(message)
+    # 判断对话是否为恶意或敏感内容；通过检查后再保存用户消息。
+    is_malicious = await chat_service.is_malicious([
+        HumanMessage(content=message.content)
+    ])
+    message.is_malicious = int(is_malicious)
+    message.is_stopped = 0
+    message_time = datetime.now()
+    message.create_time = message_time
 
-    # 判断对话是否为恶意或敏感内容
-    if await chat_service.is_malicious([HumanMessage(content=message.content)]):
-        # AI回复：对话包含恶意或敏感内容
+    if is_malicious:
+        # 安全拒绝回复本身不是恶意文本，因此 assistant 仍标记为 0。
         ai_message = Message(
             session_id=message.session_id,
             role="assistant",
             content="对话包含恶意或敏感内容",
             rewritten_content=None,
-            create_time=datetime.now()
+            is_malicious=0,
+            is_stopped=0,
+            create_time=message_time
         )
-        ai_message_id = MessageCRUD.create(ai_message)
+        message_id, ai_message_id = MessageCRUD.create_malicious_pair(message, ai_message)
 
         async def malicious_response():
             yield encode_stream_event({
@@ -194,17 +225,12 @@ async def chat(
             media_type="application/x-ndjson",
             headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"}
         )
-    
-    # 构建历史对话消息（用于重写问题）
-    history_messages: List[BaseMessage] = []
-    for msg in existing_messages:
-        if msg.role == "user":
-            # 如果有重写后的内容，使用重写后的；否则使用原始内容
-            query_content = msg.rewritten_content if msg.rewritten_content else msg.content
-            history_messages.append(HumanMessage(content=query_content))
-        elif msg.role == "assistant":
-            history_messages.append(AIMessage(content=msg.content))
-    
+
+    message_id = MessageCRUD.create(message)
+
+    # 构建历史对话消息（用于重写问题和生成回答）
+    history_messages = build_history_messages(existing_messages)
+
     # 重写用户问题（结合历史对话）
     rewritten_query = await chat_service.rewrite_question(history_messages, message.content)
     
@@ -285,6 +311,8 @@ async def chat(
                     role="assistant",
                     content=response,
                     rewritten_content=None,
+                    is_malicious=0,
+                    is_stopped=int(was_stopped),
                     create_time=datetime.now()
                 )
 

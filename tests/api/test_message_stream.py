@@ -102,6 +102,8 @@ def test_chat_streams_events_and_persists_complete_reply(
     assert events[0]["user_message_id"] == 101
     assert events[-1]["assistant_message_id"] == 102
     assert [message.role for message in created_messages] == ["user", "assistant"]
+    assert [message.is_malicious for message in created_messages] == [0, 0]
+    assert [message.is_stopped for message in created_messages] == [0, 0]
     assert created_messages[-1].content == "校园回答"
 
 
@@ -249,6 +251,8 @@ def test_explicit_stop_persists_truncated_assistant_reply(
     assert events[-1]["assistant_message_id"] == 102
     assert [message.role for message in created_messages] == ["user", "assistant"]
     assert created_messages[-1].content == "第一段"
+    assert created_messages[-1].is_stopped == 1
+    assert created_messages[-1].is_malicious == 0
     assert renamed_sessions == [(7, "截断回答标题")]
     assert chat_service.summary_messages[1].content == "第一段"
     assert message_router.active_chat_requests == {}
@@ -417,7 +421,7 @@ def test_chat_fixed_no_source_response_skips_source_select(
     assert chat_service.select_called is False
 
 
-def test_chat_malicious_reply_skips_search_and_sources(
+def test_chat_malicious_reply_marks_user_and_skips_search(
         monkeypatch,
         app_client_factory,
         current_user
@@ -427,11 +431,13 @@ def test_chat_malicious_reply_skips_search_and_sources(
             return True
 
     prepare_owned_session(monkeypatch, current_user)
-    monkeypatch.setattr(
-        MessageCRUD,
-        "create",
-        lambda _message: 102,
-    )
+    created_messages = []
+
+    def create_malicious_pair(user_message, assistant_message):
+        created_messages.extend([user_message, assistant_message])
+        return 101, 102
+
+    monkeypatch.setattr(MessageCRUD, "create_malicious_pair", create_malicious_pair)
 
     chat_service = MaliciousChatService()
     search_service = RecordingSearchService([source_chunk(1, "1_0")])
@@ -447,6 +453,9 @@ def test_chat_malicious_reply_skips_search_and_sources(
     assert [event["type"] for event in events] == ["start", "delta", "done"]
     assert events[-1]["sources"] == []
     assert search_service.search_called is False
+    assert [message.role for message in created_messages] == ["user", "assistant"]
+    assert [message.is_malicious for message in created_messages] == [1, 0]
+    assert [message.is_stopped for message in created_messages] == [0, 0]
 
 
 def test_explicit_stop_selects_sources_and_summarizes(monkeypatch, current_user):
@@ -534,3 +543,54 @@ def test_explicit_stop_selects_sources_and_summarizes(monkeypatch, current_user)
     assert created_messages[0].content == "请假有什么要求？"
     assert renamed_sessions == [(7, "截断回答标题")]
     assert chat_service.summary_messages[1].content == "第一段"
+
+
+def test_build_history_messages_skips_malicious_pair():
+    def message(role, content, **overrides):
+        return Message(
+            session_id=7,
+            role=role,
+            content=content,
+            create_time=datetime.now(),
+            **overrides
+        )
+
+    messages = [
+        message("user", "恶意输入", is_malicious=1),
+        message("assistant", "对话包含恶意或敏感内容"),
+        message("user", "上一个问题"),
+        message("assistant", "上一个回答", is_stopped=1),
+        message("user", "当前上下文问题"),
+    ]
+
+    history = message_router.build_history_messages(messages)
+
+    assert [item.content for item in history] == [
+        "上一个问题",
+        "上一个回答",
+        "当前上下文问题",
+    ]
+
+
+def test_chat_malicious_check_failure_does_not_persist_user_message(
+        monkeypatch,
+        current_user
+):
+    class FailingCheckService:
+        async def is_malicious(self, _messages):
+            raise RuntimeError("检查服务不可用")
+
+    prepare_owned_session(monkeypatch, current_user)
+
+    def fail_if_created(_message):
+        raise AssertionError("检查失败时不应保存用户消息")
+
+    monkeypatch.setattr(MessageCRUD, "create", fail_if_created)
+
+    with pytest.raises(RuntimeError, match="检查服务不可用"):
+        asyncio.run(message_router.chat(
+            Message.model_validate(message_payload()),
+            current_user,
+            FailingCheckService(),
+            object()
+        ))
