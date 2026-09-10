@@ -15,6 +15,12 @@ from ai.hybrid_search_service import HybridSearchService
 from authentication.user_auth import require_current_user
 from config.ai_config import SYSTEM_MESSAGE, TOPK, TOPN
 from crud.message_crud import MessageCRUD
+from crud.message_source_crud import (
+    build_message_sources,
+    create_assistant_message_with_sources,
+    get_sources_by_message_ids,
+    get_sources_grouped_by_message_ids,
+)
 from crud.session_crud import SessionCRUD
 from crud.user_knowledge_base_crud import UserKnowledgeBaseCRUD
 from model.message_model import Message
@@ -23,6 +29,9 @@ from model.session_model import DEFAULT_SESSION_NAME, normalize_session_name
 from model.user_model import User
 
 router = APIRouter(prefix="/api/message", tags=["message"])
+
+# 与 system.md 中的固定无依据回复保持完全一致。
+NO_SOURCE_RESPONSE = "知识库中没有找到"
 
 
 @dataclass
@@ -54,47 +63,77 @@ def encode_stream_event(event: dict) -> str:
     return json.dumps(event, ensure_ascii=False) + "\n"
 
 
-def retrieve_context_from_knowledge_bases(
+def retrieve_chunks_from_knowledge_bases(
         user_id: int,
         query: str,
         search_service: HybridSearchService
-) -> str:
+) -> list[dict]:
     """
-    从用户可访问的知识库中检索相关上下文（使用混合检索 + Rerank）
+    从用户可访问的知识库中检索结构化切片。
     :param user_id: 用户ID
     :param query: 用户查询
-    :return: 合并后的上下文文本
+    :param search_service: 混合检索服务
+    :return: 带 id、正文和元数据的切片列表
     """
-    # 获取用户可访问的知识库列表
     knowledge_base_ids = UserKnowledgeBaseCRUD.get_knowledge_bases_by_user(user_id)
-
     if not knowledge_base_ids:
-        return ""
+        return []
 
-    all_documents = []
+    all_chunks = []
 
-    # 在每个知识库中执行混合检索
     for kb_id in knowledge_base_ids:
         try:
-            # 调用混合检索，返回已重排序的文档列表
             results = search_service.search(
                 knowledge_base_id=kb_id,
                 query=query,
-                top_k=TOPK,      # 最终返回数量（重排后）
-                top_n=TOPN       # 精排数量（可根据需要调整）
+                top_k=TOPK,
+                top_n=TOPN
             )
-            if results:
-                # 提取文档内容
-                docs = [item["content"] for item in results if item.get("content")]
-                all_documents.extend(docs)
-        except Exception as e:
-            # 跳过访问失败或检索失败的知识库，记录日志（可选）
-            print(f"检索知识库 {kb_id} 失败: {e}")
+            for item in results:
+                metadata = item.get("metadata", {})
+                chunk_id = str(item.get("id", "")).strip()
+                content = item.get("content", "")
+                if not chunk_id or not content:
+                    continue
+
+                # 注入和判定使用同一份处理后正文，避免标签替换导致来源快照不一致。
+                content = content.replace("</source>", "[/source]")
+                all_chunks.append({
+                    "id": chunk_id,
+                    "content": content,
+                    "metadata": {
+                        "document_id": metadata.get("document_id"),
+                        "knowledge_base_id": metadata.get("knowledge_base_id", kb_id),
+                        "chunk_index": metadata.get("chunk_index"),
+                    },
+                    "source": item.get("source"),
+                    "rerank_score": item.get("rerank_score"),
+                })
+        except Exception as exc:
+            print(f"检索知识库 {kb_id} 失败: {exc}")
             continue
 
-    # 去重并合并
-    unique_docs = list(set(all_documents))
-    return "\n\n".join(unique_docs)
+    seen_ids = set()
+    chunks = []
+    for chunk in all_chunks:
+        if chunk["id"] in seen_ids:
+            continue
+        seen_ids.add(chunk["id"])
+        chunks.append(chunk)
+
+    return chunks
+
+
+def format_source_blocks(chunks: list[dict]) -> str:
+    """将结构化切片格式化为带稳定 ID 的注入文本。"""
+    return "\n\n".join(
+        f"<source id=\"{chunk['id']}\" "
+        f"document_id=\"{chunk['metadata']['document_id']}\" "
+        f"chunk_index=\"{chunk['metadata']['chunk_index']}\">\n"
+        f"{chunk['content']}\n"
+        f"</source>"
+        for chunk in chunks
+    )
 
 
 @router.post("/chat")
@@ -144,7 +183,11 @@ async def chat(
                 "request_id": None
             })
             yield encode_stream_event({"type": "delta", "content": ai_message.content})
-            yield encode_stream_event({"type": "done", "assistant_message_id": ai_message_id})
+            yield encode_stream_event({
+                "type": "done",
+                "assistant_message_id": ai_message_id,
+                "sources": []
+            })
 
         return StreamingResponse(
             malicious_response(),
@@ -177,11 +220,11 @@ async def chat(
     messages.extend(history_messages)
 
     # RAG检索（使用重写后的问题）
-    context = retrieve_context_from_knowledge_bases(user.id, rewritten_query, search_service)
+    chunks = retrieve_chunks_from_knowledge_bases(user.id, rewritten_query, search_service)
 
     # 添加当前用户消息（可能包含上下文）
-    if context:
-        current_content = f"<knowledge_base>\n{context}\n</knowledge_base>\n\n<user_query>\n{rewritten_query}\n</user_query>"
+    if chunks:
+        current_content = f"<knowledge_base>\n{format_source_blocks(chunks)}\n</knowledge_base>\n\n<user_query>\n{rewritten_query}\n</user_query>"
     else:
         current_content = rewritten_query
     messages.append(HumanMessage(content=current_content))
@@ -216,7 +259,27 @@ async def chat(
                 raise RuntimeError("AI returned an empty response")
 
             ai_message_id = None
+            source_payload = []
             if response.strip():
+                selected_chunks = []
+                # 显式停止也对已生成片段做来源判定；取消连接/失败仍不落库。
+                if chunks and response.strip() != NO_SOURCE_RESPONSE:
+                    try:
+                        selected_ids = await chat_service.select_source_ids(
+                            format_source_blocks(chunks),
+                            rewritten_query,
+                            response
+                        )
+                        candidate_by_id = {chunk["id"]: chunk for chunk in chunks}
+                        selected_chunks = [
+                            candidate_by_id[source_id]
+                            for source_id in selected_ids
+                            if source_id in candidate_by_id
+                        ]
+                    except Exception as exc:
+                        # 判定失败不影响完整回答落库；来源按无来源处理。
+                        print(f"stage=source_select message=相关性判定失败 error={exc}")
+
                 ai_message = Message(
                     session_id=message.session_id,
                     role="assistant",
@@ -224,7 +287,26 @@ async def chat(
                     rewritten_content=None,
                     create_time=datetime.now()
                 )
-                ai_message_id = MessageCRUD.create(ai_message)
+
+                if selected_chunks:
+                    sources = build_message_sources(message.session_id, selected_chunks)
+                    ai_message_id = create_assistant_message_with_sources(ai_message, sources)
+                    source_payload = [
+                        {
+                            "chunk_id": source.chunk_id,
+                            "chunk_index": source.chunk_index,
+                            "document_id": source.document_id,
+                            "filename": source.filename,
+                            "knowledge_base_id": source.knowledge_base_id,
+                            "content": source.content,
+                            "rerank_score": source.rerank_score,
+                            "recall_source": source.recall_source,
+                            "sort_order": source.sort_order,
+                        }
+                        for source in sources
+                    ]
+                else:
+                    ai_message_id = MessageCRUD.create(ai_message)
 
             try:
                 if response.strip() and is_first_round and session.name == DEFAULT_SESSION_NAME:
@@ -239,10 +321,12 @@ async def chat(
                 print(f"更新会话信息失败: {exc}")
 
             terminal_type = "stopped" if was_stopped else "done"
-            yield encode_stream_event({
+            terminal_event = {
                 "type": terminal_type,
-                "assistant_message_id": ai_message_id
-            })
+                "assistant_message_id": ai_message_id,
+                "sources": source_payload
+            }
+            yield encode_stream_event(terminal_event)
         except asyncio.CancelledError:
             # 断网或页面离开仍视为连接中断，不保存部分回复。
             raise
@@ -299,8 +383,17 @@ async def get_messages_by_session_id(
         return result.error(msg="会话不存在或无权访问")
 
     messages = MessageCRUD.get_by_session_id(session_id)
+    sources_by_message_id = get_sources_grouped_by_message_ids([
+        item.id for item in messages if item.role == "assistant" and item.id is not None
+    ])
 
-    return result.success(msg="查询成功", data=messages)
+    message_data = []
+    for item in messages:
+        data = item.to_dict()
+        data["sources"] = sources_by_message_id.get(item.id, [])
+        message_data.append(data)
+
+    return result.success(msg="查询成功", data=message_data)
 
 
 @router.get("/{message_id}")
@@ -325,7 +418,11 @@ async def get_message(
     if not session or (session.user_id != user.id and user.is_admin == 0):
         return result.error(msg="无权访问该消息")
 
-    return result.success(msg="查询成功", data=message)
+    sources = get_sources_by_message_ids([message.id]) if message.role == "assistant" else []
+    message_data = message.to_dict()
+    message_data["sources"] = sources
+
+    return result.success(msg="查询成功", data=message_data)
 
 
 @router.delete("/session/{session_id}")
