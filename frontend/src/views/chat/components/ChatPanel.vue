@@ -2,8 +2,9 @@
 import {computed, nextTick, ref} from 'vue'
 import MarkdownIt from 'markdown-it'
 import {ElMessage} from 'element-plus'
-import {ChatDotRound, Delete, Position, UserFilled, VideoPause} from '@element-plus/icons-vue'
+import {ChatDotRound, CopyDocument, Delete, Document, Position, UserFilled, VideoPause} from '@element-plus/icons-vue'
 import {countCharacters, truncateCharacters} from '@/utils/characterCount.js'
+import MessageSourcesDialog from '@/components/MessageSourcesDialog.vue'
 import ChatInputCounter from './ChatInputCounter.vue'
 
 const md = new MarkdownIt({ html: false, breaks: true, linkify: true, typographer: true })
@@ -20,6 +21,8 @@ const emit = defineEmits(['send', 'stop', 'delete-message'])
 const inputContent = ref('')
 const textareaRef = ref(null)
 const isComposing = ref(false)
+const sourceDialogVisible = ref(false)
+const selectedSources = ref([])
 const inputLength = computed(() => countCharacters(inputContent.value))
 const isOverLimit = computed(() => inputLength.value > MAX_INPUT_LENGTH)
 
@@ -99,6 +102,47 @@ const handleSend = () => {
   nextTick(() => autoResizeTextarea())
 }
 
+const copyMessage = async (content) => {
+  if (!content) return
+
+  try {
+    let copied = false
+    if (navigator.clipboard?.writeText) {
+      try {
+        await navigator.clipboard.writeText(content)
+        copied = true
+      } catch {
+        copied = false
+      }
+    }
+
+    if (!copied) {
+      const textarea = document.createElement('textarea')
+      textarea.value = content
+      textarea.style.position = 'fixed'
+      textarea.style.opacity = '0'
+      document.body.appendChild(textarea)
+      try {
+        textarea.select()
+        copied = document.execCommand('copy')
+      } finally {
+        textarea.remove()
+      }
+    }
+
+    if (!copied) throw new Error('浏览器拒绝复制操作')
+    ElMessage.success('消息已复制')
+  } catch (error) {
+    console.error('复制消息失败:', error)
+    ElMessage.error('复制失败，请稍后重试')
+  }
+}
+
+const showSources = (sources) => {
+  selectedSources.value = sources
+  sourceDialogVisible.value = true
+}
+
 </script>
 
 <template>
@@ -122,9 +166,35 @@ const handleSend = () => {
             <div v-else class="generating-status"><i /><i /><i /><span>{{ isStopping ? '正在停止' : '正在检索并组织回答' }}</span></div>
           </div>
           <span v-if="msg.role === 'assistant' && msg.is_stopped === 1" class="message-stopped-tag">已停止生成</span>
-          <el-tooltip v-if="msg.id && !isStreaming" content="删除此消息及后续内容" placement="bottom">
-            <button class="message-delete-btn" type="button" aria-label="删除此消息及后续内容" @click="$emit('delete-message', msg)"><el-icon><Delete /></el-icon></button>
-          </el-tooltip>
+          <div v-if="msg.id" class="message-controls">
+            <div class="message-actions">
+              <el-tooltip content="复制消息" placement="bottom" :hide-after="30">
+                <button class="message-action-btn" type="button" aria-label="复制消息" @click="copyMessage(msg.content)"><el-icon><CopyDocument /></el-icon></button>
+              </el-tooltip>
+              <el-tooltip :content="isStreaming ? '生成过程中不可删除消息' : '删除此消息及后续内容'" placement="bottom" :hide-after="30">
+                <span>
+                  <button
+                    class="message-action-btn message-delete-btn"
+                    type="button"
+                    aria-label="删除此消息及后续内容"
+                    :disabled="isStreaming"
+                    @click="$emit('delete-message', msg)"
+                  >
+                    <el-icon><Delete /></el-icon>
+                  </button>
+                </span>
+              </el-tooltip>
+              <el-tooltip v-if="msg.role === 'assistant' && msg.sources?.length" :content="`${msg.sources.length}个来源`" placement="bottom" :hide-after="30">
+                <button
+                  class="message-action-btn message-source-btn"
+                  type="button"
+                  @click="showSources(msg.sources)"
+                >
+                  <el-icon><Document /></el-icon><span>{{ msg.sources.length }}个来源</span>
+                </button>
+              </el-tooltip>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -161,6 +231,7 @@ const handleSend = () => {
       </div>
       <span class="composer-note">回答由知识库生成，请结合原始资料核验重要信息</span>
     </div>
+    <MessageSourcesDialog v-model:visible="sourceDialogVisible" :sources="selectedSources" />
   </section>
 </template>
 
@@ -182,9 +253,16 @@ const handleSend = () => {
 .is-assistant .message-bubble { padding: 2px 0; background: transparent; }
 .is-user .message-bubble { background: var(--color-primary); color: #fff; white-space: pre-wrap; word-break: break-word; }
 .message-stopped-tag { margin: 2px 0 6px; color: var(--color-text-muted); font-size: 12px; }
-.message-delete-btn { width: 30px; height: 30px; margin-top: 3px; padding: 0; display: grid; place-items: center; opacity: 0; border: 0; border-radius: 4px; background: transparent; color: var(--color-text-muted); cursor: pointer; transition: opacity .15s, background-color .15s, color .15s; }
-.message-row:hover .message-delete-btn, .message-delete-btn:focus-visible { opacity: 1; }
+.message-controls { width: 100%; min-height: 30px; margin-top: 3px; display: flex; align-items: center; gap: 10px; }
+.is-user .message-controls { justify-content: flex-end; }
+.message-actions { height: 30px; display: flex; align-items: center; gap: 2px; }
+.message-action-btn { width: 30px; height: 30px; padding: 0; display: grid; place-items: center; border: 0; border-radius: 4px; background: transparent; color: var(--color-text-muted); cursor: pointer; transition: background-color .15s, color .15s; }
+.message-action-btn .el-icon { font-size: 16px; }
+.message-action-btn:hover { background: var(--color-primary-soft); color: var(--color-primary); }
 .message-delete-btn:hover { background: #fff0f0; color: var(--color-danger); }
+.message-action-btn:disabled { background: transparent; color: #c0c4cc; cursor: not-allowed; }
+.message-source-btn { width: auto; margin-left: 4px; padding: 0 7px; display: inline-flex; align-items: center; gap: 5px; font-size: 14px; white-space: nowrap; }
+.message-source-btn .el-icon { font-size: 16px; }
 .generating-status { min-height: 30px; display: flex; align-items: center; gap: 5px; color: var(--color-text-secondary); font-size: 13px; }
 .generating-status i { width: 5px; height: 5px; border-radius: 50%; background: var(--color-primary); animation: thinking 1.2s infinite ease-in-out; }
 .generating-status i:nth-child(2) { animation-delay: .15s; }
@@ -224,7 +302,6 @@ const handleSend = () => {
   .message-avatar { width: 28px; height: 28px; flex-basis: 28px; }
   .message-content { max-width: calc(100% - 36px); }
   .message-bubble { max-width: 100%; padding: 9px 12px; }
-  .message-delete-btn { opacity: 1; }
   .message-bubble :deep(pre), .message-bubble :deep(table) { max-width: 100%; overflow-x: auto; }
   .chat-input-area { padding: 8px 8px max(8px, env(safe-area-inset-bottom)); }
   .send-btn { width: 44px; padding: 0; }
