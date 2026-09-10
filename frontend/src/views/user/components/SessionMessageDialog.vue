@@ -1,8 +1,10 @@
 <script setup>
 import { ref, watch, nextTick } from "vue";
-import { messageBySessionId } from "@/api/message.js";
-import { ElMessage } from "element-plus";
+import { deleteMessagesAfter, messageBySessionId } from "@/api/message.js";
+import { ElMessage, ElMessageBox } from "element-plus";
+import { CopyDocument, Delete, Document } from "@element-plus/icons-vue";
 import MarkdownIt from "markdown-it";
+import MessageSourcesDialog from "@/components/MessageSourcesDialog.vue";
 
 // 初始化 markdown-it，启用常用GFM特性
 const md = new MarkdownIt({
@@ -28,6 +30,8 @@ const dialogVisible = ref(false);
 const messageList = ref([]);
 const loading = ref(false);
 const scrollContainer = ref(null);
+const sourceDialogVisible = ref(false);
+const selectedSources = ref([]);
 
 watch(
   () => props.visible,
@@ -78,6 +82,68 @@ const renderMarkdown = (content) => {
   if (!content) return "";
   return md.render(content);
 };
+
+const showSources = (sources) => {
+  selectedSources.value = sources;
+  sourceDialogVisible.value = true;
+};
+
+const copyMessage = async (content) => {
+  if (!content) return;
+
+  try {
+    let copied = false;
+    if (navigator.clipboard?.writeText) {
+      try {
+        await navigator.clipboard.writeText(content);
+        copied = true;
+      } catch {
+        copied = false;
+      }
+    }
+
+    if (!copied) {
+      const textarea = document.createElement("textarea");
+      textarea.value = content;
+      textarea.style.position = "fixed";
+      textarea.style.opacity = "0";
+      document.body.appendChild(textarea);
+      try {
+        textarea.select();
+        copied = document.execCommand("copy");
+      } finally {
+        textarea.remove();
+      }
+    }
+
+    if (!copied) throw new Error("浏览器拒绝复制操作");
+    ElMessage.success("消息已复制");
+  } catch (error) {
+    console.error("复制消息失败:", error);
+    ElMessage.error("复制失败，请稍后重试");
+  }
+};
+
+const deleteMessage = async (msg) => {
+  try {
+    await ElMessageBox.confirm("确定要删除该消息及后续内容吗？", "删除", {
+      confirmButtonText: "确定",
+      cancelButtonText: "取消",
+      type: "warning",
+    });
+    const res = await deleteMessagesAfter(msg.session_id, msg.id);
+    if (res.code) {
+      ElMessage.success("删除成功");
+      await fetchMessages();
+    } else {
+      ElMessage.error(res.msg || "删除失败");
+    }
+  } catch (error) {
+    if (error !== "cancel" && error?.action !== "cancel") {
+      ElMessage.error("删除请求异常");
+    }
+  }
+};
 </script>
 
 <template>
@@ -123,6 +189,30 @@ const renderMarkdown = (content) => {
           />
           <pre v-else class="user-text">{{ msg.content }}</pre>
         </div>
+        <span v-if="msg.role === 'assistant' && msg.is_stopped === 1" class="message-stopped-tag">已停止生成</span>
+        <div v-if="msg.id" class="message-controls">
+          <div class="message-actions">
+            <el-tooltip content="复制消息" placement="bottom" :hide-after="30">
+              <button class="message-action-btn" type="button" aria-label="复制消息" @click="copyMessage(msg.content)">
+                <el-icon><CopyDocument /></el-icon>
+              </button>
+            </el-tooltip>
+            <el-tooltip content="删除此消息及后续内容" placement="bottom" :hide-after="30">
+              <button class="message-action-btn message-delete-btn" type="button" aria-label="删除此消息及后续内容" @click="deleteMessage(msg)">
+                <el-icon><Delete /></el-icon>
+              </button>
+            </el-tooltip>
+          </div>
+          <el-tooltip v-if="msg.role === 'assistant' && msg.sources?.length" :content="`${msg.sources.length}个来源`" placement="bottom" :hide-after="30">
+            <button
+              class="message-action-btn message-source-btn"
+              type="button"
+              @click="showSources(msg.sources)"
+            >
+              <el-icon><Document /></el-icon><span>{{ msg.sources.length }}个来源</span>
+            </button>
+          </el-tooltip>
+        </div>
       </div>
     </div>
 
@@ -132,6 +222,7 @@ const renderMarkdown = (content) => {
       </div>
     </template>
   </el-dialog>
+  <MessageSourcesDialog v-model:visible="sourceDialogVisible" :sources="selectedSources" />
 </template>
 
 <style scoped>
@@ -190,6 +281,77 @@ const renderMarkdown = (content) => {
 .message-row--assistant .message-bubble {
   background-color: #f4f4f5;
   border: 1px solid #e9e9eb;
+}
+
+.message-controls {
+  width: 100%;
+  min-height: 30px;
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.message-actions {
+  height: 30px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.message-action-btn {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: background-color .15s, color .15s;
+}
+
+.message-action-btn .el-icon {
+  font-size: 16px;
+}
+
+.message-action-btn:hover {
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+}
+
+.message-delete-btn:hover {
+  background: #fff0f0;
+  color: var(--color-danger);
+}
+
+.message-stopped-tag {
+  margin-left: 4px;
+  color: #909399;
+  font-size: 12px;
+}
+
+.message-source-btn {
+  height: 30px;
+  width: auto;
+  margin-left: 0;
+  padding: 0 7px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.message-source-btn .el-icon {
+  font-size: 16px;
+}
+
+.message-source-btn:hover {
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
 }
 
 /* 用户纯文本 */
