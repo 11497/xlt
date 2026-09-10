@@ -121,6 +121,7 @@ const handleSend = () => {
             <div v-else-if="msg.content" class="markdown-body" v-html="md.render(msg.content)"></div>
             <div v-else class="generating-status"><i /><i /><i /><span>{{ isStopping ? '正在停止' : '正在检索并组织回答' }}</span></div>
           </div>
+          <span v-if="msg.role === 'assistant' && msg.is_stopped === 1" class="message-stopped-tag">已停止生成</span>
           <el-tooltip v-if="msg.id && !isStreaming" content="删除此消息及后续内容" placement="bottom">
             <button class="message-delete-btn" type="button" aria-label="删除此消息及后续内容" @click="$emit('delete-message', msg)"><el-icon><Delete /></el-icon></button>
           </el-tooltip>
@@ -180,6 +181,7 @@ const handleSend = () => {
 .message-bubble { max-width: 100%; padding: 11px 15px; border-radius: 6px; color: var(--color-text); font-size: 14px; line-height: 1.75; overflow-wrap: anywhere; }
 .is-assistant .message-bubble { padding: 2px 0; background: transparent; }
 .is-user .message-bubble { background: var(--color-primary); color: #fff; white-space: pre-wrap; word-break: break-word; }
+.message-stopped-tag { margin: 2px 0 6px; color: var(--color-text-muted); font-size: 12px; }
 .message-delete-btn { width: 30px; height: 30px; margin-top: 3px; padding: 0; display: grid; place-items: center; opacity: 0; border: 0; border-radius: 4px; background: transparent; color: var(--color-text-muted); cursor: pointer; transition: opacity .15s, background-color .15s, color .15s; }
 .message-row:hover .message-delete-btn, .message-delete-btn:focus-visible { opacity: 1; }
 .message-delete-btn:hover { background: #fff0f0; color: var(--color-danger); }

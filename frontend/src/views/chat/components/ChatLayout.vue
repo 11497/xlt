@@ -218,6 +218,7 @@ const handleSend = async (content) => {
         scrollToBottom()
       } else if (event.type === 'done' || event.type === 'stopped') {
         assistantMsg.id = event.assistant_message_id
+        if (event.type === 'stopped') assistantMsg.is_stopped = 1
       }
     }, { signal: controller.signal })
 
