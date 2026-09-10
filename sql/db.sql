@@ -1,5 +1,7 @@
 -- 空环境初始化脚本：业务数据删除采用逻辑删除。
-create database if not exists xlt;
+create database if not exists xlt
+    default character set utf8mb4
+    default collate utf8mb4_unicode_ci;
 
 use xlt;
 
@@ -10,41 +12,42 @@ use xlt;
 create table user (
     id int auto_increment primary key comment '用户id',
     username varchar(255) not null unique comment '用户名',
-    password varchar(255) not null default '$argon2id$v=19$m=65536,t=3,p=4$sFFvvH2qZYyhTBvJs0vx5A$nfy24ZwxcDs6A/VKWLKZlofCg3KENlL9dhExvnByGc0' comment 'Argon2id 密码哈希',
-    is_admin tinyint default 0 comment '是否管理员，0为普通用户，1为管理员',
+    password varchar(255) not null comment 'Argon2id 密码哈希',
+    is_admin tinyint(1) not null default 0 comment '是否管理员，0为普通用户，1为管理员',
     is_deleted tinyint(1) not null default 0 comment '是否逻辑删除，0=否，1=是',
     deleted_at datetime null comment '逻辑删除时间',
     key idx_user_deleted (is_deleted)
-) comment '用户';
+) engine=InnoDB default charset=utf8mb4 collate=utf8mb4_unicode_ci comment '用户';
 
 create table session (
     id int auto_increment primary key comment '会话id',
     user_id int not null comment '用户id',
     name varchar(30) not null default '新建会话' comment '会话名称',
-    create_time datetime default current_timestamp comment '创建时间',
+    create_time datetime not null default current_timestamp comment '创建时间',
     update_time datetime not null default current_timestamp comment '更新时间',
     is_deleted tinyint(1) not null default 0 comment '是否逻辑删除，0=否，1=是',
     deleted_at datetime null comment '逻辑删除时间',
     key idx_session_deleted (is_deleted),
-    key idx_session_user_deleted (user_id, is_deleted),
+    key idx_session_user_deleted (user_id, is_deleted, update_time),
     constraint fk_session_user
         foreign key (user_id) references user(id) on delete restrict
-) comment '会话';
+) engine=InnoDB default charset=utf8mb4 collate=utf8mb4_unicode_ci comment '会话';
 
 create table message (
     id int auto_increment primary key comment '消息id',
     session_id int not null comment '会话id',
-    role varchar(255) not null comment '角色',
-    content text comment '消息内容',
+    role varchar(16) not null comment '角色',
+    content text not null comment '消息内容',
     rewritten_content text comment '重写后的内容',
-    create_time datetime default current_timestamp comment '创建时间',
+    create_time datetime not null default current_timestamp comment '创建时间',
     is_deleted tinyint(1) not null default 0 comment '是否逻辑删除，0=否，1=是',
     deleted_at datetime null comment '逻辑删除时间',
     key idx_message_deleted (is_deleted),
-    key idx_message_session_deleted (session_id, is_deleted),
+    key idx_message_session_deleted (session_id, is_deleted, create_time),
     constraint fk_message_session
-        foreign key (session_id) references session(id) on delete restrict
-) comment '消息';
+        foreign key (session_id) references session(id) on delete restrict,
+    constraint chk_message_role check (role in ('user', 'assistant'))
+) engine=InnoDB default charset=utf8mb4 collate=utf8mb4_unicode_ci comment '消息';
 
 create table knowledge_base (
     id int auto_increment primary key comment '知识库id',
@@ -52,7 +55,7 @@ create table knowledge_base (
     is_deleted tinyint(1) not null default 0 comment '是否逻辑删除，0=否，1=是',
     deleted_at datetime null comment '逻辑删除时间',
     key idx_knowledge_base_deleted (is_deleted)
-) comment '知识库';
+) engine=InnoDB default charset=utf8mb4 collate=utf8mb4_unicode_ci comment '知识库';
 
 create table role (
     id int auto_increment primary key comment '角色id',
@@ -60,7 +63,7 @@ create table role (
     is_deleted tinyint(1) not null default 0 comment '是否逻辑删除，0=否，1=是',
     deleted_at datetime null comment '逻辑删除时间',
     key idx_role_deleted (is_deleted)
-) comment '角色';
+) engine=InnoDB default charset=utf8mb4 collate=utf8mb4_unicode_ci comment '角色';
 
 create table role_user (
     role_id int not null comment '角色id',
@@ -73,7 +76,7 @@ create table role_user (
         foreign key (role_id) references role(id) on delete restrict,
     constraint fk_role_user_user
         foreign key (user_id) references user(id) on delete restrict
-) comment '角色用户关联';
+) engine=InnoDB default charset=utf8mb4 collate=utf8mb4_unicode_ci comment '角色用户关联';
 
 create table role_knowledge_base (
     role_id int not null comment '角色id',
@@ -88,7 +91,7 @@ create table role_knowledge_base (
     constraint fk_role_knowledge_base_knowledge_base
         foreign key (knowledge_base_id) references knowledge_base(id) on delete restrict,
     constraint chk_role_knowledge_base_permission check (permission in (0, 1))
-) comment '角色知识库关联';
+) engine=InnoDB default charset=utf8mb4 collate=utf8mb4_unicode_ci comment '角色知识库关联';
 
 create table document (
     id int auto_increment primary key comment '文档id',
@@ -106,9 +109,10 @@ create table document (
     key idx_document_status (status),
     key idx_document_kb_status (knowledge_base_id, status),
     key idx_document_deleted (is_deleted),
+    key idx_document_kb_deleted_created (knowledge_base_id, is_deleted, create_time),
     constraint fk_document_knowledge_base
         foreign key (knowledge_base_id) references knowledge_base(id) on delete restrict
-) comment '文档';
+) engine=InnoDB default charset=utf8mb4 collate=utf8mb4_unicode_ci comment '文档';
 
 create table document_task (
     id bigint unsigned auto_increment primary key comment '任务id',
@@ -130,7 +134,7 @@ create table document_task (
     key idx_task_lease (status, claimed_at),
     key idx_task_document (document_id),
     key idx_task_kb (knowledge_base_id)
-) comment '文档索引/删除异步任务';
+) engine=InnoDB default charset=utf8mb4 collate=utf8mb4_unicode_ci comment '文档索引/删除异步任务';
 
 create table announcement (
     id int auto_increment primary key comment '公告id',
@@ -141,8 +145,8 @@ create table announcement (
     update_time datetime not null default current_timestamp comment '更新时间',
     is_deleted tinyint(1) not null default 0 comment '是否逻辑删除，0=否，1=是',
     deleted_at datetime null comment '逻辑删除时间',
-    key idx_announcement_deleted (is_deleted)
-) comment '公告';
+    key idx_announcement_deleted_top_created (is_deleted, is_top, create_time)
+) engine=InnoDB default charset=utf8mb4 collate=utf8mb4_unicode_ci comment '公告';
 
 create table announcement_attachment (
     id int auto_increment primary key comment '公告附件id',
@@ -156,7 +160,47 @@ create table announcement_attachment (
     key idx_announcement_attachment_announcement_deleted (announcement_id, is_deleted),
     constraint fk_announcement_attachment_announcement
         foreign key (announcement_id) references announcement(id) on delete restrict
-) comment '公告附件';
+) engine=InnoDB default charset=utf8mb4 collate=utf8mb4_unicode_ci comment '公告附件';
+
+create table source_content (
+    id int auto_increment primary key comment '正文id',
+    content_hash char(64) not null comment 'UTF-8 SHA-256 十六进制',
+    content text not null comment '切片正文，写入后不更新',
+    create_time datetime not null default current_timestamp comment '首次写入时间',
+    unique key uk_source_content_hash (content_hash)
+) engine=InnoDB default charset=utf8mb4 collate=utf8mb4_unicode_ci comment '来源正文（按内容去重）';
+
+create table message_source (
+    id int auto_increment primary key comment '来源引用id',
+    message_id int not null comment 'assistant 消息id',
+    session_id int not null comment '冗余会话id，便于按会话清理',
+    source_content_id int not null comment '正文id',
+    knowledge_base_id int not null comment '知识库id',
+    document_id int not null comment '文档id',
+    chunk_id varchar(64) not null comment '当时的 document_id_chunk_index',
+    chunk_index int not null comment '当时的切片序号',
+    filename varchar(255) not null comment '当时的文档名',
+    rerank_score double null comment '精排分数',
+    recall_source varchar(20) null comment 'vector 或 bm25',
+    sort_order int not null default 0 comment '展示顺序',
+    create_time datetime not null default current_timestamp comment '创建时间',
+    is_deleted tinyint(1) not null default 0 comment '是否逻辑删除，0=否，1=是',
+    deleted_at datetime null comment '逻辑删除时间',
+    unique key uk_message_source_chunk (message_id, chunk_id),
+    key idx_message_source_message_deleted (message_id, is_deleted),
+    key idx_message_source_session_deleted (session_id, is_deleted),
+    key idx_message_source_content (source_content_id),
+    constraint fk_message_source_message
+        foreign key (message_id) references message(id) on delete restrict,
+    constraint fk_message_source_session
+        foreign key (session_id) references session(id) on delete restrict,
+    constraint fk_message_source_content
+        foreign key (source_content_id) references source_content(id) on delete restrict,
+    constraint fk_message_source_knowledge_base
+        foreign key (knowledge_base_id) references knowledge_base(id) on delete restrict,
+    constraint fk_message_source_document
+        foreign key (document_id) references document(id) on delete restrict
+) engine=InnoDB default charset=utf8mb4 collate=utf8mb4_unicode_ci comment '回答用来源引用';
 
 insert into user (username, password, is_admin)
 values ('admin', '$argon2id$v=19$m=65536,t=3,p=4$wSH04ON+NjdRsHmJ6F36fA$/g62R/uOp6WadTu1GldXdS5DxOHyALvvoDDJoTr+woU', 1),
