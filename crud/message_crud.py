@@ -1,6 +1,7 @@
 from typing import List, Optional
-from util.db_util import get_cursor
+from util.db_util import get_connection, get_cursor
 from model.message_model import Message
+from crud.message_source_crud import MessageSourceCRUD
 
 
 class MessageCRUD:
@@ -33,27 +34,47 @@ class MessageCRUD:
     @staticmethod
     def delete_by_session_id(session_id: int) -> bool:
         """
-        根据会话 ID 删除该会话下的所有消息
+        在同一事务中逻辑删除会话消息及其来源引用。
         :param session_id: 会话ID
         :return: 是否成功删除了记录
         """
-        sql = "UPDATE message SET is_deleted = 1, deleted_at = NOW() WHERE session_id = %s AND is_deleted = 0"
-        with get_cursor() as cursor:
-            affected = cursor.execute(sql, (session_id,))
-            return affected > 0
+        with get_connection() as conn:
+            cursor = conn.cursor()
+            try:
+                MessageSourceCRUD.soft_delete_by_session_id(cursor, session_id)
+                cursor.execute(
+                    "UPDATE message SET is_deleted = 1, deleted_at = NOW() "
+                    "WHERE session_id = %s AND is_deleted = 0",
+                    (session_id,)
+                )
+                return cursor.rowcount > 0
+            finally:
+                cursor.close()
 
     @staticmethod
     def delete_message_with_after(session_id: int, message_id: int) -> bool:
         """
-        根据会话 ID 和消息 ID，删除该会话内该消息 ID 之后的所有消息
+        在同一事务中逻辑删除指定消息及之后的消息与来源引用。
         :param session_id: 会话ID
-        :param message_id: 消息ID
+        :param message_id: 起始消息ID
         :return: 是否成功删除了记录
         """
-        sql = "UPDATE message SET is_deleted = 1, deleted_at = NOW() WHERE session_id = %s AND id >= %s AND is_deleted = 0"
-        with get_cursor() as cursor:
-            affected = cursor.execute(sql, (session_id, message_id))
-            return affected > 0
+        with get_connection() as conn:
+            cursor = conn.cursor()
+            try:
+                MessageSourceCRUD.soft_delete_by_session_and_after(
+                    cursor,
+                    session_id,
+                    message_id
+                )
+                cursor.execute(
+                    "UPDATE message SET is_deleted = 1, deleted_at = NOW() "
+                    "WHERE session_id = %s AND id >= %s AND is_deleted = 0",
+                    (session_id, message_id)
+                )
+                return cursor.rowcount > 0
+            finally:
+                cursor.close()
 
     @staticmethod
     def get_by_id(message_id: int) -> Optional[Message]:

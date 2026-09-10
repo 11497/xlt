@@ -214,3 +214,28 @@ class DocumentCRUD:
             documents = [Document.from_row(r) for r in rows]
 
         return documents, total
+
+
+def get_filenames_by_document_ids(document_ids: list[int]) -> dict[int, str]:
+    """
+    按 ID 批量查询文档文件名快照。
+    :param document_ids: 需要查询的文档 ID
+    :return: 文档 ID 到文件名的映射
+    """
+    unique_ids = sorted({
+        int(document_id)
+        for document_id in document_ids
+        if document_id is not None
+    })
+    if not unique_ids:
+        return {}
+
+    placeholders = ",".join(["%s"] * len(unique_ids))
+    sql = (
+        "SELECT id, filename FROM document "
+        f"WHERE id IN ({placeholders}) AND is_deleted = 0"
+    )
+    with get_cursor() as cursor:
+        cursor.execute(sql, unique_ids)
+        rows = cursor.fetchall()
+        return {int(row["id"]): row["filename"] for row in rows}

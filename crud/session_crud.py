@@ -1,4 +1,5 @@
 from typing import List, Optional, Tuple
+from crud.message_source_crud import MessageSourceCRUD
 from util.db_util import get_connection, get_cursor
 from model.session_model import (
     Session,
@@ -58,6 +59,7 @@ class SessionCRUD:
         with get_connection() as conn:
             cursor = conn.cursor()
             try:
+                MessageSourceCRUD.soft_delete_by_session_id(cursor, session_id)
                 cursor.execute(
                     "UPDATE message SET is_deleted = 1, deleted_at = NOW() "
                     "WHERE session_id = %s AND is_deleted = 0",
