@@ -18,6 +18,12 @@ class Message(SoftDeleteModel):
     create_time: datetime
     id: Optional[int] = Field(default=None, ge=1)  # 新建时 id 为 None，查询时自动填充
     rewritten_content: Optional[str] = None
+    # 恶意/敏感判定针对用户输入；拒绝回复本身仍标记为 0。
+    is_malicious: int = Field(default=0, ge=0, le=1)
+    # 仅 assistant 因用户手动停止保存非空片段时为 1。
+    is_stopped: int = Field(default=0, ge=0, le=1)
+
+
 
     is_deleted: int = Field(default=0, ge=0, le=1, init=False, exclude=True)
     deleted_at: Optional[datetime] = Field(default=None, init=False, exclude=True)

@@ -13,10 +13,64 @@ class MessageCRUD:
         :param message: 消息对象
         :return: 新插入记录的 id
         """
-        sql = "INSERT INTO message (session_id, role, content, rewritten_content) VALUES (%s, %s, %s, %s)"
+        sql = (
+            "INSERT INTO message ("
+            "session_id, role, content, rewritten_content, "
+            "is_malicious, is_stopped"
+            ") VALUES (%s, %s, %s, %s, %s, %s)"
+        )
         with get_cursor() as cursor:
-            cursor.execute(sql, (message.session_id, message.role, message.content, message.rewritten_content))
+            cursor.execute(
+                sql,
+                (
+                    message.session_id,
+                    message.role,
+                    message.content,
+                    message.rewritten_content,
+                    message.is_malicious,
+                    message.is_stopped,
+                )
+            )
             return cursor.lastrowid
+
+    @staticmethod
+    def create_malicious_pair(user_message: Message, assistant_message: Message) -> tuple[int, int]:
+        """原子保存被拦截的用户消息及其安全拒绝回复。"""
+        sql = (
+            "INSERT INTO message ("
+            "session_id, role, content, rewritten_content, "
+            "is_malicious, is_stopped, create_time"
+            ") VALUES (%s, %s, %s, %s, %s, %s, %s), "
+            "(%s, %s, %s, %s, %s, %s, %s)"
+        )
+        params = (
+            user_message.session_id,
+            user_message.role,
+            user_message.content,
+            user_message.rewritten_content,
+            user_message.is_malicious,
+            user_message.is_stopped,
+            user_message.create_time,
+            assistant_message.session_id,
+            assistant_message.role,
+            assistant_message.content,
+            assistant_message.rewritten_content,
+            assistant_message.is_malicious,
+            assistant_message.is_stopped,
+            assistant_message.create_time,
+        )
+        with get_cursor() as cursor:
+            cursor.execute(sql, params)
+            first_message_id = cursor.lastrowid
+            cursor.execute(
+                "SELECT id FROM message WHERE session_id = %s AND id >= %s "
+                "ORDER BY id LIMIT 2",
+                (user_message.session_id, first_message_id),
+            )
+            rows = cursor.fetchall()
+            if len(rows) != 2:
+                raise RuntimeError("保存恶意消息及安全拒绝回复后未能取得完整 ID")
+            return rows[0]["id"], rows[1]["id"]
 
     @staticmethod
     def get_by_session_id(session_id: int) -> List[Message]:
@@ -25,7 +79,10 @@ class MessageCRUD:
         :param session_id: 会话ID
         :return: 消息对象列表
         """
-        sql = "SELECT * FROM message WHERE session_id = %s AND is_deleted = 0 ORDER BY create_time"
+        sql = (
+            "SELECT * FROM message WHERE session_id = %s AND is_deleted = 0 "
+            "ORDER BY create_time, id"
+        )
         with get_cursor() as cursor:
             cursor.execute(sql, (session_id,))
             rows = cursor.fetchall()

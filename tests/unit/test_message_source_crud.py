@@ -159,6 +159,9 @@ def test_create_assistant_message_with_sources_uses_single_transaction(monkeypat
     message_id = create_assistant_message_with_sources(_assistant_message(), sources)
 
     assert message_id == 101
+    insert_params = cursor.queries[0][1]
+    assert insert_params[4] == 0
+    assert insert_params[5] == 0
     assert sources[0].message_id == 101
     assert sources[0].session_id == 7
     assert sources[0].source_content_id == 44
@@ -168,6 +171,27 @@ def test_create_assistant_message_with_sources_uses_single_transaction(monkeypat
     assert len(cursor.executemany_calls) == 1
     assert connection.committed is True
     assert connection.rolled_back is False
+
+
+def test_create_assistant_message_with_sources_persists_flags(monkeypatch):
+    cursor = FakeCursor(fetchone_results=[{"id": 44}])
+    connection = FakeConnection(cursor)
+    monkeypatch.setattr(
+        "crud.message_source_crud.get_connection",
+        lambda: connection,
+    )
+
+    message = _assistant_message()
+    message.is_stopped = 1
+    message.is_malicious = 0
+    message_id = create_assistant_message_with_sources(message, [])
+
+    assert message_id == 101
+    insert_sql, insert_params = cursor.queries[0]
+    assert "is_malicious" in insert_sql and "is_stopped" in insert_sql
+    assert insert_params[4] == 0
+    assert insert_params[5] == 1
+    assert connection.committed is True
 
 
 def test_delete_by_session_soft_deletes_sources_before_messages(monkeypatch):

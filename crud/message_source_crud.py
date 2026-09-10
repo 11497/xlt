@@ -172,9 +172,18 @@ def create_assistant_message_with_sources(
         cursor = conn.cursor(pymysql.cursors.DictCursor)
         try:
             cursor.execute(
-                "INSERT INTO message (session_id, role, content, rewritten_content) "
-                "VALUES (%s, %s, %s, %s)",
-                (message.session_id, message.role, message.content, message.rewritten_content)
+                "INSERT INTO message ("
+                "session_id, role, content, rewritten_content, "
+                "is_malicious, is_stopped"
+                ") VALUES (%s, %s, %s, %s, %s, %s)",
+                (
+                    message.session_id,
+                    message.role,
+                    message.content,
+                    message.rewritten_content,
+                    message.is_malicious,
+                    message.is_stopped,
+                )
             )
             message_id = cursor.lastrowid
 

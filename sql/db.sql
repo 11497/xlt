@@ -39,6 +39,8 @@ create table message (
     role varchar(16) not null comment '角色',
     content text not null comment '消息内容',
     rewritten_content text comment '重写后的内容',
+    is_malicious tinyint(1) not null default 0 comment '是否被判定为恶意/敏感输入，0=否，1=是',
+    is_stopped tinyint(1) not null default 0 comment 'assistant 是否因用户手动停止而保存部分回复，0=否，1=是',
     create_time datetime not null default current_timestamp comment '创建时间',
     is_deleted tinyint(1) not null default 0 comment '是否逻辑删除，0=否，1=是',
     deleted_at datetime null comment '逻辑删除时间',
@@ -46,7 +48,10 @@ create table message (
     key idx_message_session_deleted (session_id, is_deleted, create_time),
     constraint fk_message_session
         foreign key (session_id) references session(id) on delete restrict,
-    constraint chk_message_role check (role in ('user', 'assistant'))
+    constraint chk_message_role check (role in ('user', 'assistant')),
+    constraint chk_message_malicious check (is_malicious in (0, 1)),
+    constraint chk_message_stopped check (is_stopped in (0, 1)),
+    constraint chk_message_stopped_role check (role = 'assistant' or is_stopped = 0)
 ) engine=InnoDB default charset=utf8mb4 collate=utf8mb4_unicode_ci comment '消息';
 
 create table knowledge_base (
