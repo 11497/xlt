@@ -141,6 +141,7 @@ def test_session_delete_with_messages_is_single_transaction(monkeypatch):
     monkeypatch.setattr(session_crud, "get_connection", lambda: _connection_context(connection))
     assert SessionCRUD.delete_with_messages(8) is True
     assert [sql for sql, _ in connection.cursor_obj.queries] == [
+        "UPDATE message_source SET is_deleted = 1, deleted_at = NOW() WHERE session_id = %s AND is_deleted = 0",
         "UPDATE message SET is_deleted = 1, deleted_at = NOW() WHERE session_id = %s AND is_deleted = 0",
         "UPDATE session SET is_deleted = 1, deleted_at = NOW(), update_time = NOW() WHERE id = %s AND is_deleted = 0",
     ]
